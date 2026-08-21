@@ -8,7 +8,13 @@ import {
   type Hero,
   type Side,
 } from "@shayyz/contracts";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   fetchAssetStatus,
   fetchDraft,
@@ -17,6 +23,7 @@ import {
   subscribeToDraft,
 } from "./api";
 import { HeroMedia } from "./HeroMedia";
+import { newestAddedHeroId } from "./voice";
 
 type WithoutRevision<T> = T extends unknown
   ? Omit<T, "expectedRevision">
@@ -47,6 +54,10 @@ function useDraft() {
   const [heroes, setHeroes] = useState<Hero[]>([]);
   const [assets, setAssets] = useState<AssetPackStatus>();
   const [connected, setConnected] = useState(false);
+  const [draftEvent, setDraftEvent] = useState<{
+    revision: number;
+    source: "snapshot" | "update";
+  }>();
   const [error, setError] = useState("");
   const [token, setToken] = useState(
     () => sessionStorage.getItem("shayyz-control-token") ?? "",
@@ -60,7 +71,10 @@ function useDraft() {
         setAssets(assetStatus);
       })
       .catch((reason: Error) => setError(reason.message));
-    return subscribeToDraft(setState, setConnected);
+    return subscribeToDraft((draft, source) => {
+      setState(draft);
+      setDraftEvent({ revision: draft.revision, source });
+    }, setConnected);
   }, []);
 
   const dispatch = async (command: DraftCommandInput) => {
@@ -88,12 +102,42 @@ function useDraft() {
     state,
     heroes,
     assets,
+    draftEvent,
     connected,
     error,
     token,
     saveToken,
     dispatch,
   };
+}
+
+function useHeroVoice(
+  state: DraftState | undefined,
+  heroes: Hero[],
+  event: { revision: number; source: "snapshot" | "update" } | undefined,
+) {
+  const previous = useRef<DraftState | undefined>(undefined);
+  const activeAudio = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!state) return;
+    const prior = previous.current;
+    previous.current = state;
+    if (
+      !prior ||
+      event?.source !== "update" ||
+      event.revision !== state.revision ||
+      !state.presentation.voiceEnabled
+    )
+      return;
+    const heroId = newestAddedHeroId(prior, state);
+    const voiceUrl = heroes.find((hero) => hero.id === heroId)?.voiceUrl;
+    if (!voiceUrl) return;
+    activeAudio.current?.pause();
+    const audio = new Audio(voiceUrl);
+    activeAudio.current = audio;
+    void audio.play().catch(() => undefined);
+  }, [event, heroes, state]);
 }
 
 function HeroMark({
@@ -268,6 +312,22 @@ function ControlPage() {
             onChange={(event) => saveToken(event.target.value)}
           />
         </label>
+        <label className="voice-setting">
+          <input
+            type="checkbox"
+            checked={state.presentation.voiceEnabled}
+            onChange={(event) =>
+              dispatch({
+                type: "set-presentation",
+                presentation: { voiceEnabled: event.target.checked },
+              })
+            }
+          />
+          <span>
+            <strong>Hero voice lines</strong>
+            <small>Off by default · OBS only</small>
+          </span>
+        </label>
         <p className="legal-note">
           Unofficial community project. Game media requires separate permission.
         </p>
@@ -417,8 +477,9 @@ function ControlPage() {
 }
 
 function OverlayPage() {
-  const { state, heroes, assets, connected } = useDraft();
+  const { state, heroes, assets, connected, draftEvent } = useDraft();
   const [, rerender] = useState(0);
+  useHeroVoice(state, heroes, draftEvent);
   useEffect(() => {
     const timer = window.setInterval(() => rerender((value) => value + 1), 250);
     return () => window.clearInterval(timer);

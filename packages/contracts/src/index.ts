@@ -127,6 +127,15 @@ export const DraftTimerSchema = z.object({
 });
 export type DraftTimer = z.infer<typeof DraftTimerSchema>;
 
+export const PresentationSettingsSchema = z
+  .object({
+    voiceEnabled: z.boolean().default(false),
+  })
+  .default({ voiceEnabled: false });
+export type PresentationSettings = z.infer<
+  typeof PresentationSettingsSchema
+>;
+
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.string().datetime(),
@@ -139,6 +148,7 @@ export const DraftStateSchema = z.object({
     red: SideSelectionsSchema,
   }),
   timer: DraftTimerSchema,
+  presentation: PresentationSettingsSchema,
 });
 export type DraftState = z.infer<typeof DraftStateSchema>;
 
@@ -167,6 +177,10 @@ export const DraftCommandSchema = z.discriminatedUnion("type", [
   }),
   CommandBaseSchema.extend({ type: z.literal("start-timer") }),
   CommandBaseSchema.extend({ type: z.literal("pause-timer") }),
+  CommandBaseSchema.extend({
+    type: z.literal("set-presentation"),
+    presentation: PresentationSettingsSchema,
+  }),
 ]);
 export type DraftCommand = z.infer<typeof DraftCommandSchema>;
 
@@ -234,6 +248,7 @@ export function createDefaultDraftState(now = new Date()): DraftState {
       running: false,
       startedAt: null,
     },
+    presentation: { voiceEnabled: false },
   };
 }
 

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createDefaultDraftState } from "@shayyz/contracts";
 import { DraftStore, RevisionConflictError } from "./store";
 
 const directories: string[] = [];
@@ -53,5 +54,27 @@ describe("DraftStore", () => {
     await writeFile(store.filePath, "not-json");
     await store.initialize();
     expect(store.state.revision).toBe(0);
+  });
+
+  test("migrates saved state and persists presentation settings", async () => {
+    const store = await createStore();
+    const legacy = createDefaultDraftState() as Partial<
+      ReturnType<typeof createDefaultDraftState>
+    >;
+    delete legacy.presentation;
+    await writeFile(store.filePath, JSON.stringify(legacy));
+    await store.initialize();
+    expect(store.state.presentation.voiceEnabled).toBe(false);
+    expect(
+      JSON.parse(await readFile(store.filePath, "utf8")).presentation,
+    ).toEqual({ voiceEnabled: false });
+
+    await store.dispatch({
+      type: "set-presentation",
+      expectedRevision: 0,
+      presentation: { voiceEnabled: true },
+    });
+    await store.dispatch({ type: "reset", expectedRevision: 1 });
+    expect(store.state.presentation.voiceEnabled).toBe(true);
   });
 });

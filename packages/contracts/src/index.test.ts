@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  AssetPackManifestSchema,
   STANDARD_TEN_BAN_FORMAT,
   applySelection,
   createDefaultDraftState,
@@ -47,4 +48,33 @@ describe("standard draft contract", () => {
       applySelection(state, { heroId: "miya", source: "manual" }),
     ).toThrow("already selected");
   });
+});
+
+test("asset manifests reject unsafe paths", () => {
+  const base = {
+    schemaVersion: 1,
+    pack: {
+      id: "mlbb-personal",
+      displayName: "Personal MLBB media",
+      usage: "personal-local-no-redistribution",
+      createdAt: new Date().toISOString(),
+    },
+    heroes: {},
+    cues: {},
+  };
+  expect(AssetPackManifestSchema.safeParse(base).success).toBe(true);
+  expect(
+    AssetPackManifestSchema.safeParse({
+      ...base,
+      heroes: {
+        miya: {
+          portrait: {
+            path: "../private.png",
+            sha256: "a".repeat(64),
+            mimeType: "image/png",
+          },
+        },
+      },
+    }).success,
+  ).toBe(false);
 });

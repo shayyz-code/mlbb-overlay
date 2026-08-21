@@ -24,7 +24,7 @@
     "name": "Argus"
   },
   {
-    "name": "Arlot"
+    "name": "Arlott"
   },
   {
     "name": "Atlas"
@@ -54,7 +54,7 @@
     "name": "Beatrix"
   },
   {
-    "name": "Beleric"
+    "name": "Belerick"
   },
   {
     "name": "Benedetta"
@@ -66,7 +66,7 @@
     "name": "Bruno"
   },
   {
-    "name": "Carmila"
+    "name": "Carmilla"
   },
   {
     "name": "Cecilion"
@@ -96,7 +96,7 @@
     "name": "Diggie"
   },
   {
-    "name": "Dyroth"
+    "name": "Dyrroth"
   },
   {
     "name": "Edith"
@@ -123,7 +123,7 @@
     "name": "Franco"
   },
   {
-    "name": "Fredrin"
+    "name": "Fredrinn"
   },
   {
     "name": "Freya"
@@ -225,7 +225,7 @@
     "name": "Lukas"
   },
   {
-    "name": "Lapu Lapu"
+    "name": "Lapu-Lapu"
   },
   {
     "name": "Layla"
@@ -363,16 +363,16 @@
     "name": "Xavier"
   },
   {
-    "name": "Xborg"
+    "name": "X.Borg"
   },
   {
     "name": "Yin"
   },
   {
-    "name": "Yisunshin"
+    "name": "Yi Sun-shin"
   },
   {
-    "name": "Yuzhong"
+    "name": "Yu Zhong"
   },
   {
     "name": "Yve"
@@ -391,5 +391,11 @@
   },
   {
     "name": "Sora"
+  },
+  {
+    "name": "Marcel"
+  },
+  {
+    "name": "Hirara"
   }
 ]

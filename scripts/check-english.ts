@@ -1,6 +1,13 @@
 import { existsSync, statSync } from "node:fs";
 
-const roots = ["apps", "packages", "scripts", "README.md", "CONTRIBUTING.md", "AGENTS.md"];
+const roots = [
+  "apps",
+  "packages",
+  "scripts",
+  "README.md",
+  "CONTRIBUTING.md",
+  "AGENTS.md",
+];
 const blockedWords = [
   "untuk",
   "fungsi",
@@ -27,7 +34,11 @@ for (const root of roots) {
     continue;
   }
 
-  for await (const path of glob.scan({ cwd: root, absolute: true, onlyFiles: true })) {
+  for await (const path of glob.scan({
+    cwd: root,
+    absolute: true,
+    onlyFiles: true,
+  })) {
     if (path.endsWith("check-english.ts")) continue;
     const text = (await Bun.file(path).text()).toLowerCase();
     for (const word of blockedWords) {

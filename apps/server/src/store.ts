@@ -35,6 +35,7 @@ export class DraftStore {
     try {
       const saved = JSON.parse(await readFile(this.filePath, "utf8"));
       this.#state = DraftStateSchema.parse(saved);
+      if (saved.presentation === undefined) await this.persist();
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         const backup = `${this.filePath}.corrupt-${Date.now()}`;
@@ -78,6 +79,7 @@ export class DraftStore {
       case "reset": {
         const reset = createDefaultDraftState();
         reset.teams = structuredClone(this.#state.teams);
+        reset.presentation = structuredClone(this.#state.presentation);
         reset.revision = this.#state.revision;
         this.#state = this.withRevision(reset);
         break;
@@ -129,6 +131,12 @@ export class DraftStore {
         }
         next.timer.running = false;
         next.timer.startedAt = null;
+        this.#state = this.withRevision(next);
+        break;
+      }
+      case "set-presentation": {
+        const next = this.state;
+        next.presentation = command.presentation;
         this.#state = this.withRevision(next);
         break;
       }

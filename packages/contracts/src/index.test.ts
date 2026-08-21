@@ -48,6 +48,10 @@ describe("standard draft contract", () => {
       applySelection(state, { heroId: "miya", source: "manual" }),
     ).toThrow("already selected");
   });
+
+  test("keeps hero voice playback off by default", () => {
+    expect(createDefaultDraftState().presentation.voiceEnabled).toBe(false);
+  });
 });
 
 test("asset manifests reject unsafe paths", () => {

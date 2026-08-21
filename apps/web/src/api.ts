@@ -47,7 +47,7 @@ export async function sendCommand(
 }
 
 export function subscribeToDraft(
-  onState: (state: DraftState) => void,
+  onState: (state: DraftState, source: "snapshot" | "update") => void,
   onStatus: (connected: boolean) => void,
 ): () => void {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -70,7 +70,11 @@ export function subscribeToDraft(
       )
         return;
       const state = DraftStateSchema.safeParse(envelope.data.data);
-      if (state.success) onState(state.data);
+      if (state.success)
+        onState(
+          state.data,
+          envelope.data.type === "draft-updated" ? "update" : "snapshot",
+        );
     });
     socket.addEventListener("close", () => {
       onStatus(false);

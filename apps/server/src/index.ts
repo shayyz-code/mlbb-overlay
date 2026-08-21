@@ -5,6 +5,7 @@ import { createBunWebSocket } from "hono/bun";
 import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 import { createApp } from "./app";
+import { LocalAssetPack } from "./assets";
 import { DraftStore } from "./store";
 
 const host = process.env.SHAYYZ_HOST ?? "127.0.0.1";
@@ -20,12 +21,21 @@ const controlToken = isLoopback
   : process.env.SHAYYZ_CONTROL_TOKEN || crypto.randomUUID().replaceAll("-", "");
 const store = new DraftStore(runtimeDirectory);
 await store.initialize();
+const configuredAssetManifest = process.env.SHAYYZ_ASSET_PACK;
+const assetManifest = configuredAssetManifest
+  ? resolve(configuredAssetManifest)
+  : join(projectRoot, "vendor-assets/mlbb-personal/manifest.json");
+const assetPack = await LocalAssetPack.load(
+  assetManifest,
+  Boolean(configuredAssetManifest),
+);
 
 const clients = new Set<WSContext>();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 const application = createApp({
   store,
   ...(controlToken ? { controlToken } : {}),
+  ...(assetPack ? { assetPack } : {}),
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);

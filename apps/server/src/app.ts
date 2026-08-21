@@ -3,6 +3,11 @@ import type { EventEnvelope } from "@shayyz/contracts";
 import { DraftCommandSchema } from "@shayyz/contracts";
 import { serveStatic } from "hono/bun";
 import { Hono } from "hono";
+import {
+  emptyAssetStatus,
+  type HeroMediaKind,
+  type LocalAssetPack,
+} from "./assets";
 import { heroes } from "./heroes";
 import { RevisionConflictError, type DraftStore } from "./store";
 
@@ -11,6 +16,7 @@ export interface AppOptions {
   controlToken?: string;
   webRoot?: string;
   broadcast?: (event: EventEnvelope) => void;
+  assetPack?: LocalAssetPack;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -48,7 +54,26 @@ export function createApp(options: AppOptions): Hono {
     }),
   );
   app.get("/api/v1/draft", (context) => context.json(options.store.state));
-  app.get("/api/v1/heroes", (context) => context.json(heroes));
+  const heroIds = heroes.map((hero) => hero.id);
+  app.get("/api/v1/heroes", (context) =>
+    context.json(options.assetPack?.heroes(heroes) ?? heroes),
+  );
+  app.get("/api/v1/assets/status", (context) =>
+    context.json(
+      options.assetPack?.status(heroIds) ?? emptyAssetStatus(heroIds),
+    ),
+  );
+  app.get("/api/v1/media/heroes/:id/:kind", (context) => {
+    const kind = context.req.param("kind") as HeroMediaKind;
+    if (!(["portrait", "poster", "voice"] as string[]).includes(kind))
+      return context.notFound();
+    const asset = options.assetPack?.hero(context.req.param("id"), kind);
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
+  app.get("/api/v1/media/cues/:id", (context) => {
+    const asset = options.assetPack?.cue(context.req.param("id"));
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
 
   app.post("/api/v1/draft/commands", requireControlToken, async (context) => {
     try {
@@ -98,4 +123,33 @@ export function createApp(options: AppOptions): Hono {
   }
 
   return app;
+}
+
+function mediaResponse(
+  request: Request,
+  asset: { absolutePath: string; mimeType: string },
+): Response {
+  const file = Bun.file(asset.absolutePath);
+  const headers = {
+    "accept-ranges": "bytes",
+    "cache-control": "private, max-age=3600",
+    "content-type": asset.mimeType,
+  };
+  const match = request.headers.get("range")?.match(/^bytes=(\d+)-(\d*)$/);
+  if (!match) return new Response(file, { headers });
+  const start = Number(match[1]);
+  const end = match[2] ? Number(match[2]) : file.size - 1;
+  if (start > end || end >= file.size)
+    return new Response(null, {
+      status: 416,
+      headers: { "content-range": `bytes */${file.size}` },
+    });
+  return new Response(file.slice(start, end + 1), {
+    status: 206,
+    headers: {
+      ...headers,
+      "content-length": String(end - start + 1),
+      "content-range": `bytes ${start}-${end}/${file.size}`,
+    },
+  });
 }

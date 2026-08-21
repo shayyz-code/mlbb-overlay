@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "./app";
+import { assetFixture } from "./asset-fixture";
 import { DraftStore } from "./store";
 
 const directories: string[] = [];
@@ -93,5 +94,26 @@ describe("draft API", () => {
     const response = await app.request("/overlay/draft");
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("SHAYYZ");
+  });
+
+  test("streams only allowlisted private media with range support", async () => {
+    const { store } = await setup();
+    const { directory, pack } = await assetFixture();
+    directories.push(directory);
+    const app = createApp({ store, assetPack: pack });
+
+    const heroes = await (await app.request("/api/v1/heroes")).json();
+    expect(
+      heroes.find((hero: { id: string }) => hero.id === "miya"),
+    ).toMatchObject({ portraitUrl: "/api/v1/media/heroes/miya/portrait" });
+    const response = await app.request("/api/v1/media/heroes/miya/portrait", {
+      headers: { range: "bytes=0-6" },
+    });
+    expect(response.status).toBe(206);
+    expect(response.headers.get("content-range")).toBe("bytes 0-6/16");
+    expect(await response.text()).toBe("private");
+    expect(
+      (await app.request("/api/v1/media/heroes/layla/portrait")).status,
+    ).toBe(404);
   });
 });

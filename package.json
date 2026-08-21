@@ -21,6 +21,7 @@
     "test:e2e": "playwright test",
     "assets:import": "bun run scripts/import-assets.ts",
     "assets:verify": "bun run scripts/import-assets.ts --verify",
+    "android:audit": "bun run scripts/audit-android.ts",
     "check:english": "bun run scripts/check-english.ts",
     "check:gitignore": "bun run scripts/check-gitignore.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run build && bun run check:english && bun run check:gitignore"

@@ -22,6 +22,13 @@ capture session. `adb screenrecord` is suitable for collecting benchmark clips,
 not low-latency triggering; it produces MP4 recordings and has a three-minute
 limit. `adb exec-out screencap -p` can collect individual development frames.
 
+Play Store AVD images are release-signed and do not support `adb root`. If file
+inspection is necessary, use a separate AOSP system image and treat package
+installation there as a compatibility experiment, not a guaranteed clone:
+AOSP images omit Google Play services, while Play Asset Delivery stores packs
+inside app-managed internal storage. Start with `bun run android:audit`; it
+writes metadata only to ignored `captures/` and does not pull package files.
+
 The system must not read game memory, inject touch input, bypass capture
 protections, or call an undocumented game endpoint.
 
@@ -66,5 +73,6 @@ Promotion targets:
 - [OBS WebSocket protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md)
 - [Android MediaProjection capture](https://developer.android.com/media/platform/av-capture)
 - [Android Debug Bridge screen recording](https://developer.android.com/tools/adb)
+- [Android virtual devices and root-capable AOSP images](https://developer.android.com/studio/run/managing-avds)
 - [Google Play Asset Delivery](https://developer.android.com/guide/playcore/asset-delivery)
 - [Official MLBB Google Play listing and support contact](https://play.google.com/store/apps/details?id=com.mobile.legends)

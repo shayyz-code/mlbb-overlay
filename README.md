@@ -13,7 +13,7 @@ The first SHAYYZ release rebuilds the draft workflow with:
 - a configurable current-standard ten-ban phase sequence;
 - typed state, undo, reset, timers, and real-time synchronization;
 - centralized broadcast-esports theming;
-- media-free geometric hero placeholders.
+- local-only portraits, animated posters, cues, and opt-in hero voices with geometric fallbacks.
 
 Visual draft detection is being developed as an opt-in beta. Turtle and Lord
 event detection remains a later milestone and is not presented as production
@@ -42,7 +42,18 @@ token.
 
 ## Assets
 
-The public repository does not ship extracted game resources. Development uses original placeholders until an operator imports an asset pack with documented permission. See [vendor-assets/README.md](vendor-assets/README.md).
+The public repository never ships game resources. Personal media stays in the
+ignored `vendor-assets/mlbb-personal/` directory and is served only through the
+allowlisted local media API. Import and verify a private pack with:
+
+```sh
+bun run assets:import --source /path/to/private/source --game-build VERSION
+bun run assets:verify
+```
+
+To inspect a connected emulator without copying game files, run
+`bun run android:audit`. Reports go to ignored `captures/`. See
+[vendor-assets/README.md](vendor-assets/README.md) for the private workflow.
 
 ## Attribution and license
 

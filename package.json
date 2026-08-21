@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
-    "build": "tsc -p tsconfig.json",
+    "build": "bun run --filter '*' build",
     "start": "bun run --cwd apps/server start",
     "format": "biome format --write .",
     "lint": "biome lint .",

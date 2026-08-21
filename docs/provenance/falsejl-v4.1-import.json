@@ -4,6 +4,7 @@
   "importDate": "2026-08-21",
   "commit": "5d384cd",
   "tag": "falsejl-v4.1-import",
+  "maintenanceStatus": "Historical snapshot only; replaced files were removed from the maintained tree in issue 10.",
   "included": [
     "server.js",
     "package.json",

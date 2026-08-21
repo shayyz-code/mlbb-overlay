@@ -10,6 +10,7 @@ test-results/
 # Runtime state and operator-provided assets
 runtime/*
 !runtime/.gitkeep
+apps/*/runtime/
 vendor-assets/*
 !vendor-assets/README.md
 captures/
@@ -34,9 +35,3 @@ models/
 Thumbs.db
 .idea/
 .vscode/
-
-# Legacy generated/runtime files
-public/serverip.txt
-public/database/savedmatch/
-public/database/*.xlsm
-public/Assets/

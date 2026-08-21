@@ -8,7 +8,7 @@ const requiredIgnored = [
   "runtime/state.json",
   "vendor-assets/private/hero.png",
   "captures/frame.jpg",
-  "public/serverip.txt",
+  "apps/server/runtime/draft-state.json",
 ];
 const requiredTracked = [
   "bun.lock",

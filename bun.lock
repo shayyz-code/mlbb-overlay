@@ -41,6 +41,10 @@
         "zod": "^4.1.0",
       },
     },
+    "packages/detector": {
+      "name": "@shayyz/detector",
+      "version": "0.1.0",
+    },
   },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
@@ -218,6 +222,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.62.5", "", { "os": "win32", "cpu": "x64" }, "sha512-/gDJaRs4gl0NPIwqCz+6PkpmhhjRAD2j6P4rSNHBzUkO3naEx2mIU0pRle1vUNRQ7mE/+8OOeXLTv/J56FKiQg=="],
 
     "@shayyz/contracts": ["@shayyz/contracts@workspace:packages/contracts"],
+
+    "@shayyz/detector": ["@shayyz/detector@workspace:packages/detector"],
 
     "@shayyz/server": ["@shayyz/server@workspace:apps/server"],
 

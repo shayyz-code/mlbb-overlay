@@ -1,0 +1,84 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createApp } from "./app";
+import { DraftStore } from "./store";
+
+const directories: string[] = [];
+afterEach(async () =>
+  Promise.all(
+    directories.splice(0).map((path) => rm(path, { recursive: true })),
+  ),
+);
+
+async function setup(controlToken?: string) {
+  const directory = await mkdtemp(join(tmpdir(), "shayyz-app-"));
+  directories.push(directory);
+  const store = new DraftStore(directory);
+  await store.initialize();
+  return {
+    store,
+    app: createApp({ store, ...(controlToken ? { controlToken } : {}) }),
+  };
+}
+
+describe("draft API", () => {
+  test("returns health, draft state, and a media-free hero catalog", async () => {
+    const { app } = await setup();
+    expect((await app.request("/api/v1/system/status")).status).toBe(200);
+    expect((await app.request("/api/v1/draft")).status).toBe(200);
+
+    const heroes = await (await app.request("/api/v1/heroes")).json();
+    expect(heroes.length).toBeGreaterThan(100);
+    expect(heroes[0].portraitUrl).toBeUndefined();
+  });
+
+  test("protects mutations when a LAN token is configured", async () => {
+    const { app } = await setup("secret-token");
+    const body = JSON.stringify({
+      expectedRevision: 0,
+      type: "select-hero",
+      heroId: "miya",
+      source: "manual",
+    });
+
+    expect(
+      (await app.request("/api/v1/draft/commands", { method: "POST", body }))
+        .status,
+    ).toBe(401);
+    expect(
+      (
+        await app.request("/api/v1/draft/commands", {
+          method: "POST",
+          body,
+          headers: {
+            authorization: "Bearer secret-token",
+            "content-type": "application/json",
+          },
+        })
+      ).status,
+    ).toBe(200);
+  });
+
+  test("reports revision conflicts", async () => {
+    const { app } = await setup();
+    const command = {
+      expectedRevision: 0,
+      type: "select-hero",
+      heroId: "miya",
+      source: "manual",
+    };
+
+    await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      body: JSON.stringify(command),
+    });
+    const response = await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      body: JSON.stringify({ ...command, heroId: "layla" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ currentRevision: 1 });
+  });
+});

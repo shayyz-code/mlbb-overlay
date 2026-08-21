@@ -1,0 +1,16 @@
+{
+  "name": "@shayyz/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "build": "bun build src/index.ts --target=bun --outdir=dist",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@shayyz/contracts": "workspace:*",
+    "hono": "^4.9.0"
+  }
+}

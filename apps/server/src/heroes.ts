@@ -1,5 +1,5 @@
-import legacyHeroes from "../../../public/database/herolist.json";
 import type { Hero } from "@shayyz/contracts";
+import heroCatalog from "../../../config/heroes.json";
 
 function slug(name: string): string {
   return name
@@ -9,7 +9,7 @@ function slug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export const heroes: Hero[] = legacyHeroes
+export const heroes: Hero[] = heroCatalog
   .map(({ name }) => ({ id: slug(name), name }))
   .filter(
     (hero, index, list) =>

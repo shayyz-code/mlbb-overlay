@@ -1,12 +1,17 @@
 import { existsSync, statSync } from "node:fs";
 
 const roots = [
+  ".github",
   "apps",
+  "config",
+  "docs",
   "packages",
   "scripts",
+  "vendor-assets",
   "README.md",
   "CONTRIBUTING.md",
   "AGENTS.md",
+  "NOTICE",
 ];
 const blockedWords = [
   "untuk",

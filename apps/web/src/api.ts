@@ -1,13 +1,21 @@
 import {
+  AssetPackStatusSchema,
   DraftStateSchema,
   EventEnvelopeSchema,
   HeroSchema,
+  type AssetPackStatus,
   type DraftCommand,
   type DraftState,
   type Hero,
 } from "@shayyz/contracts";
 
 const HeroesSchema = HeroSchema.array();
+
+export async function fetchAssetStatus(): Promise<AssetPackStatus> {
+  const response = await fetch("/api/v1/assets/status");
+  if (!response.ok) throw new Error("Unable to load private asset status.");
+  return AssetPackStatusSchema.parse(await response.json());
+}
 
 export async function fetchDraft(): Promise<DraftState> {
   const response = await fetch("/api/v1/draft");

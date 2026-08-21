@@ -141,6 +141,10 @@ small {
 }
 .system-card div {
   display: grid;
+  min-width: 0;
+}
+.system-card small {
+  line-height: 1.45;
 }
 .status-light {
   width: 9px;
@@ -370,7 +374,20 @@ button.danger {
     #0b111d 70%
   );
 }
-.hero-mark > span {
+.hero-visual {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.hero-visual img,
+.hero-visual video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+}
+.hero-initials {
   font:
     800 1.1rem "Arial Narrow",
     sans-serif;
@@ -397,6 +414,7 @@ button.danger {
   padding-bottom: 14px;
 }
 .team-draft {
+  position: relative;
   margin: 14px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -408,6 +426,21 @@ button.danger {
   transition:
     border-color 200ms,
     box-shadow 200ms;
+}
+.team-draft > :not(.phase-cue) {
+  position: relative;
+  z-index: 1;
+}
+.phase-cue {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.1;
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 .team-draft.team-red {
   background: linear-gradient(250deg, rgba(255, 64, 93, 0.08), transparent 60%);
@@ -620,7 +653,7 @@ button.danger {
 .overlay-teams .pick-row .hero-mark {
   min-height: 210px;
 }
-.overlay-teams .pick-row .hero-mark > span {
+.overlay-teams .pick-row .hero-initials {
   font-size: 2rem;
 }
 .overlay-teams .hero-mark strong {

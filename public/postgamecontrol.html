@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postgame Control (Match Data) - Sharp UI</title>
+    <style>
+        @font-face { font-family: 'Big Noodle Titling'; src: url('Assets/Font/big_noodle_titling.ttf') format('truetype'); }
+        
+        :root { 
+            /* Base Colors */
+            --bg-dark: #09090b;
+            --font-color: #EAEAEA; 
+            --accent-color: #A855F7; 
+            --accent-glow: rgba(168, 85, 247, 0.5); 
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(20, 20, 25, 0.65); /* Lebih transparan */
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --glass-blur: blur(16px); /* Blur lebih kuat */
+
+            /* Team Colors */
+            --blue-side: #00AFFF; 
+            --red-side: #F94868; 
+            --active-green: #00FF8C; 
+
+            /* Input Fields inside Glass */
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 4px !important; outline: none; } 
+        
+        body { 
+            font-family: 'Big Noodle Titling', sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            padding-bottom: 100px;
+            background-color: var(--bg-dark); 
+            color: var(--font-color); 
+            letter-spacing: 1px; 
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- BACKGROUND ANIMATION --- */
+        .blob-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: -1; pointer-events: none; }
+        .blob { position: absolute; opacity: 0.5; filter: blur(90px); border-radius: 50%; }
+        .blob-1 { width: 500px; height: 500px; background: #7e22ce; top: -10%; left: -10%; animation: float 20s infinite ease-in-out; }
+        .blob-2 { width: 600px; height: 600px; background: #1e1b4b; bottom: -10%; right: -10%; animation: float 25s infinite ease-in-out reverse; }
+        .blob-3 { width: 300px; height: 300px; background: #be123c; top: 40%; right: 20%; opacity: 0.3; animation: float 18s infinite ease-in-out; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(30px, 40px) rotate(10deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .container { max-width: 1650px; margin: 0 auto; position: relative; z-index: 1; }
+        
+        /* --- GLASS MIXIN CLASS --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 { 
+            text-align: center; margin-bottom: 30px; 
+            text-shadow: 0 0 25px var(--accent-glow); 
+            font-size: 3.5rem; text-transform: uppercase;
+            font-weight: normal; letter-spacing: 3px;
+        }
+        
+        h2 { font-size: 2rem; margin: 0; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; }
+
+        /* --- GAME INFO PANEL --- */
+        .game-info-panel {
+            display: flex; justify-content: center; gap: 60px;
+        }
+        .info-group { display: flex; flex-direction: column; align-items: center; min-width: 180px; }
+        .info-group label { color: #aaa; font-size: 1.1rem; margin-bottom: 5px; letter-spacing: 2px; }
+        .info-group input { 
+            width: 100%; font-size: 2.5rem; color: var(--accent-color); 
+            font-weight: normal; background: transparent; border: none; 
+            border-bottom: 2px solid rgba(255,255,255,0.1); padding: 5px;
+            text-align: center; transition: all 0.3s ease;
+        }
+        .info-group input:focus { 
+            border-color: var(--accent-color); 
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* --- WINNER SELECTION --- */
+        .winner-panel {
+            display: flex; gap: 20px; justify-content: center; margin-bottom: 30px;
+            background: rgba(0,0,0,0.2); border-radius: 50px !important;
+            padding: 10px; border: 1px solid rgba(255,255,255,0.05);
+            width: fit-content; margin-left: auto; margin-right: auto;
+        }
+        .win-btn {
+            background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #888;
+            width: 200px; padding: 10px; font-size: 1.4rem;
+            cursor: pointer; transition: all 0.3s ease; border-radius: 40px !important;
+        }
+        .win-btn.blue:hover, .win-btn.blue.active { background: rgba(0, 175, 255, 0.2); border-color: var(--blue-side); color: var(--blue-side); box-shadow: 0 0 20px rgba(0, 175, 255, 0.3); }
+        .win-btn.red:hover, .win-btn.red.active { background: rgba(249, 72, 104, 0.2); border-color: var(--red-side); color: var(--red-side); box-shadow: 0 0 20px rgba(249, 72, 104, 0.3); }
+
+        /* --- TEAMS --- */
+        .section-header { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .team-blue { border-left: 4px solid var(--blue-side); }
+        .team-red { border-left: 4px solid var(--red-side); }
+        
+        .team-blue h2 { color: var(--blue-side); text-shadow: 0 0 20px rgba(0, 175, 255, 0.3); }
+        .team-red h2 { color: var(--red-side); text-shadow: 0 0 20px rgba(249, 72, 104, 0.3); }
+
+        /* --- STATS GRID --- */
+        .stats-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .stat-box { 
+            background: var(--input-bg); padding: 15px; border: 1px solid var(--input-border); 
+            display: flex; flex-direction: column; align-items: center;
+            transition: 0.3s;
+        }
+        .stat-box:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+        .stat-box label { color: #999; font-size: 1rem; margin-bottom: 5px; }
+        .stat-box input { width: 100%; font-size: 1.6rem; border: none; background: transparent; text-align: center; color: white; }
+
+        /* --- TABLE STYLING (FIXED ALIGNMENT) --- */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 6px; min-width: 1000px; }
+        
+        th { 
+            text-align: left; padding: 15px; 
+            color: #888; font-size: 1.1rem; letter-spacing: 1.5px; font-weight: normal;
+        }
+        
+        td { 
+            padding: 8px 12px; 
+            background: rgba(0, 0, 0, 0.2); /* Gelap sedikit di dalam baris */
+            border-top: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            vertical-align: middle; /* KUNCI RATA TENGAH VERTIKAL */
+            height: 65px; /* Paksa tinggi baris agar seragam */
+        }
+        
+        tr:hover td { background: rgba(255, 255, 255, 0.05); }
+        
+        /* Input dalam tabel */
+        input[type="text"], input[type="number"] { 
+            width: 100%; background: var(--input-bg); border: 1px solid var(--input-border); 
+            color: white; padding: 8px; font-family: inherit; font-size: 1.2rem; text-align: center;
+            transition: all 0.2s;
+        }
+        input:focus { border-color: var(--accent-color); background: black; }
+        input[readonly] { background: transparent; border: none; font-size: 2rem; padding: 0; }
+
+        /* Hero & Player */
+        .hero-display { display: flex; align-items: center; gap: 15px; }
+        .hero-img { 
+            width: 48px; height: 48px; object-fit: cover; 
+            border: 1px solid #444; background: #000; 
+            flex-shrink: 0; /* Jangan biarkan gambar mengecil */
+        }
+        .player-name { font-size: 1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; display: block; }
+
+        /* --- ITEM SLOTS ALIGNMENT FIX --- */
+        /* Container untuk item di dalam TD */
+        .item-container-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 100%;
+        }
+
+        .item-slot { 
+            width: 44px; /* Lebar Pasti */
+            height: 44px; /* Tinggi Pasti */
+            background: rgba(0,0,0,0.4); 
+            border: 1px solid #444; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            position: relative;
+            flex-shrink: 0; /* PENTING: Mencegah kotak penyet */
+            transition: all 0.2s;
+        }
+        .item-slot:hover { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-glow); transform: scale(1.05); z-index: 10; }
+        .item-slot img { width: 100%; height: 100%; object-fit: contain; }
+        .empty-slot { border: 1px dashed #444; opacity: 0.4; }
+        .empty-slot:hover { border-style: solid; opacity: 1; }
+
+        /* --- MVP CHECKBOX --- */
+        .mvp-cell { text-align: center; }
+        .mvp-checkbox { 
+            width: 24px; height: 24px; appearance: none; background: #111; 
+            border: 2px solid #555; cursor: pointer; display: inline-block; vertical-align: middle;
+        }
+        .mvp-checkbox:checked { background: gold; border-color: #ffd700; box-shadow: 0 0 15px gold; }
+
+        /* --- STATUS & BUTTONS --- */
+        #save-status {
+            position: fixed; bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.8); padding: 8px 20px;
+            border: 1px solid #333; color: #888; font-weight: bold;
+            z-index: 1000; border-radius: 30px !important;
+        }
+        .status-saving { color: yellow !important; border-color: yellow !important; }
+        .status-saved { color: var(--active-green) !important; border-color: var(--active-green) !important; }
+
+        .btn-container { 
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            display: flex; justify-content: center; 
+            background: rgba(10, 10, 12, 0.8); border-top: 1px solid #333;
+            padding: 15px; z-index: 100; backdrop-filter: blur(10px);
+        }
+        button.action-btn { 
+            padding: 12px 40px; font-family: inherit; font-size: 1.4rem; 
+            cursor: pointer; border: none; font-weight: bold; text-transform: uppercase; 
+            background: var(--red-side); color: white; letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(249, 72, 104, 0.4);
+            transition: all 0.2s;
+        }
+        button.action-btn:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(249, 72, 104, 0.8); }
+
+        /* --- MODAL (Also Frosted) --- */
+        .modal-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-content { 
+            background: rgba(20, 20, 25, 0.95); width: 90%; max-width: 900px; height: 80vh; 
+            border: 1px solid var(--accent-color); display: flex; flex-direction: column; 
+            box-shadow: 0 0 50px rgba(168, 85, 247, 0.2);
+        }
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; padding: 20px; overflow-y: auto; }
+        .grid-item { 
+            background: rgba(255,255,255,0.05); padding: 10px; text-align: center; cursor: pointer; 
+            border: 1px solid transparent; transition: all 0.2s;
+        }
+        .grid-item:hover { border-color: var(--accent-color); background: rgba(0,0,0,0.5); transform: scale(1.05); }
+        .grid-item img { width: 50px; height: 50px; object-fit: contain; }
+        .grid-item span { display: block; font-size: 0.9rem; margin-top: 5px; color: #ccc; }
+
+    </style>
+</head>
+<body>
+
+    <div class="blob-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div id="save-status">Ready</div>
+
+    <div id="itemModal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;">
+                <h2 style="color:var(--accent-color);">SELECT ASSET</h2>
+                <span onclick="closeModal()" style="font-size: 2rem; cursor: pointer;">&times;</span>
+            </div>
+            <div style="padding: 10px; background: rgba(0,0,0,0.3);">
+                <input type="text" id="itemSearch" placeholder="SEARCH..." onkeyup="filterItems(this.value)" style="text-align: left;">
+            </div>
+            <div id="itemGrid" class="item-grid"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>MATCH DATA EDITOR</h1>
+
+        <div class="game-info-panel glass-panel">
+            <div class="info-group">
+                <label>GAME NUMBER</label>
+                <input type="number" id="game-number" onchange="updateGameInfo('game_number', this.value)">
+            </div>
+            <div class="info-group">
+                <label>DURATION</label>
+                <input type="text" id="game-duration" placeholder="00:00" maxlength="5"> 
+            </div>
+        </div>
+
+        <div class="winner-panel glass-panel">
+            <button class="win-btn blue" id="btn-win-blue" onclick="setWinner('blue')">BLUE WIN</button>
+            <button class="win-btn red" id="btn-win-red" onclick="setWinner('red')">RED WIN</button>
+        </div>
+
+        <div class="section team-blue glass-panel">
+            <div class="section-header">
+                <h2>
+                    <span id="blue-team-name">BLUE TEAM</span>
+                    <span>SCORE: <input type="number" id="blue-score" style="width:70px; display:inline-block;" readonly></span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="stats-group">
+                    <div class="stat-box"><label>TOTAL GOLD</label><input type="number" id="blue-totalgold" readonly></div>
+                    <div class="stat-box"><label>TURRETS</label><input type="number" id="blue-turret" onchange="updateTeamStat('blueteam', 'turret', this.value)"></div>
+                    <div class="stat-box"><label>LORD</label><input type="number" id="blue-lord" onchange="updateTeamStat('blueteam', 'lord', this.value)"></div>
+                    <div class="stat-box"><label>TURTLE</label><input type="number" id="blue-turtle" onchange="updateTeamStat('blueteam', 'turtle', this.value)"></div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table id="blue-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 250px;">HERO & PLAYER</th>
+                                <th style="width: 200px;">LVL</th>
+                                <th style="width: 200px;">KDA</th>
+                                <th style="width: 200px;">GOLD</th>
+                                <th style="width: 70px;">SPELL</th>
+                                <th>ITEMS</th>
+                                <th style="width: 60px; text-align: center;">MVP</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="section team-red glass-panel">
+            <div class="section-header">
+                <h2>
+                    <span id="red-team-name">RED TEAM</span>
+                    <span>SCORE: <input type="number" id="red-score" style="width:70px; display:inline-block;" readonly></span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="stats-group">
+                    <div class="stat-box"><label>TOTAL GOLD</label><input type="number" id="red-totalgold" readonly></div>
+                    <div class="stat-box"><label>TURRETS</label><input type="number" id="red-turret" onchange="updateTeamStat('redteam', 'turret', this.value)"></div>
+                    <div class="stat-box"><label>LORD</label><input type="number" id="red-lord" onchange="updateTeamStat('redteam', 'lord', this.value)"></div>
+                    <div class="stat-box"><label>TURTLE</label><input type="number" id="red-turtle" onchange="updateTeamStat('redteam', 'turtle', this.value)"></div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="red-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 250px;">HERO & PLAYER</th>
+                                <th style="width: 200px;">LVL</th>
+                                <th style="width: 200px;">KDA</th>
+                                <th style="width: 200px;">GOLD</th>
+                                <th style="width: 70px;">SPELL</th>
+                                <th>ITEMS</th>
+                                <th style="width: 60px; text-align: center;">MVP</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button id="reset-btn" class="reset-btn action-btn" onclick="handleResetRequest()">RESET ITEMS & STATS</button>
+        </div>
+    </div>
+
+    <script>
+        let matchData = {};
+        let itemList = [];
+        let currentEditContext = null; 
+        let currentMvpId = null;
+        let resetStage = 0; 
+        let resetTimeout;
+
+        const ws = new WebSocket(`ws://${window.location.host}`);
+
+        Promise.all([
+            fetch('/api/matchdata').then(r => r.json()),
+            fetch('/api/items').then(r => r.json()),
+            fetch('/api/mvp').then(r => r.json())
+        ]).then(([mData, items, mvpData]) => {
+            matchData = mData;
+            itemList = items.length ? items : ["winter_truncheon", "immortality"]; 
+            if(mvpData && mvpData.mvp) currentMvpId = mvpData.mvp.checkboxId;
+            renderAll();
+        });
+
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if(msg.type === 'matchdata_update') {
+                matchData = msg.data;
+                renderAll();
+            }
+        };
+
+        const durationInput = document.getElementById('game-duration');
+        durationInput.addEventListener('input', function(e) {
+            let val = e.target.value.replace(/\D/g, '');
+            if(val.length > 4) val = val.slice(0, 4);
+            if(val.length > 2) val = val.slice(0, 2) + ':' + val.slice(2);
+            e.target.value = val;
+            if(val.length === 5) updateGameInfo('game_duration', val);
+        });
+
+        function renderAll() {
+            if(!matchData.teamdata) return;
+
+            document.getElementById('game-number').value = matchData.game_number || 0;
+            if(document.activeElement !== durationInput) {
+                 document.getElementById('game-duration').value = matchData.game_duration || "00:00";
+            }
+
+            updateWinnerUI();
+            renderTeam('blueteam', 'blue-table');
+            renderTeam('redteam', 'red-table');
+            renderTeamStats();
+        }
+
+        function updateWinnerUI() {
+            const winner = matchData.winmatches || 'none';
+            const btnBlue = document.getElementById('btn-win-blue');
+            const btnRed = document.getElementById('btn-win-red');
+
+            btnBlue.classList.remove('active');
+            btnRed.classList.remove('active');
+
+            if(winner === 'blue') btnBlue.classList.add('active');
+            if(winner === 'red') btnRed.classList.add('active');
+        }
+
+        function renderTeamStats() {
+            const bd = matchData.teamdata.blueteam;
+            const rd = matchData.teamdata.redteam;
+
+            document.getElementById('blue-team-name').textContent = bd.teamname || "BLUE TEAM";
+            document.getElementById('blue-score').value = bd.score;
+            document.getElementById('blue-totalgold').value = bd.totalgold;
+            document.getElementById('blue-turret').value = bd.turret;
+            document.getElementById('blue-lord').value = bd.lord;
+            document.getElementById('blue-turtle').value = bd.turtle;
+
+            document.getElementById('red-team-name').textContent = rd.teamname || "RED TEAM";
+            document.getElementById('red-score').value = rd.score;
+            document.getElementById('red-totalgold').value = rd.totalgold;
+            document.getElementById('red-turret').value = rd.turret;
+            document.getElementById('red-lord').value = rd.lord;
+            document.getElementById('red-turtle').value = rd.turtle;
+        }
+
+        function renderTeam(teamKey, tableId) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+            const players = matchData.teamdata[teamKey].playerlist;
+
+            players.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                let heroSrc = 'Assets/HeroPick/idle.png';
+                if(p.hero && p.hero !== "") heroSrc = `Assets/HeroPick/${p.hero}.png`;
+
+                tr.innerHTML = `
+                    <td>
+                        <div class="hero-display">
+                            <img src="${heroSrc}" class="hero-img" onerror="this.src='Assets/HeroPick/idle.png'">
+                            <span class="player-name">${p.name || 'Player '+(index+1)}</span>
+                        </div>
+                    </td>
+                    <td><input type="number" value="${p.level}" onchange="updatePlayer('${teamKey}', ${index}, 'level', this.value)"></td>
+                    <td><input type="text" value="${p.KDA}" onchange="updatePlayer('${teamKey}', ${index}, 'KDA', this.value)"></td>
+                    <td><input type="number" value="${p.gold}" onchange="updatePlayer('${teamKey}', ${index}, 'gold', this.value)"></td>
+                    
+                    <td>
+                        <div style="display:flex; justify-content:center;">
+                            <div class="item-slot" onclick="openModal('${teamKey}', ${index}, 'spell')">
+                                <img src="Assets/itemandspell/${p.spell || 'Execute'}.png" onerror="this.style.display='none'">
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="item-container-row">
+                            ${p.itemlist.map((item, iSlot) => `
+                                <div class="item-slot ${!item || item === 'idle' ? 'empty-slot' : ''}" 
+                                     onclick="openModal('${teamKey}', ${index}, 'item', ${iSlot})"
+                                     title="${item}">
+                                    <img src="Assets/itemandspell/${item}.png" onerror="this.style.display='none'">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </td>
+
+                    <td class="mvp-cell">
+                        <input type="checkbox" class="mvp-checkbox" 
+                               id="mvp-${teamKey}-${index}" 
+                               ${currentMvpId === `mvp-${teamKey}-${index}` ? 'checked' : ''}
+                               onchange="handleMvp(this, '${teamKey}', ${index})">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function autoSave() {
+            const statusEl = document.getElementById('save-status');
+            statusEl.textContent = "SAVING...";
+            statusEl.className = "status-saving";
+
+            fetch('/api/matchdata', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(matchData)
+            }).then(r => r.json()).then(d => {
+                statusEl.textContent = "SAVED";
+                statusEl.className = "status-saved";
+                setTimeout(() => {
+                    statusEl.textContent = "READY";
+                    statusEl.classList.remove('status-saved');
+                }, 2000);
+            });
+        }
+
+        function setWinner(side) {
+            matchData.winmatches = side;
+            updateWinnerUI();
+            autoSave();
+        }
+
+        function updateGameInfo(field, value) {
+            matchData[field] = value;
+            autoSave();
+        }
+
+        function updatePlayer(team, index, field, value) {
+            matchData.teamdata[team].playerlist[index][field] = value;
+            if(field === 'gold') calculateTotalGold(team);
+            autoSave();
+        }
+
+        function updateTeamStat(team, field, value) {
+            matchData.teamdata[team][field] = value;
+            autoSave();
+        }
+
+        function calculateTotalGold(teamKey) {
+            let total = 0;
+            matchData.teamdata[teamKey].playerlist.forEach(p => total += parseInt(p.gold) || 0);
+            matchData.teamdata[teamKey].totalgold = total;
+            
+            if(teamKey === 'blueteam') document.getElementById('blue-totalgold').value = total;
+            else document.getElementById('red-totalgold').value = total;
+        }
+
+        function openModal(team, pIndex, type, slotIndex = null) {
+            currentEditContext = { team, pIndex, type, slotIndex };
+            document.getElementById('itemModal').classList.add('show');
+            document.getElementById('itemSearch').value = '';
+            document.getElementById('itemSearch').focus();
+            renderItemGrid('');
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('show');
+            currentEditContext = null;
+        }
+
+        function renderItemGrid(search) {
+            const grid = document.getElementById('itemGrid');
+            grid.innerHTML = '';
+            
+            const clearBtn = document.createElement('div');
+            clearBtn.className = 'grid-item';
+            clearBtn.style.borderColor = 'red';
+            clearBtn.innerHTML = '<span style="font-size:1.5rem; color:red;">&times;</span><span>CLEAR</span>';
+            clearBtn.onclick = () => selectItem('idle');
+            grid.appendChild(clearBtn);
+
+            const filtered = itemList.filter(i => i.toLowerCase().includes(search.toLowerCase()));
+            filtered.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'grid-item';
+                div.innerHTML = `
+                    <img src="Assets/itemandspell/${item}.png" onerror="this.src='Assets/Other/no-image.png'">
+                    <span>${item}</span>
+                `;
+                div.onclick = () => selectItem(item);
+                grid.appendChild(div);
+            });
+        }
+
+        function filterItems(val) { renderItemGrid(val); }
+
+        function selectItem(value) {
+            if(!currentEditContext) return;
+            const { team, pIndex, type, slotIndex } = currentEditContext;
+            if(type === 'spell') matchData.teamdata[team].playerlist[pIndex].spell = value;
+            else if (type === 'item') matchData.teamdata[team].playerlist[pIndex].itemlist[slotIndex] = value;
+            
+            renderAll();
+            closeModal();
+            autoSave();
+        }
+
+        function checkImageExists(url, callback) {
+            const img = new Image();
+            img.onload = () => callback(true);
+            img.onerror = () => callback(false);
+            img.src = url;
+        }
+
+        function handleMvp(checkbox, team, index) {
+            document.querySelectorAll('.mvp-checkbox').forEach(cb => { if(cb !== checkbox) cb.checked = false; });
+
+            if(checkbox.checked) {
+                currentMvpId = checkbox.id;
+                const p = matchData.teamdata[team].playerlist[index];
+                
+                let heroImg = 'Assets/HeroPick/idle.png';
+                if(p.hero && p.hero !== "") heroImg = `Assets/HeroPick/${p.hero}.png`;
+
+                const primaryPlayerImg = `Assets/player/${p.name}.png`;
+                const fallbackPlayerImg = `Assets/player/playertemp.png`;
+
+                checkImageExists(primaryPlayerImg, (exists) => {
+                    const finalPlayerImg = exists ? primaryPlayerImg : fallbackPlayerImg;
+                    const mvpPayload = {
+                        mvp: {
+                            checkboxId: currentMvpId,
+                            side: team === 'blueteam' ? 'blue' : 'red',
+                            nickname: p.name,
+                            heroImg: heroImg,
+                            playerPhoto: finalPlayerImg,
+                            stats: {
+                                LVL: p.level, KDA: p.KDA, GOLD: p.gold, SPELL: p.spell,
+                                'ITEM 1': p.itemlist[0], 'ITEM 2': p.itemlist[1],
+                                'ITEM 3': p.itemlist[2], 'ITEM 4': p.itemlist[3],
+                                'ITEM 5': p.itemlist[4], 'ITEM 6': p.itemlist[5]
+                            }
+                        }
+                    };
+                    fetch('/api/mvp', { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'}, 
+                        body: JSON.stringify(mvpPayload) 
+                    });
+                });
+            } else {
+                currentMvpId = null;
+                fetch('/api/mvp', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ mvp: null }) 
+                });
+            }
+        }
+
+        function handleResetRequest() {
+            const btn = document.getElementById('reset-btn');
+            if (resetStage === 0) {
+                resetStage = 1;
+                btn.textContent = "CONFIRM RESET?";
+                btn.style.backgroundColor = "red";
+                resetTimeout = setTimeout(() => {
+                    resetStage = 0;
+                    btn.textContent = "RESET ITEMS & STATS";
+                    btn.style.backgroundColor = ""; 
+                }, 2000);
+            } else {
+                clearTimeout(resetTimeout);
+                executeReset();
+                resetStage = 0;
+                btn.textContent = "RESET ITEMS & STATS";
+                btn.style.backgroundColor = "";
+            }
+        }
+
+        function executeReset() {
+            matchData.winmatches = "none";
+            ['blueteam', 'redteam'].forEach(team => {
+                matchData.teamdata[team].totalgold = 0;
+                matchData.teamdata[team].turret = 0;
+                matchData.teamdata[team].lord = 0;
+                matchData.teamdata[team].turtle = 0;
+                matchData.teamdata[team].playerlist.forEach(p => {
+                    p.level = 0; p.gold = 0; p.KDA = "0/0/0";
+                    p.itemlist = ["idle","idle","idle","idle","idle","idle"];
+                });
+            });
+            renderAll();
+            autoSave();
+        }
+        
+        document.addEventListener('keydown', (e) => { if(e.key === "Escape") closeModal(); });
+
+    </script>
+</body>
+</html>

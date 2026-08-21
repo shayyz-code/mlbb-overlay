@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Display</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent; /* Pastikan background transparan untuk OBS */
+        }
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #videoPlayer {
+            width: 1920px;
+            height: 1080px;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="videoPlayer">
+            <source id="videoSource" src="" type="video/webm">
+        </video>
+    </div>
+
+    <script>
+        // Database video sederhana
+        const videoDatabase = {
+            'videoPlayer1': 'Assets/notification/turtlespawn.webm',
+            'videoPlayer2': 'Assets/notification/blueturtleslain.webm',
+            'videoPlayer3': 'Assets/notification/redturtleslain.webm',
+            'videoPlayer4': 'Assets/notification/lordspawnn.webm',
+            'videoPlayer5': 'Assets/notification/bluelordslain.webm',
+            'videoPlayer6': 'Assets/notification/redlordslain.webm',
+            'videoPlayer7': 'Assets/notification/firstblood.webm',
+            'videoPlayer8': 'Assets/notification/doublekill.webm',
+            'videoPlayer9': 'Assets/notification/triplekill.webm',
+            'videoPlayer10': 'Assets/notification/maniac.webm',
+            'videoPlayer11': 'Assets/notification/savage.webm',
+            'videoPlayer12': 'Assets/notification/wipeout.webm'
+        };
+
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
+        let isPlaying = false;
+
+        // --- WEBSOCKET CONNECTION ---
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+
+        ws.onopen = () => {
+            console.log('Connected to Server for Notifications');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                
+                // Menerima trigger dari server
+                if (msg.type === 'notification_trigger' && msg.videoId) {
+                    playVideoById(msg.videoId);
+                }
+            } catch (e) {
+                console.error('Error parsing WS message:', e);
+            }
+        };
+
+        function playVideoById(playerId) {
+            // Jika video ID valid dan ada di database
+            if (videoDatabase[playerId]) {
+                
+                // Hentikan video lama jika sedang jalan (opsional, tergantung preferensi mau ditumpuk atau reset)
+                if (isPlaying) {
+                    videoPlayer.pause();
+                    videoPlayer.currentTime = 0;
+                }
+
+                // Setup source baru
+                videoSource.src = videoDatabase[playerId];
+                videoPlayer.load(); // Reload source
+                videoPlayer.style.display = 'block';
+                isPlaying = true;
+
+                // Play video
+                const playPromise = videoPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.error("Auto-play prevented:", error);
+                        isPlaying = false;
+                        videoPlayer.style.display = 'none';
+                    });
+                }
+
+                // Reset when video ends
+                videoPlayer.onended = () => {
+                    isPlaying = false;
+                    videoPlayer.style.display = 'none';
+                    videoSource.src = ''; 
+                };
+            }
+        }
+    </script>
+</body>
+</html>

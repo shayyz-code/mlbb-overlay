@@ -1,0 +1,227 @@
+@font-face {
+    font-family: 'myfonts';
+    src: url('Assets/Font/Renegade\ Pursuit.otf') format('truetype');
+}
+
+/* === VARIABEL SCOREBOARD === */
+:root {
+    /* Main Variables (Fallback) */
+    --blue-primary: #00d2ff; 
+    --red-primary: #ff2a2a;
+    
+    /* Scoreboard Specific (Diisi oleh theme-loader.js) */
+    --sb-teamname-blue: var(--blue-primary);
+    --sb-teamname-red: var(--red-primary);
+    
+    --sb-bg-teamname: #1e1e1e;
+    --sb-bg-logo: #000000;
+    --sb-bg-score: #000000;
+    --sb-bg-combined: #0a0a0a; /* Box 2 & Lower */
+    --sb-bg-box1: #1e1e1e;
+    --sb-bg-secondary: #1e1e1e;
+    
+    --sb-border-bottom: rgba(255, 255, 255, 0.2);
+    --sb-flag-img: none;
+    
+    /* Scoreboard Toggles */
+    --sb-glow-blue: 0 0 10px var(--sb-teamname-blue);
+    --sb-glow-red: 0 0 10px var(--sb-teamname-red);
+    --sb-box-shadow-blue: 0 0 10px rgba(0, 210, 255, 0.2);
+    --sb-box-shadow-red: 0 0 10px rgba(255, 42, 42, 0.2);
+}
+
+body {
+    font-family: myfonts;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.mainbox {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+}
+
+.map {
+    width: 337.5px;
+    height: 337.5px;
+}
+
+.board {
+    width: 1581.5px;
+    height: 126.5px;
+    display: flex;
+}
+
+/* --- BOX 1 & FLAG --- */
+.box1 {
+    width: 104px;
+    height: 119.5px;
+    background: var(--sb-bg-box1); /* Configurable Box 1 */
+    
+}
+
+.flag {
+    width: 104px;
+    height: 119px;
+    background-position: center;
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-image: var(--sb-flag-img); /* Configurable Image */
+}
+
+/* --- MAIN SCOREBOARD --- */
+.mainscoreboard {
+    width: 1037.07px;
+    height: 119.5px;
+    display: flex;
+    flex-direction: column;
+}
+
+.upper {
+    width: 1037.07px;
+    height: 52.63px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- BOX 2 (Color Matched with Lower) --- */
+.box2 {
+    width: 91px;
+    height: 52.63px;
+    padding: 10px;
+    position: absolute;
+    /* Box 2 ikut warna Lower/Combined */
+    background: var(--sb-bg-combined); 
+    border-bottom: 1px solid var(--sb-border-bottom); /* Opsional, agar konsisten */
+}
+
+.box2.blue {
+    /* Indikator kecil tetap warna tim */
+    border-top: 4px solid var(--blue-primary);
+}
+
+.box2.red {
+    border-top: 4px solid var(--red-primary);
+}
+
+.mb { left: -10px; }
+.mr { right: -10px; }
+
+.transparent {
+    width: 855.07px;
+    height: 52.63px;
+}
+
+/* --- LOWER BAR (Color Matched with Box 2) --- */
+.lower {
+    width: 1037.07px;
+    height: 39.87px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sb-bg-combined); /* Configurable Combined */
+}
+
+.lowerwrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 50px;
+}
+
+.red { transform: skewX(-20deg); }
+.blue { transform: skewX(20deg); }
+
+/* --- SCORE BOX --- */
+.score {
+    width: 50px;
+    height: 47.66px;
+    background: var(--sb-bg-score); /* Configurable Score BG */
+    margin: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+
+}
+
+.score.blue {
+    color: var(--sb-teamname-blue); /* Ikut warna teamname/score */
+    text-shadow: var(--sb-glow-blue);
+    border-bottom: 3px solid var(--blue-primary);
+}
+
+.score.red {
+    color: var(--sb-teamname-red);
+    text-shadow: var(--sb-glow-red);
+    border-bottom: 3px solid var(--red-primary);
+}
+
+/* --- TEAM NAME --- */
+.teamname {
+    width: 290px;
+    height: 54.5px;
+    background: var(--sb-bg-teamname); /* Configurable TeamName BG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    text-align: center;
+}
+
+.teamname.blue {
+    border-bottom: 3px solid var(--sb-border-bottom);
+    color: var(--sb-teamname-blue); /* Configurable Text Blue */
+    text-shadow: var(--sb-glow-blue);
+    border-bottom: 3px solid var(--blue-primary);
+}
+
+.teamname.red {
+    border-bottom: 3px solid var(--sb-border-bottom);
+    color: var(--sb-teamname-red); /* Configurable Text Red */
+    text-shadow: var(--sb-glow-red);
+    border-bottom: 3px solid var(--red-primary);
+}
+
+/* --- TEAM LOGO --- */
+.teamlogo {
+    width: 80px;
+    height: 69.39px;
+    background: var(--sb-bg-logo); /* Configurable Logo BG */
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.teamlogo.blue {
+    box-shadow: var(--sb-box-shadow-blue);
+}
+
+.teamlogo.red {
+    box-shadow: var(--sb-box-shadow-red);
+}
+
+.teamlogo img {
+    width: 50px;
+    height: 65px;
+    object-fit: contain;
+}
+
+.space { width: 90px; }
+
+/* --- SECONDARY BOARD --- */
+.secondaryboard {
+    width: 440px;
+    height: 116.31px;
+    background: var(--sb-bg-secondary); /* Configurable Secondary BG */
+
+}
+
+.revblue { transform: skewX(-20deg); }
+.revred { transform: skewX(20deg); }

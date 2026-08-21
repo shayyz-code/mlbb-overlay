@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticker Control</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #1a1a1a;
+        color: white;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .control-panel {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 30px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 500px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-weight: 300;
+        letter-spacing: 2px;
+        color: #00d2ff;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #ccc;
+        font-size: 0.9em;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: white;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #00d2ff;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(45deg, #00d2ff, #0078ff);
+        color: white;
+      }
+
+      .btn-danger {
+        background: linear-gradient(45deg, #ff2a2a, #cc0000);
+        color: white;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        opacity: 0.9;
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .status {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 0.9em;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="control-panel">
+      <h1>Ticker Control</h1>
+
+      <div class="input-group">
+        <label>Scrolling Text</label>
+        <input
+          type="text"
+          id="tickerText"
+          placeholder="Enter text to scroll..."
+        />
+      </div>
+
+      <div class="input-group">
+        <label>Scroll Speed (Seconds per loop)</label>
+        <input type="number" id="tickerSpeed" value="15" min="5" max="60" />
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-danger" id="stopBtn">Hide</button>
+        <button class="btn-primary" id="updateBtn">Update & Show</button>
+      </div>
+
+      <div class="status" id="statusMsg">Ready</div>
+    </div>
+
+    <script>
+      let tickerData = {
+        text: "",
+        speed: 15,
+        isRunning: true,
+      }
+
+      const textInput = document.getElementById("tickerText")
+      const speedInput = document.getElementById("tickerSpeed")
+      const updateBtn = document.getElementById("updateBtn")
+      const stopBtn = document.getElementById("stopBtn")
+      const statusMsg = document.getElementById("statusMsg")
+
+      // Load initial data
+      async function loadData() {
+        try {
+          const res = await fetch("/api/ticker")
+          const data = await res.json()
+          tickerData = data
+          updateUI()
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      function updateUI() {
+        textInput.value = tickerData.text
+        speedInput.value = tickerData.speed
+      }
+
+      async function saveData() {
+        try {
+          statusMsg.textContent = "Saving..."
+          await fetch("/api/ticker", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(tickerData),
+          })
+          statusMsg.textContent = "Saved!"
+          setTimeout(() => (statusMsg.textContent = "Ready"), 2000)
+        } catch (e) {
+          statusMsg.textContent = "Error saving"
+        }
+      }
+
+      updateBtn.onclick = () => {
+        tickerData.text = textInput.value
+        tickerData.speed = parseInt(speedInput.value) || 15
+        tickerData.isRunning = true
+        saveData()
+      }
+
+      stopBtn.onclick = () => {
+        tickerData.isRunning = false
+        saveData()
+      }
+
+      // WebSocket for sync
+      const ws = new WebSocket(`ws://${location.host}`)
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data)
+        if (msg.type === "ticker_update") {
+          tickerData = msg.data
+          updateUI()
+        }
+      }
+
+      loadData()
+    </script>
+  </body>
+</html>

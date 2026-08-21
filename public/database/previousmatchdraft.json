@@ -1,0 +1,80 @@
+{
+  "draftdata": {
+    "timer": "60",
+    "timerRunning": false,
+    "current_phase": 13,
+    "blueside": {
+      "ban": [
+        {
+          "hero": "/Assets/HeroPick/floryn.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/angela.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/aulus.png"
+        },
+        {
+          "hero": ""
+        },
+        {
+          "hero": ""
+        }
+      ],
+      "pick": [
+        {
+          "hero": "/Assets/HeroPick/arlot.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/zilong.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/atlas.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/arlot.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/odette.png"
+        }
+      ]
+    },
+    "redside": {
+      "ban": [
+        {
+          "hero": "/Assets/HeroPick/argus.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/alpha.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/argus.png"
+        },
+        {
+          "hero": ""
+        },
+        {
+          "hero": ""
+        }
+      ],
+      "pick": [
+        {
+          "hero": "/Assets/HeroPick/bane.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/benedetta.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/akai.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/akai.png"
+        },
+        {
+          "hero": "/Assets/HeroPick/estes.png"
+        }
+      ]
+    },
+    "timer_running": true
+  }
+}

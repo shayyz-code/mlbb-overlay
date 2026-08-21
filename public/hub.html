@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MLBB Overlay Command Center</title>
+    <style>
+      /* ================== FONT ASSETS ================== */
+      @font-face {
+        font-family: "Big Noodle Titling";
+        src: url("Assets/Font/big_noodle_titling.ttf") format("truetype");
+      }
+
+      /* ================== VARIABLES ================== */
+      :root {
+        --bg-dark: #09090b;
+        --glass-bg: rgba(24, 24, 27, 0.65);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-highlight: rgba(255, 255, 255, 0.03);
+        --accent-primary: #a855f7;
+        --accent-secondary: #8b5cf6;
+        --accent-glow: rgba(168, 85, 247, 0.5);
+        --text-main: #fafafa;
+        --text-muted: #a1a1aa;
+        --success: #10b981;
+        --font-display: "Big Noodle Titling", sans-serif;
+        --font-body: "Segoe UI", system-ui, sans-serif;
+        --font-code: "Consolas", "Monaco", monospace;
+        --sidebar-width: 280px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        font-family: var(--font-body);
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+      }
+
+      /* ================== BACKGROUND FX ================== */
+      .ambient-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+        background:
+          radial-gradient(
+            circle at 15% 50%,
+            rgba(76, 29, 149, 0.15),
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at 85% 30%,
+            rgba(168, 85, 247, 0.1),
+            transparent 40%
+          );
+      }
+
+      .blob-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.4;
+        animation: float 20s infinite ease-in-out alternate;
+      }
+      .blob-1 {
+        top: -10%;
+        left: -10%;
+        width: 500px;
+        height: 500px;
+        background: var(--accent-primary);
+        animation-duration: 25s;
+      }
+      .blob-2 {
+        bottom: -10%;
+        right: -10%;
+        width: 600px;
+        height: 600px;
+        background: #4c1d95;
+        animation-duration: 30s;
+      }
+      .blob-3 {
+        top: 40%;
+        left: 40%;
+        width: 300px;
+        height: 300px;
+        background: #2563eb;
+        opacity: 0.2;
+        animation-duration: 22s;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translate(0, 0) scale(1);
+        }
+        50% {
+          transform: translate(30px, -50px) scale(1.1);
+        }
+        100% {
+          transform: translate(-20px, 20px) scale(0.9);
+        }
+      }
+
+      /* ================== SIDEBAR ================== */
+      .sidebar {
+        width: var(--sidebar-width);
+        background: var(--glass-bg);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-right: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        z-index: 10;
+      }
+
+      .app-brand {
+        margin-bottom: 30px;
+        text-align: center;
+      }
+      .app-brand img {
+        max-width: 100%;
+        height: auto;
+        filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
+      }
+
+      .status-panel {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 30px;
+      }
+
+      .status-header {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--success);
+        animation: pulse 2s infinite;
+      }
+
+      .ip-address {
+        font-family: var(--font-code);
+        font-size: 0.95rem;
+        color: var(--accent-primary);
+        font-weight: bold;
+        word-break: break-all;
+      }
+
+      .nav-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-grow: 1;
+      }
+
+      .nav-item {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text-muted);
+        padding: 12px 16px;
+        text-align: left;
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        letter-spacing: 1px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-item:hover {
+        color: var(--text-main);
+        background: var(--glass-highlight);
+        padding-left: 20px;
+      }
+
+      .nav-item.active {
+        background: rgba(168, 85, 247, 0.15);
+        color: var(--accent-primary);
+        border-color: rgba(168, 85, 247, 0.3);
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.1);
+      }
+
+      .nav-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--accent-primary);
+        box-shadow: 0 0 10px var(--accent-primary);
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        border-top: 1px solid var(--glass-border);
+        padding-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .btn-visit {
+        background: linear-gradient(
+          90deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        border: none;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: transform 0.2s;
+      }
+      .btn-visit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px var(--accent-glow);
+      }
+
+      /* ================== MAIN CONTENT ================== */
+      .main-content {
+        flex-grow: 1;
+        padding: 40px;
+        overflow-y: auto;
+        position: relative;
+      }
+      .page-header {
+        margin-bottom: 30px;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 15px;
+      }
+
+      .page-title {
+        font-family: var(--font-display);
+        font-size: 3rem;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: -webkit-linear-gradient(#fff, #a1a1aa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .page-subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 5px;
+      }
+
+      /* ================== GRID & CARDS ================== */
+      .tab-pane {
+        display: none;
+        animation: fadeIn 0.4s ease;
+      }
+      .tab-pane.active {
+        display: block;
+      }
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 24px;
+      }
+
+      .tool-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        backdrop-filter: blur(10px);
+      }
+      .tool-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent-primary);
+        box-shadow:
+          0 10px 30px -10px rgba(0, 0, 0, 0.5),
+          0 0 20px rgba(168, 85, 247, 0.2);
+      }
+
+      .card-preview {
+        height: 140px;
+        width: 100%;
+        background: #111;
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid var(--glass-border);
+      }
+      .card-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.7;
+        transition: opacity 0.3s;
+      }
+      .tool-card:hover .card-preview img {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+      .card-title {
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        margin: 0 0 12px 0;
+        color: var(--text-main);
+        letter-spacing: 0.5px;
+      }
+      .card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .action-btn {
+        background: transparent;
+        border: 1px solid var(--glass-border);
+        color: var(--text-muted);
+        padding: 8px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        transition: all 0.2s;
+        font-family: var(--font-body);
+      }
+      .action-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .btn-primary {
+        grid-column: span 2;
+        background: rgba(168, 85, 247, 0.15);
+        border-color: rgba(168, 85, 247, 0.3);
+        color: var(--accent-primary);
+      }
+      .btn-primary:hover {
+        background: var(--accent-primary);
+        color: white;
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+      .btn-copied {
+        background: var(--success) !important;
+        color: #000 !important;
+        border-color: var(--success) !important;
+      }
+
+      /* ================== README STYLES (NEW) ================== */
+      .readme-wrapper {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      /* IP Info Box */
+      .info-panel {
+        background: rgba(0, 0, 0, 0.25);
+        border-left: 4px solid var(--accent-primary);
+        padding: 20px;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 40px;
+        line-height: 1.6;
+      }
+
+      /* License Grid Split */
+      .license-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 50px;
+      }
+
+      .license-col h3 {
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        color: var(--accent-primary);
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 10px;
+      }
+
+      .license-col p {
+        font-size: 0.95rem;
+        color: #d4d4d8;
+        line-height: 1.7;
+        text-align: justify;
+        margin-bottom: 20px;
+      }
+
+      .section-header {
+        font-family: var(--font-display);
+        text-align: center;
+        font-size: 2.5rem;
+        margin: 40px 0 20px 0;
+        letter-spacing: 2px;
+        color: var(--text-main);
+      }
+
+      /* Buttons Grid */
+      .support-grid,
+      .social-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 40px;
+      }
+
+      .social-link {
+        padding: 12px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+        transition: 0.3s;
+        text-align: center;
+        min-width: 140px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        text-transform: uppercase;
+        font-family: var(--font-body);
+      }
+      .social-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+        filter: brightness(1.1);
+      }
+
+      /* Social Colors */
+      .bg-saweria {
+        background: linear-gradient(135deg, #ffc940, #ff9a00);
+        color: #000;
+      }
+      .bg-paypal {
+        background: #00457c;
+      }
+      .bg-sociabuzz {
+        background: #01ce6f;
+      }
+      .bg-kofi {
+        background: #9d6c54;
+      }
+
+      .bg-discord {
+        background: #5865f2;
+      }
+      .bg-insta {
+        background: radial-gradient(
+          circle at 30% 107%,
+          #fdf497 0%,
+          #fdf497 5%,
+          #fd5949 45%,
+          #d6249f 60%,
+          #285aeb 90%
+        );
+      }
+      .bg-tiktok {
+        background: #000;
+        border: 1px solid #333;
+        box-shadow:
+          2px 2px 0 #fe2c55,
+          -2px -2px 0 #25f4ee;
+      }
+      .bg-facebook {
+        background: #1877f2;
+      }
+
+      @media (max-width: 900px) {
+        .license-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        .sidebar {
+          width: 80px;
+          padding: 15px;
+        }
+        .nav-item {
+          font-size: 0;
+          text-align: center;
+          padding: 15px 0;
+        }
+        .nav-item::after {
+          content: attr(data-icon);
+          font-size: 1.5rem;
+          display: block;
+        }
+        .app-brand,
+        .status-panel,
+        .page-subtitle,
+        .sidebar-footer {
+          display: none;
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #52525b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-bg"></div>
+    <div class="blob-container">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="app-brand">
+        <img
+          src="Assets/Other/OVERLAYTOOLLOGO.png"
+          alt="Overlay Tool"
+          style="max-height: 60px; object-fit: contain"
+        />
+      </div>
+
+      <div class="status-panel">
+        <div class="status-header">
+          SERVER STATUS
+          <div class="status-dot"></div>
+        </div>
+        <div class="ip-address" id="sidebarIpDisplay">Loading...</div>
+      </div>
+
+      <nav class="nav-menu">
+        <button
+          class="nav-item active"
+          data-tab-target="#control"
+          data-icon="C"
+        >
+          CONTROL PANEL
+        </button>
+        <button class="nav-item" data-tab-target="#display" data-icon="D">
+          DISPLAY OVERLAY
+        </button>
+        <button class="nav-item" data-tab-target="#utility" data-icon="U">
+          UTILITY OVERLAY
+        </button>
+        <button class="nav-item" data-tab-target="#readme" data-icon="R">
+          INFO & DOCS
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="https://www.falsejl.my.id" target="_blank" class="btn-visit"
+          >Visit FalseJL</a
+        >
+        <div
+          style="
+            text-align: center;
+            font-size: 0.7rem;
+            color: #555;
+            margin-top: 5px;
+          "
+        >
+          v4.1 False MLBB Overlay Tool
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="control" class="tab-pane active">
+        <div class="page-header">
+          <h1 class="page-title">Control Hub</h1>
+          <div class="page-subtitle">
+            Manage game states, scores, and drafting phases.
+          </div>
+        </div>
+        <div class="tools-grid" id="controlGrid"></div>
+      </div>
+
+      <div id="display" class="tab-pane">
+        <div class="page-header">
+          <h1 class="page-title">Display Overlay</h1>
+          <div class="page-subtitle">
+            Main broadcast screens. Use 'Copy Localhost' if on same PC.
+          </div>
+        </div>
+        <div class="tools-grid" id="displayGrid"></div>
+      </div>
+
+      <div id="utility" class="tab-pane">
+        <div class="page-header">
+          <h1 class="page-title">Utility Overlay</h1>
+          <div class="page-subtitle">Supporting widgets and tickers.</div>
+        </div>
+        <div class="tools-grid" id="utilityGrid"></div>
+      </div>
+
+      <div id="readme" class="tab-pane">
+        <div class="page-header">
+          <h1 class="page-title">System Documentation</h1>
+          <div class="page-subtitle">License information and usage guide.</div>
+        </div>
+
+        <div class="readme-wrapper">
+          <div class="info-panel">
+            <h3
+              style="
+                margin-top: 0;
+                font-family: var(--font-display);
+                letter-spacing: 1px;
+                color: var(--accent-primary);
+              "
+            >
+              NETWORK CONFIGURATION
+            </h3>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px"
+            >
+              <div>
+                <strong>When to use 'Copy by IP':</strong><br />
+                If you run this Control Hub on one PC and your streaming
+                software (OBS) is on an <em>entirely different</em> PC. This
+                allows the streaming PC to access the overlay over the network.
+              </div>
+              <div>
+                <strong>When to use 'Copy Localhost':</strong><br />
+                If you run this Control Hub and OBS on the
+                <strong>same</strong> PC. Localhost is faster and more stable
+                for single-PC setups.
+              </div>
+            </div>
+          </div>
+
+          <hr
+            style="
+              border: 0;
+              border-top: 1px solid var(--glass-border);
+              margin: 30px 0;
+            "
+          />
+
+          <div class="license-grid">
+            <div class="license-col">
+              <h3>1. Usage License and Restrictions</h3>
+              <p>
+                This web application, FalseOverlayTool, is provided free of
+                charge. You are granted the right to use this application for
+                both personal and commercial projects. This includes
+                customizing, modifying, or further developing the web app to
+                suit your needs. However, this right does not include the right
+                to resell this web application product. Selling, reselling, or
+                distributing this tool for profit in any form is strictly
+                prohibited and violates its terms of use.
+              </p>
+
+              <h3>2. Reporting Violations</h3>
+              <p>
+                The spirit of this project is to support the community. If you
+                find anyone or any entity selling this web app, please report
+                them to us immediately. Your cooperation is crucial to keeping
+                this tool free for everyone.
+              </p>
+
+              <h3>3. Credit & Support</h3>
+              <p>
+                If you find this tool useful for your tournaments or projects,
+                we would be incredibly grateful for a credit or a shoutout. You
+                can support us by simply placing our logo anywhere in your
+                broadcast or event materials. While this is completely optional,
+                your support means the world to us and helps us continue to
+                develop and maintain this tool. Thank you for your understanding
+                and support!
+              </p>
+            </div>
+
+            <div class="license-col">
+              <h3>1. Lisensi Penggunaan dan Batasan</h3>
+              <p>
+                Aplikasi web FalseOverlayTool ini disediakan secara gratis. Anda
+                diberikan hak untuk menggunakan aplikasi ini untuk proyek
+                pribadi ataupun komersial. Hak ini mencakup kebebasan untuk
+                mengkostumisasi, memodifikasi, atau mengembangkan lebih lanjut
+                webapp ini sesuai dengan kebutuhan Anda. Namun, hak ini tidak
+                termasuk hak untuk menjual kembali produk aplikasi web ini.
+                Menjual, menjual kembali, atau mendistribusikan alat ini untuk
+                mendapatkan keuntungan dalam bentuk apa pun sangat dilarang dan
+                melanggar ketentuan penggunaannya.
+              </p>
+
+              <h3>2. Laporkan Pelanggaran</h3>
+              <p>
+                Semangat dari proyek ini adalah untuk mendukung komunitas. Jika
+                Anda menemukan seseorang atau pihak yang memperjualbelikan
+                webapp ini, tolong segera laporkan kepada kami. Kerja sama Anda
+                sangat penting untuk menjaga agar alat ini tetap gratis untuk
+                semua orang.
+              </p>
+
+              <h3>3. Kredit & Dukungan</h3>
+              <p>
+                Jika teman-teman merasa alat ini bermanfaat untuk turnamen atau
+                proyek kalian, kami akan sangat berterima kasih jika teman-teman
+                berkenan memberikan kredit atau shoutout. Anda dapat mendukung
+                kami hanya dengan mencantumkan logo kami di bagian manapun pada
+                siaran atau materi acara Anda. Hal ini bersifat sepenuhnya
+                opsional, namun dukungan dari Anda sangat berarti bagi kami
+                untuk terus melanjutkan pengembangan dan pemeliharaan alat ini.
+                Terima kasih atas pengertian dan dukungannya!
+              </p>
+            </div>
+          </div>
+
+          <hr
+            style="
+              border: 0;
+              border-top: 1px solid var(--glass-border);
+              margin: 30px 0;
+            "
+          />
+
+          <h2 class="section-header">SUPPORT US!</h2>
+          <div class="support-grid">
+            <a
+              href="https://saweria.co/FalseJL"
+              target="_blank"
+              class="social-link bg-saweria"
+              >SAWERIA</a
+            >
+            <a
+              href="https://www.paypal.me/FalseJL"
+              target="_blank"
+              class="social-link bg-paypal"
+              >PAYPAL</a
+            >
+            <a
+              href="https://sociabuzz.com/falsejl/tribe"
+              target="_blank"
+              class="social-link bg-sociabuzz"
+              >SOCIABUZZ</a
+            >
+            <a
+              href="https://ko-fi.com/falsejl"
+              target="_blank"
+              class="social-link bg-kofi"
+              >KO-FI</a
+            >
+          </div>
+
+          <h2 class="section-header">SOCIAL MEDIA</h2>
+          <div class="social-grid">
+            <a
+              href="https://discord.gg/r4tNswJwbV"
+              target="_blank"
+              class="social-link bg-discord"
+              >Discord</a
+            >
+            <a
+              href="https://www.instagram.com/false.jl/"
+              target="_blank"
+              class="social-link bg-insta"
+              >IG (Personal)</a
+            >
+            <a
+              href="https://www.instagram.com/falsejl.esportsorg/"
+              target="_blank"
+              class="social-link bg-insta"
+              >IG (Esports)</a
+            >
+            <a
+              href="https://www.tiktok.com/@false.jl.co"
+              target="_blank"
+              class="social-link bg-tiktok"
+              >TikTok (Me)</a
+            >
+            <a
+              href="https://www.tiktok.com/@falsejl.esportsorganizer"
+              target="_blank"
+              class="social-link bg-tiktok"
+              >TikTok (Esports)</a
+            >
+            <a
+              href="https://www.facebook.com/profile.php?id=61560855818677"
+              target="_blank"
+              class="social-link bg-facebook"
+              >Facebook</a
+            >
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const serverPort = 3000
+      let serverIP = "localhost"
+
+      // --- DATA FILES ---
+      const controlFiles = [
+        "control.html",
+        "controlban6.html",
+        "drawcontrol.html",
+        "notifcontrol.html",
+        "postgamecontrol.html",
+        "schedulecontrol.html",
+        "costumoverlaycontrol.html",
+        "timerControl.html",
+        "tickerControl.html",
+      ]
+      const displayFiles = [
+        "display.html",
+        "display2.html",
+        "displaycostum.html",
+        "displayban6.html",
+        "display2ban6.html",
+        "displaycostumban6.html",
+        "postdraft.html",
+        "postdraft2.html",
+        "postdraftcostum.html",
+        "scoreboard.html",
+        "scoreboardcostum.html",
+        "previousdraft.html",
+        "notifdisplay.html",
+        "builds.html",
+        "globalban.html",
+      ]
+      const utilityFiles = [
+        "postgame.html",
+        "mvpdisplay.html",
+        "scheduledisplay.html",
+        "drawdisplay.html",
+        "drawdisplay2.html",
+        "drawdisplay3.html",
+        "drawfinal.html",
+        "timerDisplay.html",
+        "tickerDisplay.html",
+      ]
+
+      // --- IP INITIALIZATION ---
+      async function initializeIP() {
+        const ipDisplay = document.getElementById("sidebarIpDisplay")
+        try {
+          const response = await fetch("/serverip.txt")
+          if (!response.ok) throw new Error("Net Err")
+          const ip = (await response.text()).trim()
+          if (ip) {
+            serverIP = ip
+            ipDisplay.textContent = `${serverIP}:${serverPort}`
+            ipDisplay.style.color = "var(--success)"
+          } else {
+            throw new Error("Empty IP")
+          }
+        } catch (error) {
+          console.error("IP Fetch Error:", error)
+          ipDisplay.textContent = `Offline / Localhost`
+          ipDisplay.style.color = "#ef4444"
+        }
+      }
+
+      // --- CARD GENERATOR ---
+      function createCard(filename, type) {
+        const title = filename
+          .replace(".html", "")
+          .replace(/([A-Z])/g, " $1")
+          .replace(/^./, (str) => str.toUpperCase())
+
+        let buttons = ""
+
+        if (type === "control") {
+          buttons = `
+                    <button class="action-btn btn-primary open-btn" data-url="http://${serverIP}:${serverPort}/${filename}">OPEN PANEL</button>
+                    <button class="action-btn copy-btn" data-url="http://${serverIP}:${serverPort}/${filename}">COPY IP</button>
+                `
+        } else {
+          buttons = `
+                    <button class="action-btn btn-primary copy-btn" data-url="http://localhost:${serverPort}/${filename}">LOCALHOST</button>
+                    <button class="action-btn copy-btn" data-url="http://${serverIP}:${serverPort}/${filename}">NET IP</button>
+                `
+        }
+
+        return `
+                <div class="tool-card">
+                    <div class="card-preview">
+                        <img src="Assets/screenshots/${filename}.png" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0iIzIyMiI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIC8+PHRleHQgeD0iNTAiIHk9IjUwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzU1NSI+Tk8gUFJFVklFVzwvdGV4dD48L3N2Zz4='">
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title">${title}</h3>
+                        <div class="card-actions">
+                            ${buttons}
+                        </div>
+                    </div>
+                </div>
+            `
+      }
+
+      // --- FUNGSI COPY YANG AMAN (HTTP & HTTPS) ---
+      function copyTextToClipboard(text) {
+        // Coba cara modern dulu (biasanya gagal di HTTP IP)
+        if (navigator.clipboard && window.isSecureContext) {
+          return navigator.clipboard.writeText(text)
+        } else {
+          // Cara Fallback (Pasti berhasil di HTTP)
+          return new Promise((resolve, reject) => {
+            let textArea = document.createElement("textarea")
+            textArea.value = text
+
+            // Sembunyikan textarea agar tidak terlihat
+            textArea.style.position = "fixed"
+            textArea.style.left = "-9999px"
+            textArea.style.top = "0"
+            document.body.appendChild(textArea)
+
+            textArea.focus()
+            textArea.select()
+
+            try {
+              const successful = document.execCommand("copy")
+              document.body.removeChild(textArea)
+              if (successful) resolve()
+              else reject(new Error("ExecCommand Failed"))
+            } catch (err) {
+              document.body.removeChild(textArea)
+              reject(err)
+            }
+          })
+        }
+      }
+
+      // --- CORE LOGIC ---
+      async function renderApp() {
+        await initializeIP()
+
+        // Render Grids
+        document.getElementById("controlGrid").innerHTML = controlFiles
+          .map((f) => createCard(f, "control"))
+          .join("")
+        document.getElementById("displayGrid").innerHTML = displayFiles
+          .map((f) => createCard(f, "display"))
+          .join("")
+        document.getElementById("utilityGrid").innerHTML = utilityFiles
+          .map((f) => createCard(f, "utility"))
+          .join("")
+
+        // Event Listeners (Delegation)
+        document.body.addEventListener("click", async (e) => {
+          // Tab Switching
+          if (e.target.closest("[data-tab-target]")) {
+            const btn = e.target.closest("[data-tab-target]")
+            const targetId = btn.dataset.tabTarget
+
+            document
+              .querySelectorAll(".nav-item")
+              .forEach((b) => b.classList.remove("active"))
+            btn.classList.add("active")
+
+            document
+              .querySelectorAll(".tab-pane")
+              .forEach((p) => p.classList.remove("active"))
+            document.querySelector(targetId).classList.add("active")
+          }
+
+          // Open Button
+          if (e.target.classList.contains("open-btn")) {
+            window.open(e.target.dataset.url, "_blank")
+          }
+
+          // Copy Button (UPDATED)
+          if (e.target.classList.contains("copy-btn")) {
+            const btn = e.target
+            const url = btn.dataset.url
+
+            try {
+              // Panggil fungsi copy custom kita
+              await copyTextToClipboard(url)
+
+              const originalText = btn.textContent
+              btn.textContent = "COPIED!"
+              btn.classList.add("btn-copied")
+              setTimeout(() => {
+                btn.textContent = originalText
+                btn.classList.remove("btn-copied")
+              }, 1500)
+            } catch (err) {
+              console.error("Copy Error:", err)
+              alert(
+                "Gagal Copy! Browser memblokir akses clipboard. Silakan copy manual: \n" +
+                  url,
+              )
+            }
+          }
+        })
+      }
+
+      renderApp()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer Display - OBS Source</title>
+    <style>
+      @font-face {
+        font-family: "Big Noodle Titling";
+        src: url("Assets/Font/big_noodle_titling.ttf") format("truetype");
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: transparent; /* Important for OBS */
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: "Big Noodle Titling", sans-serif;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      }
+
+      #container {
+        text-align: center;
+        /* Optional: Add a semi-transparent background plate if text is hard to read */
+        /* background: rgba(0,0,0,0.5); */
+        /* padding: 20px; */
+        /* border-radius: 10px; */
+      }
+
+      #label {
+        color: #ffffff;
+        font-size: 48px; /* Adjustable */
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+
+      #timer {
+        background: linear-gradient(to bottom, #ffffff 0%, #ffdab2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 120px; /* Large timer */
+        line-height: 1;
+        letter-spacing: 5px;
+        text-shadow: none;
+        filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
+      }
+
+      /* Optional animation for urgent time */
+      .urgent {
+        color: #ff2a2a !important;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="label">NEXT MATCH STARTS IN</div>
+      <div id="timer">00:00</div>
+    </div>
+
+    <script>
+      let timerData = {
+        isRunning: false,
+        endTime: 0,
+        remaining: 300000,
+        label: "NEXT MATCH STARTS IN",
+      }
+      let interval = null
+
+      const labelEl = document.getElementById("label")
+      const timerEl = document.getElementById("timer")
+
+      async function loadData() {
+        try {
+          const res = await fetch("/api/timer")
+          const data = await res.json()
+          timerData = data
+          updateDisplay()
+          startLocalTimer()
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      function updateDisplay() {
+        labelEl.textContent = timerData.label
+        renderTime()
+      }
+
+      function renderTime() {
+        let ms = timerData.remaining
+        if (timerData.isRunning) {
+          const now = Date.now()
+          ms = Math.max(0, timerData.endTime - now)
+        }
+
+        const totalSeconds = Math.floor(ms / 1000)
+        const m = Math.floor(totalSeconds / 60)
+        const s = totalSeconds % 60
+
+        timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+
+        // Visual feedback when time is low (optional)
+        if (totalSeconds < 60 && totalSeconds > 0 && timerData.isRunning) {
+          timerEl.classList.add("urgent")
+        } else {
+          timerEl.classList.remove("urgent")
+        }
+      }
+
+      function startLocalTimer() {
+        if (interval) clearInterval(interval)
+        interval = setInterval(() => {
+          if (timerData.isRunning) {
+            renderTime()
+            // Don't stop local timer automatically, wait for server sync or let it sit at 00:00
+          }
+        }, 100)
+      }
+
+      const ws = new WebSocket(`ws://${location.host}`)
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data)
+        if (msg.type === "timer_update") {
+          timerData = msg.data
+          updateDisplay()
+        }
+      }
+
+      loadData()
+    </script>
+  </body>
+</html>

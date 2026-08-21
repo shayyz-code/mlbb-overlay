@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Selection Display - Single Box</title>
+    <style>
+        @font-face {
+            font-family: 'Big Noodle Titling';
+            src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+        }
+        :root {
+            --background-color: #0D0F12;
+            --card-color: #1A1C20;
+            --font-color: #EAEAEA;
+            --accent-color: #A855F7;
+            --accent-glow: rgba(168, 85, 247, 0.5);
+            --border-color: #3f3f46;
+            --active-color: #00FF8C;
+            
+            /* -- UKURAN BOX -- */
+            --item-width: 720px;
+            --item-height: 517.5px;
+            --item-gap: 20px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Big Noodle Titling', sans-serif;
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            letter-spacing: 1.5px;
+            overflow: hidden;
+            background-color: transparent; /* Transparan untuk OBS */
+        }
+        
+        .scroll-container {
+            width: var(--item-width);
+            height: var(--item-height);
+            border: 4px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
+            background-color: var(--card-color);
+        }
+
+        .image-reel {
+            display: flex;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            gap: var(--item-gap);
+            padding: 0;
+            will-change: transform;
+        }
+
+        .reel-item {
+            width: var(--item-width);
+            height: var(--item-height);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--card-color);
+            transition: box-shadow 0.5s ease;
+        }
+        
+        .reel-item img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            border-radius: 0;
+        }
+
+        .reel-item.selected {
+            animation: pulse-border 2s infinite ease-in-out;
+            z-index: 10; /* Pastikan di atas saat selected */
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: inset 0 0 20px 5px var(--active-color); }
+            50% { box-shadow: inset 0 0 35px 10px var(--active-color); }
+        }
+
+        .hide { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="scroll-container">
+        <div class="image-reel">
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const reel = document.querySelector('.image-reel');
+            const scrollContainer = document.querySelector('.scroll-container');
+            
+            const maps = [
+                { name: 'Broken Wall', color: '#a0522d' },
+                { name: 'Dangereous Grass', color: '#2e8b57' },
+                { name: 'Expanding River', color: '#4682b4' },
+                { name: 'Flying Cloud', color: '#add8e6' }
+            ];
+            
+            const REEL_REPEAT_COUNT = 30; // Jumlah pengulangan gambar
+            let animationFrameId;
+            let reelItemsData = []; // Menyimpan data item untuk referensi index
+
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
+            function populateReel() {
+                reel.innerHTML = '';
+                reelItemsData = [];
+                for (let i = 0; i < REEL_REPEAT_COUNT; i++) {
+                    // Acak kecuali 3 set terakhir agar hasil akhir terprediksi posisinya
+                    const items = (i < REEL_REPEAT_COUNT - 3) ? shuffle([...maps]) : [...maps];
+                    reelItemsData.push(...items);
+                }
+
+                reelItemsData.forEach((map, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'reel-item';
+                    item.dataset.index = index;
+                    item.dataset.mapName = map.name;
+                    item.style.setProperty('--aura-color', map.color);
+                    item.innerHTML = `<img src="Assets/map/${map.name}.png" alt="${map.name}">`;
+                    reel.appendChild(item);
+                });
+            }
+
+            // Inisialisasi awal
+            populateReel();
+
+            function resetDisplay() {
+                cancelAnimationFrame(animationFrameId);
+                reel.style.transition = 'none';
+                reel.style.transform = `translateX(0px)`;
+                document.querySelectorAll('.reel-item.selected').forEach(c => c.classList.remove('selected'));
+            }
+
+            // --- LOGIKA POSISI ---
+
+            function getTargetParams(targetResult) {
+                // Cari target di bagian akhir reel (set ke-27 dari 30 misalnya)
+                const targetBaseIndex = (REEL_REPEAT_COUNT - 3) * maps.length;
+                
+                // Cari index spesifik item yang namanya cocok mulai dari base index
+                const relativeIndex = reelItemsData.slice(targetBaseIndex).findIndex(m => m.name === targetResult);
+                
+                if (relativeIndex === -1) {
+                    console.error("Target map not found in reel segment:", targetResult);
+                    return null;
+                }
+
+                const finalIndex = targetBaseIndex + relativeIndex;
+                const winnerItem = document.querySelector(`.reel-item[data-index='${finalIndex}']`);
+
+                if (!winnerItem) return null;
+
+                // Hitung posisi tengah container vs tengah item
+                const containerCenter = scrollContainer.offsetWidth / 2;
+                const itemCenter = winnerItem.offsetLeft + (winnerItem.offsetWidth / 2);
+                const targetX = containerCenter - itemCenter;
+
+                return { targetX, winnerItem };
+            }
+
+            // --- FUNGSI ANIMASI ---
+
+            function jumpToResult(targetResult) {
+                resetDisplay();
+                // Kita perlu populate ulang agar jika sebelumnya acak, sekarang fresh
+                populateReel(); 
+
+                const params = getTargetParams(targetResult);
+                if (!params) return;
+
+                // Set posisi instan
+                reel.style.transform = `translateX(${params.targetX}px)`;
+                params.winnerItem.classList.add('selected');
+            }
+
+            function startAnimation(targetResult) {
+                resetDisplay();
+                // Populate ulang untuk memastikan urutan baru yang fresh
+                populateReel();
+
+                const params = getTargetParams(targetResult);
+                if (!params) return;
+
+                const duration = 8000;
+                const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+                let startTime = null;
+
+                function animationLoop(currentTime) {
+                    if (!startTime) startTime = currentTime;
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    const easedProgress = easeOutQuint(progress);
+
+                    const currentX = easedProgress * params.targetX;
+                    reel.style.transform = `translateX(${currentX}px)`;
+
+                    if (progress < 1) {
+                        animationFrameId = requestAnimationFrame(animationLoop);
+                    } else {
+                        reel.style.transform = `translateX(${params.targetX}px)`;
+                        params.winnerItem.classList.add('selected');
+                    }
+                }
+                animationFrameId = requestAnimationFrame(animationLoop);
+            }
+
+            // --- INTEGRASI NODE.JS ---
+
+            // 1. Cek State saat Load (untuk handle Refresh)
+            fetch('/api/mapdraw')
+                .then(res => res.json())
+                .then(data => {
+                    const state = data.drawdata;
+                    if (state.status === 'finished' || state.status === 'drawing') {
+                        // Langsung lompat ke hasil tanpa putar ulang
+                        jumpToResult(state.result);
+                    }
+                })
+                .catch(err => console.error("Error fetching map draw state:", err));
+
+            // 2. WebSocket untuk Live Update
+            const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = `${socketProtocol}//${window.location.host}`;
+            const ws = new WebSocket(socketUrl);
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                
+                if (message.type === 'mapdraw_update') {
+                    const newState = message.data;
+                    
+                    if (newState.status === 'drawing') {
+                        // Mulai animasi putaran
+                        startAnimation(newState.result);
+                    } else if (newState.status === 'idle') {
+                        resetDisplay();
+                        populateReel(); // Acak ulang reel saat reset
+                    }
+                }
+            };
+            
+            ws.onopen = () => console.log('Connected to MapDraw WebSocket (Single Box)');
+        });
+    </script>
+</body>
+</html>

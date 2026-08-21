@@ -1,0 +1,36 @@
+{
+  "fontFile": "Renegade Pursuit.otf",
+  "useCustomFont": false,
+  "images": {
+    "heroPickBg": ""
+  },
+  "colors": {
+    "bluePrimary": "#00d2ff",
+    "blueDark": "#003e4d",
+    "redPrimary": "#ff2a2a",
+    "redDark": "#4d0000",
+    "scoreBlue": "#00d2ff",
+    "scoreRed": "#ff2a2a",
+    "upperBg": "#000000",
+    "lowerBg": "#0a0a0a",
+    "heroPickBg": "#1e1e1e",
+    "logoTeamBg": "#000000",
+    "laneIconColor": "#f00000",
+    "auraBan": "#ff0000",
+    "auraPick": "#ffffff"
+  },
+  "opacity": {
+    "upper": "100",
+    "lower": "100",
+    "heroPick": "100",
+    "logoTeam": "60"
+  },
+  "toggles": {
+    "hideLaneLogo": false,
+    "disableGlow": false
+  },
+  "animations": {
+    "banType": "pulse",
+    "pickType": "pulse"
+  }
+}

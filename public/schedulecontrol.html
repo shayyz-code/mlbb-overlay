@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic Schedule Control</title>
+    <style>
+/* FONT SETUP */
+@font-face {
+    font-family: 'Big Noodle Titling';
+    src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+}
+
+/* PALET WARNA FUTURISTIK */
+:root {
+    --background-color: #0D0F12;
+    --card-color: rgba(26, 28, 32, 0.8);
+    --font-color: #EAEAEA;
+    --font-color-secondary: #a1a1aa;
+    --accent-color: #A855F7;
+    --accent-glow: rgba(168, 85, 247, 0.5);
+    --border-color: #3f3f46;
+    --blue-side-accent: #00AFFF;
+    --red-side-accent: #F94868;
+    --active-color: #00FF8C;
+    --reset-color: #F94868;
+    --blob-color-1: #9333ea;
+    --blob-color-2: #27272A;
+}
+
+/* RESET & PENGATURAN DASAR */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--font-color);
+    padding: 15px; /* Padding dikurangi untuk mobile */
+    min-height: 100vh;
+    position: relative;
+}
+
+/* ANIMASI BLOB BACKGROUND */
+.blob-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.6;
+}
+
+.blob-1 {
+    width: 400px;
+    height: 400px;
+    background-color: var(--blob-color-1);
+    animation: move-blob-1 20s infinite alternate;
+}
+
+.blob-2 {
+    width: 300px;
+    height: 300px;
+    background-color: var(--blob-color-2);
+    animation: move-blob-2 25s infinite alternate;
+}
+
+@keyframes move-blob-1 {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(50vw, 40vh) scale(1.2); }
+}
+@keyframes move-blob-2 {
+    from { transform: translate(80vw, 70vh) scale(1); }
+    to { transform: translate(10vw, 10vh) scale(0.8); }
+}
+
+/* STRUKTUR UTAMA */
+.main-container {
+    width: 100%; /* Lebar penuh di mobile */
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--card-color);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 20px; /* Padding dikurangi untuk mobile */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+h1 {
+    font-family: 'Big Noodle Titling', sans-serif;
+    text-align: center;
+    font-size: 2.5em; /* Ukuran font disesuaikan */
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    color: var(--font-color);
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* TABS */
+.tabs {
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+    gap: 5px; /* Jarak dikurangi */
+    flex-wrap: wrap; /* Memungkinkan tab turun baris jika tidak muat */
+}
+
+.tab-button {
+    font-family: 'Big Noodle Titling', sans-serif;
+    background: none;
+    border: none;
+    padding: 10px 15px; /* Padding disesuaikan */
+    font-size: 1.1em; /* Ukuran font disesuaikan */
+    letter-spacing: 1px;
+    cursor: pointer;
+    color: var(--font-color-secondary);
+    transition: all 0.3s ease;
+    position: relative;
+    flex-shrink: 0; /* Mencegah tombol menyusut */
+}
+
+.tab-button::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 3px;
+    background-color: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.tab-button:hover {
+    color: var(--font-color);
+}
+
+.tab-button.active {
+    color: var(--font-color);
+}
+
+.tab-button.active::after {
+    width: 100%;
+}
+
+/* KONTEN TAB */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.team-container {
+    display: grid;
+    /* Default ke 1 kolom untuk mobile */
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.team {
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    background-color: rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Di mobile, border aksen diletakkan di atas dan bawah */
+.team:first-child {
+    border-top: 3px solid var(--blue-side-accent);
+    border-left: none; /* Hapus border kiri */
+}
+.team:last-child {
+    border-bottom: 3px solid var(--red-side-accent);
+    border-right: none; /* Hapus border kanan */
+}
+
+.team img {
+    width: 80px; /* Ukuran logo disesuaikan */
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 15px;
+    background-color: rgba(0,0,0,0.3);
+    border: 1px dashed var(--border-color);
+}
+
+label {
+    font-size: 0.9em;
+    color: var(--font-color-secondary);
+    margin-bottom: 5px;
+    text-align: left;
+    width: 100%;
+}
+
+/* INPUTS & BUTTONS */
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    font-size: 1em;
+    color: var(--font-color);
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* CUSTOM FILE INPUT */
+.file-upload-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    background: var(--background-color);
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+.file-upload-wrapper:hover {
+    border-color: var(--accent-color);
+}
+input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* CUSTOM CHECKBOX */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.checkbox-container label {
+    width: auto;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 1.1em;
+    color: var(--font-color);
+}
+
+.checkbox-container input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.checkbox-container input[type="checkbox"]:checked {
+    background-color: var(--active-color);
+    border-color: var(--active-color);
+}
+
+.checkbox-container input[type="checkbox"]:checked::after {
+    content: '✔';
+    position: absolute;
+    color: var(--background-color);
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* TOMBOL RESET */
+.schedule-form {
+    text-align: center;
+}
+
+button.reset {
+    font-family: 'Big Noodle Titling', sans-serif;
+    background: transparent;
+    color: var(--reset-color);
+    border: 2px solid var(--reset-color);
+    padding: 12px 30px;
+    cursor: pointer;
+    font-size: 1.1em;
+    letter-spacing: 1px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+button.reset:hover {
+    background: var(--reset-color);
+    color: var(--background-color);
+    box-shadow: 0 0 15px rgba(249, 72, 104, 0.6);
+}
+
+/* LOGO HEADER */
+.overlaytoollogo {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-top: 20px;
+}
+
+.overlaytoollogo img {
+    max-width: 100%; /* Dibuat lebih responsif */
+    height: auto;
+}
+
+
+/* ================================================= */
+/* ============= MEDIA QUERIES (RESPONSIVE) ======== */
+/* ================================================= */
+
+/* Aturan untuk layar yang lebih besar (Tablet & Desktop) */
+@media (min-width: 768px) {
+    body {
+        padding: 30px; /* Kembalikan padding original */
+    }
+
+    .main-container {
+        padding: 25px; /* Kembalikan padding original */
+    }
+    
+    h1 {
+        font-size: 3em; /* Kembalikan ukuran font original */
+    }
+
+    .tabs {
+        flex-wrap: nowrap; /* Mencegah tab turun baris */
+        gap: 10px;
+    }
+
+    .tab-button {
+        padding: 12px 24px;
+        font-size: 1.2em;
+    }
+
+    .team-container {
+        /* Ubah kembali menjadi 2 kolom */
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+    }
+
+    .team img {
+        width: 100px; /* Kembalikan ukuran logo original */
+        height: 100px;
+    }
+
+    /* Kembalikan border aksen ke samping */
+    .team:first-child {
+        border-left: 3px solid var(--blue-side-accent);
+        border-top: 1px solid var(--border-color); /* Reset border atas */
+    }
+    .team:last-child {
+        border-right: 3px solid var(--red-side-accent);
+        border-bottom: 1px solid var(--border-color); /* Reset border bawah */
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="blob-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    
+    <div class="main-container">
+        <h1>Schedule Control</h1>
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(1)">Schedule 1</button>
+            <button class="tab-button" onclick="openTab(2)">Schedule 2</button>
+            <button class="tab-button" onclick="openTab(3)">Schedule 3</button>
+            <button class="tab-button" onclick="openTab(4)">Schedule 4</button>
+        </div>
+
+        <div id="schedule-1" class="tab-content active">
+            <div class="schedule-form">
+                <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="show-1" onchange="saveSchedule(1)"> Show on Display
+                    </label>
+                </div>
+                <div class="team-container">
+                    <div class="team">
+                        <img id="logo1-1" src="Assets/Other/transparent.png" alt="Logo 1">
+                        <label for="logo1-file-1">Team 1 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo1-file-1" accept="image/*" onchange="updateLogo(1, 1)">
+                        </div>
+                        <label for="team1-1">Team Name 1</label>
+                        <input type="text" id="team1-1" oninput="saveSchedule(1)" placeholder="Enter Team Name">
+                        <label for="score1-1">Score 1</label>
+                        <input type="text" id="score1-1" oninput="saveSchedule(1)" placeholder="Enter Score">
+                    </div>
+                    <div class="team">
+                        <img id="logo2-1" src="Assets/Other/transparent.png" alt="Logo 2">
+                        <label for="logo2-file-1">Team 2 Logo</label>
+                        <div class="file-upload-wrapper">
+                             <span>Choose File</span>
+                            <input type="file" id="logo2-file-1" accept="image/*" onchange="updateLogo(1, 2)">
+                        </div>
+                        <label for="team2-1">Team Name 2</label>
+                        <input type="text" id="team2-1" oninput="saveSchedule(1)" placeholder="Enter Team Name">
+                        <label for="score2-1">Score 2</label>
+                        <input type="text" id="score2-1" oninput="saveSchedule(1)" placeholder="Enter Score">
+                    </div>
+                </div>
+                <label for="time-1">Custom Text</label>
+                <input type="text" id="time-1" oninput="saveSchedule(1)" placeholder="e.g., Match Time / Status">
+                <button class="reset" onclick="resetSchedule(1)">Reset Schedule</button>
+            </div>
+        </div>
+
+        <div id="schedule-2" class="tab-content">
+            <div class="schedule-form">
+                 <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="show-2" onchange="saveSchedule(2)"> Show on Display
+                    </label>
+                </div>
+                <div class="team-container">
+                    <div class="team">
+                        <img id="logo1-2" src="Assets/Other/transparent.png" alt="Logo 1">
+                        <label for="logo1-file-2">Team 1 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo1-file-2" accept="image/*" onchange="updateLogo(2, 1)">
+                        </div>
+                        <label for="team1-2">Team Name 1</label>
+                        <input type="text" id="team1-2" oninput="saveSchedule(2)" placeholder="Enter Team Name">
+                        <label for="score1-2">Score 1</label>
+                        <input type="text" id="score1-2" oninput="saveSchedule(2)" placeholder="Enter Score">
+                    </div>
+                    <div class="team">
+                        <img id="logo2-2" src="Assets/Other/transparent.png" alt="Logo 2">
+                        <label for="logo2-file-2">Team 2 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo2-file-2" accept="image/*" onchange="updateLogo(2, 2)">
+                        </div>
+                        <label for="team2-2">Team Name 2</label>
+                        <input type="text" id="team2-2" oninput="saveSchedule(2)" placeholder="Enter Team Name">
+                        <label for="score2-2">Score 2</label>
+                        <input type="text" id="score2-2" oninput="saveSchedule(2)" placeholder="Enter Score">
+                    </div>
+                </div>
+                <label for="time-2">Custom Text</label>
+                <input type="text" id="time-2" oninput="saveSchedule(2)" placeholder="e.g., Match Time / Status">
+                <button class="reset" onclick="resetSchedule(2)">Reset Schedule</button>
+            </div>
+        </div>
+
+        <div id="schedule-3" class="tab-content">
+            <div class="schedule-form">
+                 <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="show-3" onchange="saveSchedule(3)"> Show on Display
+                    </label>
+                </div>
+                <div class="team-container">
+                    <div class="team">
+                        <img id="logo1-3" src="Assets/Other/transparent.png" alt="Logo 1">
+                        <label for="logo1-file-3">Team 1 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo1-file-3" accept="image/*" onchange="updateLogo(3, 1)">
+                        </div>
+                        <label for="team1-3">Team Name 1</label>
+                        <input type="text" id="team1-3" oninput="saveSchedule(3)" placeholder="Enter Team Name">
+                        <label for="score1-3">Score 1</label>
+                        <input type="text" id="score1-3" oninput="saveSchedule(3)" placeholder="Enter Score">
+                    </div>
+                    <div class="team">
+                        <img id="logo2-3" src="Assets/Other/transparent.png" alt="Logo 2">
+                        <label for="logo2-file-3">Team 2 Logo</label>
+                         <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo2-file-3" accept="image/*" onchange="updateLogo(3, 2)">
+                        </div>
+                        <label for="team2-3">Team Name 2</label>
+                        <input type="text" id="team2-3" oninput="saveSchedule(3)" placeholder="Enter Team Name">
+                        <label for="score2-3">Score 2</label>
+                        <input type="text" id="score2-3" oninput="saveSchedule(3)" placeholder="Enter Score">
+                    </div>
+                </div>
+                <label for="time-3">Custom Text</label>
+                <input type="text" id="time-3" oninput="saveSchedule(3)" placeholder="e.g., Match Time / Status">
+                <button class="reset" onclick="resetSchedule(3)">Reset Schedule</button>
+            </div>
+        </div>
+
+        <div id="schedule-4" class="tab-content">
+            <div class="schedule-form">
+                 <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="show-4" onchange="saveSchedule(4)"> Show on Display
+                    </label>
+                </div>
+                <div class="team-container">
+                    <div class="team">
+                        <img id="logo1-4" src="Assets/Other/transparent.png" alt="Logo 1">
+                        <label for="logo1-file-4">Team 1 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo1-file-4" accept="image/*" onchange="updateLogo(4, 1)">
+                        </div>
+                        <label for="team1-4">Team Name 1</label>
+                        <input type="text" id="team1-4" oninput="saveSchedule(4)" placeholder="Enter Team Name">
+                        <label for="score1-4">Score 1</label>
+                        <input type="text" id="score1-4" oninput="saveSchedule(4)" placeholder="Enter Score">
+                    </div>
+                    <div class="team">
+                        <img id="logo2-4" src="Assets/Other/transparent.png" alt="Logo 2">
+                        <label for="logo2-file-4">Team 2 Logo</label>
+                        <div class="file-upload-wrapper">
+                            <span>Choose File</span>
+                            <input type="file" id="logo2-file-4" accept="image/*" onchange="updateLogo(4, 2)">
+                        </div>
+                        <label for="team2-4">Team Name 2</label>
+                        <input type="text" id="team2-4" oninput="saveSchedule(4)" placeholder="Enter Team Name">
+                        <label for="score2-4">Score 2</label>
+                        <input type="text" id="score2-4" oninput="saveSchedule(4)" placeholder="Enter Score">
+                    </div>
+                </div>
+                <label for="time-4">Custom Text</label>
+                <input type="text" id="time-4" oninput="saveSchedule(4)" placeholder="e.g., Match Time / Status">
+                <button class="reset" onclick="resetSchedule(4)">Reset Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlaytoollogo">
+            <img src="Assets/Other/OVERLAYTOOLLOGO.png" alt="">
+        </div>
+    
+<script>
+    const DEFAULT_LOGO = 'Assets/Other/transparent.png';
+    let globalScheduleData = {}; // Menyimpan data lokal sebelum dikirim ke server
+
+    function openTab(scheduleNum) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+        document.getElementById(`schedule-${scheduleNum}`).classList.add('active');
+        document.querySelector(`.tab-button:nth-child(${scheduleNum})`).classList.add('active');
+    }
+
+    // Fungsi membaca file gambar menjadi Base64
+    function updateLogo(scheduleNum, logoNum) {
+        const fileInput = document.getElementById(`logo${logoNum}-file-${scheduleNum}`);
+        const imgElement = document.getElementById(`logo${logoNum}-${scheduleNum}`);
+        const file = fileInput.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgElement.src = e.target.result; // Update preview
+                saveSchedule(scheduleNum); // Simpan ke server
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Fungsi mengambil data dari input dan mengirim ke server
+    async function saveSchedule(scheduleNum) {
+        // Ambil data dari elemen DOM
+        const scheduleData = {
+            show: document.getElementById(`show-${scheduleNum}`).checked,
+            time: document.getElementById(`time-${scheduleNum}`).value,
+            logo1: document.getElementById(`logo1-${scheduleNum}`).src,
+            team1: document.getElementById(`team1-${scheduleNum}`).value,
+            score1: document.getElementById(`score1-${scheduleNum}`).value,
+            logo2: document.getElementById(`logo2-${scheduleNum}`).src,
+            team2: document.getElementById(`team2-${scheduleNum}`).value,
+            score2: document.getElementById(`score2-${scheduleNum}`).value
+        };
+
+        // Update variable global
+        globalScheduleData[scheduleNum.toString()] = scheduleData;
+
+        // Kirim SELURUH data ke server
+        try {
+            await fetch('/api/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalScheduleData)
+            });
+        } catch (error) {
+            console.error('Gagal menyimpan schedule:', error);
+        }
+    }
+
+    async function resetSchedule(scheduleNum) {
+        // Reset DOM elements
+        document.getElementById(`show-${scheduleNum}`).checked = false;
+        document.getElementById(`time-${scheduleNum}`).value = '';
+        document.getElementById(`logo1-${scheduleNum}`).src = DEFAULT_LOGO;
+        document.getElementById(`logo1-file-${scheduleNum}`).value = '';
+        document.getElementById(`team1-${scheduleNum}`).value = '';
+        document.getElementById(`score1-${scheduleNum}`).value = '';
+        document.getElementById(`logo2-${scheduleNum}`).src = DEFAULT_LOGO;
+        document.getElementById(`logo2-file-${scheduleNum}`).value = '';
+        document.getElementById(`team2-${scheduleNum}`).value = '';
+        document.getElementById(`score2-${scheduleNum}`).value = '';
+
+        // Simpan perubahan (kosong) ke server
+        saveSchedule(scheduleNum);
+    }
+
+    // Load data awal saat halaman dibuka
+    async function loadSchedules() {
+        try {
+            const response = await fetch('/api/schedule');
+            globalScheduleData = await response.json();
+
+            // Loop mengisi data ke form
+            for (let i = 1; i <= 4; i++) {
+                const data = globalScheduleData[i.toString()] || {};
+                
+                // Set nilai elemen, gunakan fallback jika kosong
+                document.getElementById(`show-${i}`).checked = data.show || false;
+                document.getElementById(`time-${i}`).value = data.time || '';
+                
+                // Cek jika src ada dan valid, jika tidak pakai default
+                const logo1Src = (data.logo1 && data.logo1.length > 100) ? data.logo1 : DEFAULT_LOGO;
+                document.getElementById(`logo1-${i}`).src = logo1Src;
+                
+                document.getElementById(`team1-${i}`).value = data.team1 || '';
+                document.getElementById(`score1-${i}`).value = data.score1 || '';
+                
+                const logo2Src = (data.logo2 && data.logo2.length > 100) ? data.logo2 : DEFAULT_LOGO;
+                document.getElementById(`logo2-${i}`).src = logo2Src;
+                
+                document.getElementById(`team2-${i}`).value = data.team2 || '';
+                document.getElementById(`score2-${i}`).value = data.score2 || '';
+            }
+        } catch (error) {
+            console.error('Error loading schedules:', error);
+        }
+    }
+
+    window.onload = loadSchedules;
+</script>
+
+    <script src="crosshost.js"></script>
+</body>
+</html>

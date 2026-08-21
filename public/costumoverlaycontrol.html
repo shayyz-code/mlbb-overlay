@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Overlay Control</title>
+    <style>
+        /* --- RESET & VARIABLES --- */
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        :root {
+            --bg-deep: #050507;
+            --bg-glass: rgba(26, 28, 32, 0.75);
+            --bg-header: rgba(5, 5, 7, 0.9);
+            
+            --primary: #A855F7;
+            --primary-dim: rgba(168, 85, 247, 0.2);
+            --accent-cyan: #A855F7;
+            --accent-red: #F94868;
+            
+            --text-main: #FFFFFF;
+            --text-muted: #9CA3AF;
+            
+            --border-light: rgba(255, 255, 255, 0.1);
+            --radius: 12px;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- BACKGROUND ANIMATION (BLOBS) --- */
+        .ambient-light {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.4;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .light-1 { top: -100px; left: -100px; background: var(--primary); }
+        .light-2 { bottom: -100px; right: -100px; background: var(--accent-cyan); animation-delay: -5s; }
+
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(50px) scale(1.1); }
+        }
+
+        /* --- LAYOUT --- */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: 0;
+        }
+
+        /* --- HEADER --- */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 9999;
+            background: var(--bg-header);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0 -20px 25px -20px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.5);
+        }
+
+        .header-content {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, var(--accent-cyan), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+        }
+
+        /* --- GRID SYSTEM --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding-bottom: 50px;
+        }
+
+        /* --- CARDS --- */
+        .card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 18px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        h3 {
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--primary);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* --- CONTROLS --- */
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .control-row label {
+            flex: 1;
+            min-width: 120px;
+            cursor: pointer;
+        }
+
+        .control-row > div, 
+        .control-row > input, 
+        .control-row > select {
+            flex-shrink: 0;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px dashed var(--border-light);
+            margin: 15px 0;
+            opacity: 0.5;
+        }
+
+        /* --- INPUTS --- */
+        input[type="color"] {
+            -webkit-appearance: none;
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            padding: 0;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px var(--border-light);
+            transition: 0.2s;
+        }
+        input[type="color"]:hover { transform: scale(1.1); box-shadow: 0 0 0 2px var(--primary); }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 80px;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        select {
+            background: rgba(18, 18, 20, 0.8);
+            color: var(--text-main);
+            border: 1px solid var(--border-light);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        select:hover, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            background: rgba(30, 30, 35, 0.95);
+        }
+        select option { background-color: #121212; color: #ffffff; padding: 10px; }
+
+        input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            cursor: pointer;
+            display: grid;
+            place-content: center;
+        }
+        input[type="checkbox"]:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        input[type="checkbox"]:checked::before {
+            content: "✓";
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* --- GRADIENT TOOL --- */
+        .grad-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.2);
+            padding: 5px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+        }
+        .grad-settings { display: none; align-items: center; gap: 5px; }
+        .grad-settings.active { display: flex; }
+        .grad-toggle {
+            width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0.3; filter: grayscale(1); transition: 0.3s;
+        }
+        .grad-toggle.active { opacity: 1; filter: none; background: var(--primary-dim); }
+        .angle-input { width: 40px; background: transparent; border: 1px solid var(--border-light); color: var(--accent-cyan); text-align: center; border-radius: 4px; font-size: 11px; padding: 3px 0; }
+
+        /* --- BUTTONS --- */
+        .btn-undo {
+            background: rgba(0, 150, 136, 0.2); color: #4db6ac; border: 1px solid rgba(77, 182, 172, 0.3); padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-transform: uppercase;
+        }
+        .btn-undo:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-file {
+            background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.2s;
+        }
+        .btn-file:hover { background: rgba(255,255,255,0.2); }
+
+        .btn-reset {
+            display: block; width: 100%; max-width: 400px; margin: 40px auto 20px auto; padding: 15px; background: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-reset:hover { background: rgba(220, 38, 38, 0.2); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
+
+        .btn-remove { background: transparent; border: 1px solid var(--border-light); color: #ef4444; border-radius: 4px; cursor: pointer; padding: 4px 8px; }
+        .card[style*="border: 1px solid #00d2ff"] { border-color: var(--accent-cyan) !important; box-shadow: 0 0 15px rgba(0, 210, 255, 0.15); }
+
+        /* --- CUSTOM MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-box {
+            background: #121214;
+            border: 1px solid var(--accent-red);
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%; max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(249, 72, 104, 0.2);
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: scale(1); }
+
+        .modal-box h2 { color: var(--accent-red); margin: 0 0 10px 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .modal-box p { color: #ccc; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
+
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-modal { padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; font-size: 13px; text-transform: uppercase; }
+        .btn-cancel-modal { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-cancel-modal:hover { background: rgba(255,255,255,0.2); }
+        .btn-confirm-modal { background: var(--accent-red); color: #fff; box-shadow: 0 0 15px rgba(249, 72, 104, 0.4); }
+        .btn-confirm-modal:hover { background: #d0304d; }
+        .overlaytoollogo {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-top: 20px;
+}
+.overlaytoollogo img {
+    max-width: 100%;
+    height: auto;
+}
+    </style>
+</head>
+<body>
+
+<div class="ambient-light light-1"></div>
+<div class="ambient-light light-2"></div>
+
+<div id="resetModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>⚠ Warning</h2>
+        <p>Are you sure you want to reset all theme settings to default? This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button class="btn-modal btn-cancel-modal" onclick="closeModal()">Cancel</button>
+            <button class="btn-modal btn-confirm-modal" onclick="executeReset()">Yes, Reset</button>
+        </div>
+    </div>
+</div>
+
+<div class="sticky-header">
+    <div class="header-content">
+        <h1 style="margin:0;">CUSTOM OVERLAY CONTROL</h1>
+        <button id="btnUndo" class="btn-undo" onclick="performUndo()" disabled>↩ UNDO</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="grid-container">
+        <div class="card" style="border: 1px solid #00d2ff;">
+            <h3>🏁 Scoreboard Specific</h3>
+            <div class="control-row">
+                <label>🏳️ Flag Country</label>
+                <div style="display:flex; gap:5px; align-items: center;">
+                    <select id="sbActiveFlag" onchange="updateConfig()"></select>
+                    <button class="btn-file" onclick="document.getElementById('flagUpload').click()">⬆ Upload</button>
+                    <input type="file" id="flagUpload" accept="image/*" style="display:none" onchange="uploadFlag(this)">
+                </div>
+            </div>
+            <hr>
+            <div class="control-row"><label style="color:#00d2ff">Text Blue Team</label> <input type="color" id="sbTeamNameBlue" oninput="updateConfig()"></div>
+            <div class="control-row"><label style="color:#ff2a2a">Text Red Team</label> <input type="color" id="sbTeamNameRed" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Border Bottom</label> <input type="color" id="sbBorderBottom" oninput="updateConfig()"></div>
+            <hr>
+            <div class="control-row">
+                <label>BG: Team Name</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgTeamName">
+                        <input type="color" id="g_col_sbBgTeamName" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgTeamName" min="0" max="360" oninput="syncAngle('sbBgTeamName', this.value)">
+                        <input type="number" id="g_ang_num_sbBgTeamName" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgTeamName', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgTeamName" onclick="toggleGradient('sbBgTeamName')">🎨</div>
+                    <input type="color" id="sbBgTeamName" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgTeamName" style="display:none" onchange="updateUIState('sbBgTeamName'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>BG: Logo Box</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgLogo">
+                        <input type="color" id="g_col_sbBgLogo" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgLogo" min="0" max="360" oninput="syncAngle('sbBgLogo', this.value)">
+                        <input type="number" id="g_ang_num_sbBgLogo" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgLogo', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgLogo" onclick="toggleGradient('sbBgLogo')">🎨</div>
+                    <input type="color" id="sbBgLogo" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgLogo" style="display:none" onchange="updateUIState('sbBgLogo'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>BG: Score Box</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgScore">
+                        <input type="color" id="g_col_sbBgScore" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgScore" min="0" max="360" oninput="syncAngle('sbBgScore', this.value)">
+                        <input type="number" id="g_ang_num_sbBgScore" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgScore', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgScore" onclick="toggleGradient('sbBgScore')">🎨</div>
+                    <input type="color" id="sbBgScore" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgScore" style="display:none" onchange="updateUIState('sbBgScore'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>BG: Combined (Lower)</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgCombined">
+                        <input type="color" id="g_col_sbBgCombined" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgCombined" min="0" max="360" oninput="syncAngle('sbBgCombined', this.value)">
+                        <input type="number" id="g_ang_num_sbBgCombined" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgCombined', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgCombined" onclick="toggleGradient('sbBgCombined')">🎨</div>
+                    <input type="color" id="sbBgCombined" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgCombined" style="display:none" onchange="updateUIState('sbBgCombined'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>BG: Box 1 (Flag)</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgBox1">
+                        <input type="color" id="g_col_sbBgBox1" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgBox1" min="0" max="360" oninput="syncAngle('sbBgBox1', this.value)">
+                        <input type="number" id="g_ang_num_sbBgBox1" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgBox1', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgBox1" onclick="toggleGradient('sbBgBox1')">🎨</div>
+                    <input type="color" id="sbBgBox1" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgBox1" style="display:none" onchange="updateUIState('sbBgBox1'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>BG: Secondary</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_sbBgSecondary">
+                        <input type="color" id="g_col_sbBgSecondary" oninput="updateConfig()">
+                        <input type="range" id="g_ang_sbBgSecondary" min="0" max="360" oninput="syncAngle('sbBgSecondary', this.value)">
+                        <input type="number" id="g_ang_num_sbBgSecondary" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('sbBgSecondary', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_sbBgSecondary" onclick="toggleGradient('sbBgSecondary')">🎨</div>
+                    <input type="color" id="sbBgSecondary" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_sbBgSecondary" style="display:none" onchange="updateUIState('sbBgSecondary'); updateConfig();">
+            </div>
+            <hr>
+            <div class="control-row"><label>Disable Glow (SB)</label> <input type="checkbox" id="sbDisableGlow" onchange="updateConfig()"></div>
+            <div class="control-row"><label>Disable Shadow (SB)</label> <input type="checkbox" id="sbDisableShadow" onchange="updateConfig()"></div>
+        </div>
+
+        <div class="card">
+            <h3>🖼️ Global BG Colors</h3>
+            <div class="control-row">
+                <label>Upper Section</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_upperBg">
+                        <input type="color" id="g_col_upperBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_upperBg" min="0" max="360" oninput="syncAngle('upperBg', this.value)">
+                        <input type="number" id="g_ang_num_upperBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('upperBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_upperBg" onclick="toggleGradient('upperBg')">🎨</div>
+                    <input type="color" id="upperBg" oninput="updateConfig()">
+                    <input type="range" id="opUpper" max="100" title="Opacity" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_upperBg" style="display:none" onchange="updateUIState('upperBg'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>Lower Base</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_lowerBg">
+                        <input type="color" id="g_col_lowerBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_lowerBg" min="0" max="360" oninput="syncAngle('lowerBg', this.value)">
+                        <input type="number" id="g_ang_num_lowerBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('lowerBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_lowerBg" onclick="toggleGradient('lowerBg')">🎨</div>
+                    <input type="color" id="lowerBg" oninput="updateConfig()">
+                    <input type="range" id="opLower" max="100" title="Opacity" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_lowerBg" style="display:none" onchange="updateUIState('lowerBg'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>Lower Mid (HUD)</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_lowerMidBg">
+                        <input type="color" id="g_col_lowerMidBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_lowerMidBg" min="0" max="360" oninput="syncAngle('lowerMidBg', this.value)">
+                        <input type="number" id="g_ang_num_lowerMidBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('lowerMidBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_lowerMidBg" onclick="toggleGradient('lowerMidBg')">🎨</div>
+                    <input type="color" id="lowerMidBg" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_lowerMidBg" style="display:none" onchange="updateUIState('lowerMidBg'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>Hero Card</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_heroPickBg">
+                        <input type="color" id="g_col_heroPickBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_heroPickBg" min="0" max="360" oninput="syncAngle('heroPickBg', this.value)">
+                        <input type="number" id="g_ang_num_heroPickBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('heroPickBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_heroPickBg" onclick="toggleGradient('heroPickBg')">🎨</div>
+                    <input type="color" id="heroPickBg" oninput="updateConfig()">
+                    <input type="range" id="opPick" max="100" title="Opacity" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_heroPickBg" style="display:none" onchange="updateUIState('heroPickBg'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>Team Logo Box</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_logoTeamBg">
+                        <input type="color" id="g_col_logoTeamBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_logoTeamBg" min="0" max="360" oninput="syncAngle('logoTeamBg', this.value)">
+                        <input type="number" id="g_ang_num_logoTeamBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('logoTeamBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_logoTeamBg" onclick="toggleGradient('logoTeamBg')">🎨</div>
+                    <input type="color" id="logoTeamBg" oninput="updateConfig()">
+                    <input type="range" id="opLogo" max="100" title="Opacity" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_logoTeamBg" style="display:none" onchange="updateUIState('logoTeamBg'); updateConfig();">
+            </div>
+            
+            <hr>
+            <div class="control-row">
+                <label>Post Draft BG</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_postDraftBg">
+                        <input type="color" id="g_col_postDraftBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_postDraftBg" min="0" max="360" oninput="syncAngle('postDraftBg', this.value)">
+                        <input type="number" id="g_ang_num_postDraftBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('postDraftBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_postDraftBg" onclick="toggleGradient('postDraftBg')">🎨</div>
+                    <input type="color" id="postDraftBg" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_postDraftBg" style="display:none" onchange="updateUIState('postDraftBg'); updateConfig();">
+            </div>
+            <div class="control-row">
+                <label>Pattern Color</label>
+                <input type="color" id="patternColor" oninput="updateConfig()">
+            </div>
+            </div>
+
+        <div class="card">
+            <h3>⚔️ Global Team Colors</h3>
+            <div class="control-row"><label>Blue Primary</label> <input type="color" id="bluePrimary" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Blue Dark</label> <input type="color" id="blueDark" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Red Primary</label> <input type="color" id="redPrimary" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Red Dark</label> <input type="color" id="redDark" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Global Border</label> <input type="color" id="globalBorder" oninput="updateConfig()"></div>
+        </div>
+
+        <div class="card">
+            <h3>🔢 Score Board (Colors)</h3>
+            <div class="control-row"><label>Blue Score</label> <input type="color" id="scoreBlue" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Red Score</label> <input type="color" id="scoreRed" oninput="updateConfig()"></div>
+        </div>
+
+        <div class="card">
+            <h3>🔤 Typography</h3>
+            <div class="control-row">
+                <label>Custom Font</label>
+                <div class="file-upload">
+                    <button class="btn-file" onclick="document.getElementById('fontInput').click()">📂 Change</button>
+                    <button class="btn-remove" onclick="resetAsset('font')" title="Revert to Default">❌</button>
+                    <input type="file" id="fontInput" accept=".ttf,.otf" style="display:none" onchange="uploadAsset(this, 'font')">
+                </div>
+            </div>
+            <div class="control-row">
+                <label>Size Multiplier</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="range" id="fontScale" min="0.5" max="2.0" step="0.1" oninput="updateConfig(true)">
+                    <span id="fsVal" style="width:25px; display:inline-block; text-align:right; font-size:12px; font-family:monospace;">1.0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📷 Background Images</h3>
+            <div class="control-row">
+                <label>Hero Pick Card</label>
+                <div class="file-upload">
+                    <button class="btn-file" onclick="document.getElementById('imgPick').click()">📂</button>
+                    <button class="btn-remove" onclick="resetAsset('heroPickBg')">❌</button>
+                    <input type="file" id="imgPick" accept="image/*" style="display:none" onchange="uploadAsset(this, 'heroPickBg')">
+                </div>
+            </div>
+            <div class="control-row">
+                <label>Lower Section</label>
+                <div class="file-upload">
+                    <button class="btn-file" onclick="document.getElementById('imgLow').click()">📂</button>
+                    <button class="btn-remove" onclick="resetAsset('lowerBg')">❌</button>
+                    <input type="file" id="imgLow" accept="image/*" style="display:none" onchange="uploadAsset(this, 'lowerBg')">
+                </div>
+            </div>
+            <div class="control-row">
+                <label>Lower Mid (HUD)</label>
+                <div class="file-upload">
+                    <button class="btn-file" onclick="document.getElementById('imgMid').click()">📂</button>
+                    <button class="btn-remove" onclick="resetAsset('lowerMidBg')">❌</button>
+                    <input type="file" id="imgMid" accept="image/*" style="display:none" onchange="uploadAsset(this, 'lowerMidBg')">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⏳ Timer Gradient</h3>
+            <div class="control-row"><label>Left (Blue Side)</label> <input type="color" id="timerBlue" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Center</label> <input type="color" id="timerMid" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Right (Red Side)</label> <input type="color" id="timerRed" oninput="updateConfig()"></div>
+        </div>
+
+        <div class="card">
+            <h3>🛠️ Components</h3>
+            <div class="control-row">
+                <label>Nickname BG</label>
+                <div class="grad-wrapper">
+                    <div class="grad-settings" id="g_set_playerNameBg">
+                        <input type="color" id="g_col_playerNameBg" oninput="updateConfig()">
+                        <input type="range" id="g_ang_playerNameBg" min="0" max="360" oninput="syncAngle('playerNameBg', this.value)">
+                        <input type="number" id="g_ang_num_playerNameBg" class="angle-input" min="0" max="360" value="90" oninput="syncAngle('playerNameBg', this.value)">
+                    </div>
+                    <div class="grad-toggle" id="g_btn_playerNameBg" onclick="toggleGradient('playerNameBg')">🎨</div>
+                    <input type="color" id="playerNameBg" oninput="updateConfig()">
+                </div>
+                <input type="checkbox" id="g_en_playerNameBg" style="display:none" onchange="updateUIState('playerNameBg'); updateConfig();">
+            </div>
+            <div class="control-row"><label>Nickname Text</label> <input type="color" id="playerName" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Lane Logo BG</label> <input type="color" id="laneLogoBg" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Lane Border</label> <input type="color" id="laneLogoBorder" oninput="updateConfig()"></div>
+            <div class="control-row">
+                <label>Lane Icon</label>
+                <select id="laneIconType" onchange="updateConfig()">
+                    <option value="white">White (Invert)</option>
+                    <option value="black">Black (Original)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⚙️ Toggles & Anim</h3>
+            <div class="control-row"><label>Disable Box Shadows</label> <input type="checkbox" id="disableBoxShadow" onchange="updateConfig()"></div>
+            <div class="control-row"><label>Disable Glow</label> <input type="checkbox" id="disableGlow" onchange="updateConfig()"></div>
+            <div class="control-row"><label>Hide Lane Logo</label> <input type="checkbox" id="hideLaneLogo" onchange="updateConfig()"></div>
+            <div class="control-row"><label>Hide Pattern (PD)</label> <input type="checkbox" id="hidePattern" onchange="updateConfig()"></div>
+            <div class="control-row"><label>Hide BG (PD)</label> <input type="checkbox" id="hidePostDraftBg" onchange="updateConfig()"></div>
+            <hr>
+            <div class="control-row"><label>Hero Anim</label> 
+                <select id="heroAnim" onchange="updateConfig()">
+                    <option value="fade">Fade</option><option value="slide">Slide</option>
+                    <option value="reveal">Reveal</option><option value="creative">Snap</option>
+                </select>
+            </div>
+            <div class="control-row"><label>Box Anim</label> 
+                <select id="banAnim" onchange="updateConfig()">
+                    <option value="pulse">Pulse</option><option value="flash">Flash</option><option value="static">Static</option>
+                </select>
+            </div>
+            <div class="control-row"><label>Pick Anim</label> <input type="color" id="auraPick" oninput="updateConfig()"></div>
+            <div class="control-row"><label>Ban Anim</label> <input type="color" id="auraBan" oninput="updateConfig()"></div>
+        </div>
+    </div>
+    <button class="btn-reset" onclick="resetTheme()">⚠ RESET ALL SETTINGS</button>
+</div>
+
+<div class="overlaytoollogo">
+    <img src="Assets/Other/OVERLAYTOOLLOGO.png" alt="">
+</div>
+
+<script>
+    let config = {}; 
+    let undoStack = [];
+    const MAX_UNDO = 10;
+
+    const bgListGlobal = [
+        { key: 'upperBg', hasOp: 'opUpper' },
+        { key: 'lowerBg', hasOp: 'opLower' },
+        { key: 'lowerMidBg', hasOp: null },
+        { key: 'heroPickBg', hasOp: 'opPick' },
+        { key: 'logoTeamBg', hasOp: 'opLogo' },
+        { key: 'playerNameBg', hasOp: null },
+        { key: 'postDraftBg', hasOp: null } // FITUR BARU: POST DRAFT BG
+    ];
+
+    const bgListScoreboard = [
+        { key: 'sbBgTeamName' },
+        { key: 'sbBgLogo' },
+        { key: 'sbBgScore' },
+        { key: 'sbBgCombined' },
+        { key: 'sbBgBox1' },
+        { key: 'sbBgSecondary' }
+    ];
+
+    const colorKeys = [
+        'bluePrimary','blueDark','redPrimary','redDark','scoreBlue','scoreRed',
+        'globalBorder','playerName','laneLogoBg','laneLogoBorder',
+        'timerBlue','timerMid','timerRed','auraPick','auraBan',
+        'sbTeamNameBlue','sbTeamNameRed','sbBorderBottom',
+        'patternColor' // FITUR BARU: PATTERN COLOR
+    ];
+
+    const toggleKeys = [
+        'disableBoxShadow','disableGlow','hideLaneLogo','hidePattern','hidePostDraftBg',
+        'sbDisableGlow','sbDisableShadow'
+    ];
+
+    function toggleGradient(key) {
+        const ck = document.getElementById(`g_en_${key}`);
+        if(ck) { ck.checked = !ck.checked; updateUIState(key); updateConfig(); }
+    }
+
+    function updateUIState(key) {
+        const ck = document.getElementById(`g_en_${key}`);
+        const setBox = document.getElementById(`g_set_${key}`);
+        const btn = document.getElementById(`g_btn_${key}`);
+        if(ck && ck.checked) {
+            if(setBox) setBox.classList.add('active');
+            if(btn) btn.classList.add('active');
+        } else {
+            if(setBox) setBox.classList.remove('active');
+            if(btn) btn.classList.remove('active');
+        }
+    }
+
+    function syncAngle(key, val) {
+        const slider = document.getElementById(`g_ang_${key}`);
+        const number = document.getElementById(`g_ang_num_${key}`);
+        if(slider) slider.value = val;
+        if(number) number.value = val;
+        updateConfig();
+    }
+
+    async function loadConfig() {
+        try {
+            const res = await fetch('/api/theme');
+            config = await res.json();
+            await loadFlagList();
+            renderUI();
+        } catch(e){}
+    }
+
+    async function loadFlagList() {
+        try {
+            const res = await fetch('/api/flags');
+            const flags = await res.json();
+            const sel = document.getElementById('sbActiveFlag');
+            sel.innerHTML = '<option value="">None</option>';
+            flags.forEach(f => { const opt = document.createElement('option'); opt.value = f; opt.innerText = f; sel.appendChild(opt); });
+        } catch(e){}
+    }
+
+    async function uploadFlag(input) {
+        if(!input.files[0]) return;
+        const fd = new FormData(); fd.append('file', input.files[0]);
+        await fetch('/api/upload-flag', { method: 'POST', body: fd });
+        await loadFlagList();
+        if(!config.scoreboard) config.scoreboard = {}; 
+        config.scoreboard.activeFlag = input.files[0].name;
+        updateConfig();
+    }
+
+    async function uploadAsset(input, tf) {
+        if(!input.files[0]) return;
+        const fd = new FormData(); fd.append('file', input.files[0]); fd.append('targetField', tf);
+        await fetch('/api/upload-asset', { method: 'POST', body: fd });
+        loadConfig();
+    }
+    
+    async function resetAsset(type) {
+        if(confirm("Reset asset?")) {
+             if(type==='font') { config.fontFile='Renegade Pursuit.otf'; config.useCustomFont=false; }
+             else { if(config.images) config.images[type] = ""; }
+             await fetch('/api/theme', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config) });
+             loadConfig();
+        }
+    }
+
+    function renderUI() {
+        const c = config.colors || {};
+        const t = config.toggles || {};
+        const o = config.opacity || {};
+        const sb = config.scoreboard || {};
+        const g = config.gradients || {};
+        const a = config.animations || {};
+
+        colorKeys.forEach(k => {
+            const el = document.getElementById(k);
+            if(el) {
+                let val = c[k];
+                if(k.startsWith('sb')) {
+                    const rawKey = k.replace('sb','').charAt(0).toLowerCase() + k.replace('sb','').slice(1);
+                    val = sb[rawKey];
+                }
+                el.value = val || '#000000';
+            }
+        });
+
+        toggleKeys.forEach(k => {
+            const el = document.getElementById(k);
+            if(el) {
+                let val = t[k];
+                if(k.startsWith('sb')) {
+                    const rawKey = k.replace('sb','').charAt(0).toLowerCase() + k.replace('sb','').slice(1);
+                    val = sb[rawKey];
+                }
+                el.checked = val || false;
+            }
+        });
+
+        const allGrads = [...bgListGlobal, ...bgListScoreboard];
+        allGrads.forEach(item => {
+            const key = item.key;
+            let primVal = '#000000';
+            if(key.startsWith('sb')) {
+                 const sbKey = key.replace('sbBg','bg'); 
+                 primVal = sb[sbKey] || '#000000';
+            } else {
+                primVal = c[key] || '#000000';
+            }
+            if(document.getElementById(key)) document.getElementById(key).value = primVal;
+
+            if(item.hasOp && document.getElementById(item.hasOp)) {
+                let opKey = item.hasOp.replace('op','').toLowerCase();
+                if(item.hasOp === 'opPick') opKey = 'heroPick';
+                if(item.hasOp === 'opLogo') opKey = 'logoTeam';
+                document.getElementById(item.hasOp).value = o[opKey] || 100;
+            }
+
+            const gradData = g[key] || { enabled: false, colorB: '#000000', angle: 90 };
+            
+            if(document.getElementById(`g_en_${key}`)) document.getElementById(`g_en_${key}`).checked = gradData.enabled;
+            if(document.getElementById(`g_col_${key}`)) document.getElementById(`g_col_${key}`).value = gradData.colorB;
+            if(document.getElementById(`g_ang_${key}`)) document.getElementById(`g_ang_${key}`).value = gradData.angle;
+            if(document.getElementById(`g_ang_num_${key}`)) document.getElementById(`g_ang_num_${key}`).value = gradData.angle;
+            
+            updateUIState(key);
+        });
+
+        if(document.getElementById('fontScale')) document.getElementById('fontScale').value = config.fontSizeMultiplier || 1.0;
+        if(document.getElementById('fsVal')) document.getElementById('fsVal').innerText = config.fontSizeMultiplier || 1.0;
+        if(document.getElementById('laneIconType')) document.getElementById('laneIconType').value = c.laneIconType || 'white';
+        if(document.getElementById('sbActiveFlag')) document.getElementById('sbActiveFlag').value = sb.activeFlag || '';
+        
+        if(document.getElementById('heroAnim')) document.getElementById('heroAnim').value = a.heroAnim || 'fade';
+        if(document.getElementById('banAnim')) document.getElementById('banAnim').value = a.banType || 'pulse';
+    }
+
+    async function updateConfig(isFontScale) {
+        saveState();
+        if(isFontScale) document.getElementById('fsVal').innerText = document.getElementById('fontScale').value;
+
+        let newColors = config.colors || {};
+        let newSb = config.scoreboard || {};
+        let newGrads = {};
+        let newOp = config.opacity || {};
+        let newToggles = config.toggles || {};
+        let newAnim = config.animations || {};
+
+        const allGrads = [...bgListGlobal, ...bgListScoreboard];
+        allGrads.forEach(item => {
+            const key = item.key;
+            const val = document.getElementById(key).value;
+            if(key.startsWith('sb')) {
+                 const sbKey = key.replace('sbBg','bg');
+                 newSb[sbKey] = val;
+            } else {
+                newColors[key] = val;
+            }
+
+            if(item.hasOp) {
+                 let opKey = item.hasOp.replace('op','').toLowerCase();
+                 if(item.hasOp === 'opPick') opKey = 'heroPick';
+                 if(item.hasOp === 'opLogo') opKey = 'logoTeam';
+                 newOp[opKey] = document.getElementById(item.hasOp).value;
+            }
+
+            newGrads[key] = {
+                enabled: document.getElementById(`g_en_${key}`).checked,
+                colorB: document.getElementById(`g_col_${key}`).value,
+                angle: document.getElementById(`g_ang_${key}`).value 
+            };
+        });
+
+        colorKeys.forEach(k => {
+             const el = document.getElementById(k);
+             if(el) {
+                 if(k.startsWith('sb')) {
+                     const rawKey = k.replace('sb','').charAt(0).toLowerCase() + k.replace('sb','').slice(1);
+                     newSb[rawKey] = el.value;
+                 } else {
+                     newColors[k] = el.value;
+                 }
+             }
+        });
+
+        toggleKeys.forEach(k => {
+             const el = document.getElementById(k);
+             if(el) {
+                 if(k.startsWith('sb')) {
+                     const rawKey = k.replace('sb','').charAt(0).toLowerCase() + k.replace('sb','').slice(1);
+                     newSb[rawKey] = el.checked;
+                 } else {
+                     newToggles[k] = el.checked;
+                 }
+             }
+        });
+
+        if(document.getElementById('fontScale')) config.fontSizeMultiplier = document.getElementById('fontScale').value;
+        if(document.getElementById('laneIconType')) newColors.laneIconType = document.getElementById('laneIconType').value;
+        if(document.getElementById('sbActiveFlag')) newSb.activeFlag = document.getElementById('sbActiveFlag').value;
+        if(document.getElementById('heroAnim')) newAnim.heroAnim = document.getElementById('heroAnim').value;
+        if(document.getElementById('banAnim')) newAnim.banType = document.getElementById('banAnim').value;
+
+        config.colors = newColors;
+        config.scoreboard = newSb;
+        config.gradients = newGrads;
+        config.opacity = newOp;
+        config.toggles = newToggles;
+        config.animations = newAnim;
+
+        await fetch('/api/theme', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config) });
+    }
+
+    // --- MODAL POPUP LOGIC ---
+    function resetTheme() {
+        document.getElementById('resetModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('resetModal').classList.remove('active');
+    }
+
+    async function executeReset() {
+        closeModal();
+        await fetch('/api/theme-reset', { method: 'POST' });
+        loadConfig();
+    }
+    // -------------------------
+
+    function saveState() {
+        if (undoStack.length >= MAX_UNDO) undoStack.shift();
+        undoStack.push(JSON.parse(JSON.stringify(config)));
+        document.getElementById('btnUndo').disabled = false;
+    }
+    async function performUndo() {
+        if (undoStack.length === 0) return;
+        config = undoStack.pop();
+        renderUI();
+        if(undoStack.length===0) document.getElementById('btnUndo').disabled = true;
+        await fetch('/api/theme', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config) });
+    }
+
+    loadConfig();
+</script>
+</body>
+</html>

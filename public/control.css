@@ -1,0 +1,422 @@
+/* ================== FONT KUSTOM & TEMA ================== */
+@font-face {
+    font-family: "Big Noodle Titling";
+    src: url("Assets/Font/big_noodle_titling.ttf") format("truetype");
+}
+
+:root {
+    --background-color: #0d0f12; /* Hitam Futuristik */
+    --card-color: #1a1c20; /* Abu-abu Gelap untuk Kartu */
+    --font-color: #eaeaea; /* Teks Putih Keabuan */
+    --accent-color: #a855f7; /* Aksen Ungu */
+    --accent-glow: rgba(168, 85, 247, 0.5);
+    --border-color: #3f3f46; /* Border Gelap */
+
+    --blue-side-accent: #00afff; /* Biru Neon */
+    --red-side-accent: #f94868; /* Merah Neon */
+
+    /* Warna Status Tombol Aktif */
+    --active-color: #00ff8c; /* Hijau Neon untuk status aktif */
+
+    /* Warna untuk Blob Animation */
+    --blob-color-1: #9333ea;
+    --blob-color-2: #27272a;
+}
+
+/* ================== BLOB ANIMATION BACKGROUND ================== */
+body {
+    position: relative;
+    overflow-x: hidden;
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+}
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+}
+@keyframes moveBlob {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(50vw, 30vh) scale(1.3);
+    }
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.3;
+}
+.blob:nth-child(1) {
+    width: 500px;
+    height: 500px;
+    top: -150px;
+    left: -150px;
+    background: var(--blob-color-1);
+    animation: moveBlob 25s infinite alternate ease-in-out;
+}
+.blob:nth-child(2) {
+    width: 400px;
+    height: 400px;
+    bottom: -100px;
+    right: -200px;
+    background: var(--blob-color-2);
+    animation: moveBlob 20s infinite alternate-reverse ease-in-out;
+}
+.blob:nth-child(3) {
+    display: none;
+}
+
+/* ================== GAYA KONTEN UTAMA ================== */
+.content-wrapper {
+    position: relative;
+    z-index: 1;
+    font-family: "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    scale: 0.7;
+    width: 100%;
+    box-sizing: border-box;
+    color: var(--font-color);
+}
+
+h1,
+h2 {
+    font-family: "Big Noodle Titling", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--font-color);
+    text-align: center;
+    margin: 20px 0;
+    font-weight: normal;
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* ================== LAYOUT UTAMA ================== */
+.mainbox {
+    width: 2500px;
+    background: rgba(26, 28, 32, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    display: flex;
+    gap: 20px;
+}
+
+.blueside,
+.redside {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    padding: 15px;
+    border-radius: 0;
+    gap: 15px;
+    border: 1px solid;
+}
+.blueside {
+    border-color: var(--blue-side-accent);
+    box-shadow: 0 0 20px rgba(0, 175, 255, 0.2);
+}
+.redside {
+    border-color: var(--red-side-accent);
+    box-shadow: 0 0 20px rgba(249, 72, 104, 0.2);
+}
+
+.section-card {
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+/* Mengatur lebar kolom */
+.section-card:nth-of-type(1) {
+    flex: 1.5;
+}
+.section-card:nth-of-type(2) {
+    flex: 1.5;
+} /* Diperlebar sedikit untuk Lane */
+.section-card:nth-of-type(3) {
+    flex: 1;
+}
+.section-card:nth-of-type(4) {
+    flex: 1;
+}
+
+.namebox {
+    font-family: "Big Noodle Titling", sans-serif;
+    text-align: center;
+    font-size: 1.4em;
+    letter-spacing: 1.2px;
+    margin-bottom: 5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--font-color);
+}
+
+.name-box {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ================== INPUT & DROPDOWN STYLING ================== */
+
+/* Style Dasar untuk Input Teks, Dropdown Hero, dan Dropdown Lane */
+input[type="text"],
+.dropdown,
+.lane-dropdown {
+    height: 38px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    background: var(--background-color);
+    color: var(--font-color);
+    font-family: "Segoe UI", sans-serif; /* Pastikan font konsisten */
+    font-size: 1em;
+    transition: all 0.2s ease;
+}
+
+/* Pengaturan Flex di dalam Name Box agar Input Nama & Lane muat */
+.name-box input[type="text"] {
+    flex: 1; /* Input nama mengambil sisa ruang yang ada (Auto Expand) */
+    width: auto;
+}
+
+/* Spesifik untuk Dropdown Lane */
+.lane-dropdown {
+    width: 90px; /* Lebar tetap agar rapi */
+    cursor: pointer;
+    text-transform: capitalize; /* "gold" menjadi "Gold" */
+}
+
+/* --- [PENTING] Styling Opsi Dropdown (Menu yang terbuka) --- */
+.lane-dropdown option {
+    background-color: var(--card-color); /* Background Gelap (#1A1C20) */
+    color: var(--font-color); /* Teks Putih (#EAEAEA) */
+    font-family:
+        "Big Noodle Titling", sans-serif; /* Font sama dengan aplikasi */
+    padding: 10px;
+    font-size: 1em;
+}
+
+/* Efek Hover & Focus (Glow Ungu) */
+input[type="text"]:hover,
+.dropdown:hover,
+.lane-dropdown:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+input[type="text"]:focus,
+.dropdown:focus,
+.lane-dropdown:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow:
+        0 0 15px var(--accent-glow),
+        inset 0 0 10px rgba(168, 85, 247, 0.1);
+}
+
+/* Dropdown Hero (Custom Div) */
+.dropdown-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.dropdown-items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background: var(--card-color);
+    border: 1px solid var(--accent-color);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+.dropdown-items div {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.dropdown-items div:hover {
+    background-color: var(--accent-color);
+}
+
+/* ================== BUTTON STYLING ================== */
+button {
+    padding: 10px 20px;
+    font-family: "Segoe UI", sans-serif;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+}
+button:hover {
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+button:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+/* Tombol Kontrol Atas & Bawah */
+.button,
+.timercontrol {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+}
+.button > button,
+.timercontrol > button {
+    background-color: var(--card-color);
+    color: var(--font-color);
+    border: 1px solid var(--border-color);
+}
+.button > button:hover,
+.timercontrol > button:hover {
+    background-color: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
+}
+
+/* Tombol Swap Kecil */
+.name-box button {
+    padding: 0;
+    width: 50px;
+    height: 38px; /* Samakan tinggi dengan input */
+    font-size: 0.8em;
+}
+
+/* Status Tombol Aktif (Untuk Swap) */
+.swap-active {
+    background-color: var(--active-color) !important;
+    border-color: var(--active-color) !important;
+    color: var(--background-color) !important;
+    box-shadow: 0 0 15px rgba(0, 255, 140, 0.5);
+}
+
+/* --- Disabled State --- */
+input[type="text"]:disabled,
+.dropdown:disabled,
+.lane-dropdown:disabled,
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    background-image: repeating-linear-gradient(
+        45deg,
+        var(--card-color),
+        var(--card-color) 4px,
+        #222 4px,
+        #222 5px
+    );
+}
+
+/* --- File Upload & Lainnya --- */
+.container {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0;
+    text-align: center;
+}
+.container label {
+    font-size: 0.9em;
+    margin-bottom: 8px;
+    display: block;
+    color: var(--font-color);
+    opacity: 0.7;
+}
+input[type="file"] {
+    width: 100%;
+}
+input[type="file"]::file-selector-button {
+    padding: 6px 12px;
+    border-radius: 0;
+    border: 1px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+input[type="file"]::file-selector-button:hover {
+    background-color: var(--accent-color);
+    color: #fff;
+}
+.hide {
+    display: none;
+}
+
+/* LOGO HEADER */
+.overlaytoollogo {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-top: 20px;
+}
+.overlaytoollogo img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ================== RESPONSIVE MOBILE ================== */
+@media (max-width: 992px) {
+    .content-wrapper {
+        scale: 1;
+        padding: 15px;
+        width: 100%;
+    }
+    .mainbox {
+        width: 100%;
+        flex-direction: column;
+        gap: 25px;
+    }
+    .blueside,
+    .redside {
+        flex-direction: column;
+    }
+    h1 {
+        font-size: 2.5em;
+    }
+    h2 {
+        font-size: 1.8em;
+    }
+    .section-card {
+        flex: 1 !important;
+    }
+
+    .blob {
+        filter: blur(80px);
+        opacity: 0.25;
+    }
+    .blob:nth-child(1) {
+        width: 350px;
+        height: 350px;
+    }
+    .blob:nth-child(2) {
+        width: 300px;
+        height: 300px;
+    }
+}

@@ -1,0 +1,212 @@
+@font-face {
+            font-family: 'myfonts';
+            src: url('Assets/Font/Renegade\ Pursuit.otf') format('truetype');
+        }
+
+        :root {
+            --font-scale: 1.0;
+            
+            /* --- COLORS (Base) --- */
+            --blue-primary: #00d2ff; --blue-dark: #003e4d;
+            --red-primary: #ff2a2a; --red-dark: #4d0000;
+            --score-blue: #00d2ff; --score-red: #ff2a2a;
+            
+            /* --- BACKGROUNDS (Gradient Supported) --- */
+            --upper-bg: #000000; 
+            --lower-bg: #0a0a0a; 
+            --lowermid-bg: #111111;
+            --heropick-bg: #1e1e1e; 
+            --logoteam-bg: #000000;
+            --player-bg: #000000; 
+            --lane-bg: rgba(0,0,0,0.8); 
+
+            /* --- IMAGES --- */
+            --heropick-img: none;
+            --lower-img: none; 
+            --lowermid-img: none; 
+
+            /* --- TIMER --- */
+            --timer-blue: #00d2ff; --timer-mid: #ffffff; --timer-red: #ff2a2a;
+
+            /* --- COMPONENTS --- */
+            --player-text-color: #ffffff; --phase-text-color: #ffffff;
+            --lane-border-color: #ffffff;
+            
+            /* --- ANIMATION COLORS (Fix for Complaint #4) --- */
+            --aura-ban-color: #ff0000; 
+            --aura-pick-color: #ffffff;
+            
+            /* --- LOGIC VARIABLES (Fix for Complaint #1 & #3) --- */
+            --lane-filter: invert(0); /* Controlled by JS */
+            --lane-display: flex;     /* Controlled by JS */
+            
+            /* --- GLOW --- */
+            --text-glow-blue: 0 0 10px var(--blue-primary);
+            --text-glow-red: 0 0 10px var(--red-primary);
+            --box-glow-blue: 0 0 15px var(--blue-primary);
+            --box-glow-red: 0 0 15px var(--red-primary);
+            --score-shadow: 0 0 15px;
+
+            /* --- ANIM NAMES --- */
+            --anim-ban-name: pulseBan; 
+            --anim-pick-name: pulsePick;
+            
+            /* --- EXTRAS V3.5 --- */
+            --global-border: rgba(255, 255, 255, 0.2);
+            --main-box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'myfonts', sans-serif; margin: 0; background: #000; color: #fff; overflow: hidden; }
+
+        .mainbox { 
+            width: 1920px; height: 400px; display: flex; flex-direction: column; position: relative; 
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 100%); 
+        }
+
+        /* UPPER SECTION */
+        .upper { 
+            width: 100%; height: 100px; display: flex; align-items: center; justify-content: center; 
+            background: var(--upper-bg); /* Gradient Support */
+            position: relative; z-index: 10; 
+        }
+
+        .upperside { width: 725px; height: 100%; display: flex; align-items: center; }
+        .left-side { justify-content: flex-start; }
+        .right-side { justify-content: flex-end; }
+        .uppermid { width: 470px; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+        .tour-title { font-size: calc(30px * var(--font-scale)); letter-spacing: 5px; margin: 0; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .tourlogo { width: 100%; height: 100%; display: flex; align-items: center; justify-content:center; }
+        .tourlogo img { width: auto; height: 90%; object-fit: contain; }
+
+        .teamnameholder1 { width: 300px; padding: 0 20px; font-size: calc(28px * var(--font-scale)); font-weight: bold; text-align: left; color: var(--blue-primary); text-shadow: var(--text-glow-blue); text-transform: uppercase; }
+        .teamnameholder2 { width: 300px; padding: 0 20px; font-size: calc(28px * var(--font-scale)); font-weight: bold; text-align: right; color: var(--red-primary); text-shadow: var(--text-glow-red); text-transform: uppercase; }
+
+        /* BAN SECTION */
+        .banholder { width: 400px; height: 100%; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .banhero { width: 60px; height: 60px; position: relative; overflow: hidden; border: 1px solid var(--global-border); background: rgba(0,0,0,0.5); }
+        .slashblue { transform: skewX(-10deg); }
+        .slashred { transform: skewX(10deg); }
+        .banhero img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transform: scale(1.2) skewX(10deg); }
+        .slashred img { transform: scale(1.2) skewX(-10deg); }
+
+        /* TIMER BAR */
+        .bar-strip { width: 100%; height: 20px; background: #000; display: flex; justify-content: center; align-items: center; border-top: 1px solid #333; border-bottom: 1px solid #333; z-index: 50; }
+        .timerbar-container { width: 100%; height: 10px; background: #111; padding: 2px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 0 10px #000; }
+        .timerbar { width: 100%; height: 100%; display: flex; justify-content: center; }
+        #timer-bar { 
+            width: 100%; height: 100%; 
+            background: linear-gradient(90deg, var(--timer-blue) 0%, var(--timer-mid) 50%, var(--timer-red) 100%); 
+            box-shadow: 0 0 10px rgba(255,255,255,0.8); 
+        }
+
+        /* LOWER SECTION */
+        .lower { 
+            width: 100%; height: 280px; display: flex; 
+            background: var(--lower-img), var(--lower-bg); /* Layering Image over Gradient */
+            background-size: cover, auto; 
+            background-position: center;
+            background-repeat: no-repeat;
+            box-shadow: var(--main-box-shadow);
+        }
+        .lowerside { width: 725px; height: 100%; display: flex; flex-direction: column; }
+        .pickholder { width: 100%; height: 230px; display: flex; align-items: center; justify-content: center; gap: 2px; }
+
+        /* HERO PICK CARD */
+        .heropick { 
+            width: 140px; height: 100%; position: relative; overflow: hidden; 
+            background: var(--heropick-img), var(--heropick-bg); /* Layering */
+            background-size: cover, auto;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-right: 1px solid var(--global-border); 
+            box-shadow: var(--main-box-shadow); 
+            transition: all 0.3s ease; z-index: 0; 
+        }
+
+        .left-side-picks .heropick { border-bottom: 4px solid var(--blue-primary); }
+        .right-side-picks .heropick { border-bottom: 4px solid var(--red-primary); }
+        .heropick img { width: 100%; height: 100%; object-fit: cover; scale: 1.1; }
+
+        /* LANE LOGO (FIXED) */
+        .lanelogo { 
+            position: absolute; top: 5px; left: 5px; width: 30px; height: 30px; 
+            background: var(--lane-bg); 
+            border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 15; 
+            border: 1px solid var(--lane-border-color); box-shadow: 0 0 5px rgba(0,0,0,0.5); 
+            display: var(--lane-display, flex); /* FIX HIDE */
+        }
+        .left-side-picks .lanelogo { border-color: var(--blue-primary); }
+        .right-side-picks .lanelogo { border-color: var(--red-primary); }
+        .lanelogo img { 
+            width: 20px; height: 20px; 
+            filter: var(--lane-filter, none); /* FIX INVERT */
+        }
+
+        .nickholder { width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; }
+        .playername { 
+            width: 140px; height: 40px; display: flex; align-items: center; justify-content: center; 
+            font-size: calc(14px * var(--font-scale)); 
+            color: var(--player-text-color); 
+            background: var(--player-bg); 
+            margin: 0 1px; border-top: 1px solid var(--global-border);
+        }
+
+        /* LOWER MID (HUD) */
+        .lowermid { 
+            width: 470px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; 
+            background: var(--lowermid-img), var(--lowermid-bg); /* Layering */
+            background-size: cover, auto;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-left: 2px solid var(--global-border); 
+            border-right: 2px solid var(--global-border); 
+            box-shadow: var(--main-box-shadow); 
+            z-index: 5; 
+        }
+        .scoreboard-row { width: 100%; display: flex; align-items: center; justify-content: space-around; padding: 10px 0; }
+
+        .teamlogo { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: var(--logoteam-bg); border: 3px solid; }
+        .blue-team-logo { border-color: var(--blue-primary); box-shadow: var(--box-glow-blue); }
+        .red-team-logo { border-color: var(--red-primary); box-shadow: var(--box-glow-red); }
+        .teamlogo img { width: 65px; height: 65px; object-fit: contain; }
+
+        .score { font-family: 'myfonts', sans-serif; font-size: calc(80px * var(--font-scale)); line-height: 1; margin-top: 10px; width: 50px; display: flex; align-items: center; justify-content: center; }
+        .blue-score { color: var(--score-blue); text-shadow: var(--score-shadow) var(--score-blue); }
+        .red-score { color: var(--score-red); text-shadow: var(--score-shadow) var(--score-red); }
+        .vs-label { font-family: 'myfonts', sans-serif; font-size: calc(24px * var(--font-scale)); margin-top: 10px; text-shadow: 0 0 5px #000; color: var(--phase-text-color); }
+
+        .timer-section { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 5px; }
+        .countdown-wrapper { display: flex; justify-content: center; }
+        .countdown { font-family: 'myfonts', sans-serif; font-size: calc(40px * var(--font-scale)); color: var(--phase-text-color); text-shadow: 0 0 10px rgba(255,255,255,0.5); background: transparent; border: none; padding: 0; }
+        .arrow { display: none; }
+
+        /* ANIMATION BOXES */
+        .box { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 10; opacity: 0; transition: opacity 0.6s; }
+        
+        /* FIX COLOR ANIMATIONS */
+        .active-ban { 
+            opacity: 1; 
+            box-shadow: inset 0 0 0 3px var(--aura-ban-color); 
+            background: rgba(255, 0, 0, 0.2); 
+            animation: var(--anim-ban-name) 3s infinite ease-in-out; 
+        }
+        .active-pick { 
+            opacity: 1; 
+            box-shadow: inset 0 0 20px 5px var(--aura-pick-color); 
+            background: rgba(255, 255, 255, 0.1); 
+            animation: var(--anim-pick-name) 3s infinite ease-in-out; 
+        }
+
+        @keyframes pulseBan { 0%, 100% { box-shadow: inset 0 0 0 2px rgba(255,0,0,0.5); } 50% { box-shadow: inset 0 0 0 5px var(--aura-ban-color); } }
+        @keyframes flashBan { 0%, 100% { box-shadow: inset 0 0 0 3px var(--aura-ban-color); opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes pulsePick { 0%, 100% { box-shadow: inset 0 0 10px 1px rgba(255,255,255,0.5); } 50% { box-shadow: inset 0 0 25px 5px var(--aura-pick-color); } }
+        @keyframes flashPick { 0%, 100% { box-shadow: inset 0 0 20px 5px var(--aura-pick-color); opacity: 1; } 50% { opacity: 0.5; } }
+
+        .image-box { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index:20;}
+        .image-box img { width: 100%; height: 100%; opacity: 0; transform: scale(1.15); transition: opacity 1.2s ease-out, transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); }
+        .image-box.show img { opacity: 1; transform: scale(1); }
+        .hide { display: none; }
+        .name-image-box { position: absolute; bottom: -50px; width: 100%; text-align: center; color: white; text-shadow: 1px 1px 2px black; font-weight: bold; scale: 1.7; z-index: 10; }
+        .audiob{ margin-top: 100px}

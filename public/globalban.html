@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Ban / Match History</title>
+    <style>
+        @font-face {
+            font-family: 'myfonts';
+            src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
+
+        :root {
+            --bg-body: #0e0e0e;
+            --bg-hero: #111111;
+        }
+
+        body {
+            font-family: 'myfonts', sans-serif;
+            color: #ffffff;
+            margin: 0;
+            background-color: transparent; 
+            height: 1080px; width: 1920px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 50px;
+        }
+
+        .history-container {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+            align-items: center;
+            max-height: 1000px;
+        }
+
+        .match-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            width: 1900px;
+            height: 90px;
+            background: transparent; 
+            border: none;
+            box-shadow: none;
+            opacity: 0;
+            animation: fadeIn 0.8s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .game-number { display: none; }
+
+        .team-side {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            padding: 10px 15px;
+            height: 65px;
+        }
+
+        .hero-box {
+            width: 60px;
+            height: 60px;
+            background-color: var(--bg-hero);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-box img {
+            width: 60px;
+            object-fit: contain;
+            margin-top: 80px;
+            scale: 2;
+            filter: grayscale();
+        }
+
+        .team-side.right {
+            flex-direction: row-reverse;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="history-container" id="historyContainer"></div>
+
+    <script>
+        // --- KONFIGURASI ---
+        const MAX_MATCHES = 7;
+        const CHECK_INTERVAL = 3000; // Cek file setiap 3000ms (3 detik)
+        
+        const CONTAINER = document.getElementById('historyContainer');
+        const URL_TEAM_DATA = 'database/matchdatateam.json';
+        const PATH_SAVED_MATCH = 'database/savedmatch/matchdata'; 
+
+        // Variable untuk menyimpan "State" data terakhir
+        let lastKnownDataHash = ""; 
+
+        // Fungsi Utama yang dijalankan berulang
+        async function checkUpdates() {
+            try {
+                // 1. Ambil Data Tim Utama (Anchor)
+                const teamRes = await fetch(`${URL_TEAM_DATA}?t=${Date.now()}`); // Tambah timestamp agar tidak cache browser
+                if (!teamRes.ok) throw new Error("Gagal load matchdatateam.json");
+                const teamJson = await teamRes.json();
+                
+                const anchorLeft = teamJson.teamdata.blueteam.teamname;
+                const anchorRight = teamJson.teamdata.redteam.teamname;
+
+                // 2. Kumpulkan semua data match yang ada
+                let currentMatchesData = [];
+
+                for (let i = 1; i <= MAX_MATCHES; i++) {
+                    const matchUrl = `${PATH_SAVED_MATCH}${i}.json?t=${Date.now()}`;
+                    try {
+                        const matchRes = await fetch(matchUrl);
+                        if (!matchRes.ok) break; // Stop jika file urutan tsb belum ada
+                        
+                        const matchJson = await matchRes.json();
+                        
+                        // Proses Logic Swap & Validasi disini (bukan saat render)
+                        const processedMatch = processMatchLogic(i, matchJson, anchorLeft, anchorRight);
+                        
+                        if (processedMatch) {
+                            currentMatchesData.push(processedMatch);
+                        }
+
+                    } catch (err) {
+                        break; // Stop loop jika error fetch file urutan
+                    }
+                }
+
+                // 3. Buat "Sidik Jari" (Hash/String) dari data saat ini
+                // Kita gabungkan info Tim Utama + Data Match untuk pengecekan
+                const currentDataFingerprint = JSON.stringify({
+                    aL: anchorLeft,
+                    aR: anchorRight,
+                    matches: currentMatchesData
+                });
+
+                // 4. BANDINGKAN: Apakah data baru beda dengan data lama?
+                if (currentDataFingerprint !== lastKnownDataHash) {
+                    console.log("[UPDATE] Perubahan data terdeteksi. Merender ulang...");
+                    
+                    // Update state terakhir
+                    lastKnownDataHash = currentDataFingerprint;
+                    
+                    // Render Ulang Tampilan
+                    renderView(currentMatchesData);
+                } else {
+                    // console.log("[IDLE] Data tidak berubah.");
+                }
+
+            } catch (error) {
+                console.error("Error in checkUpdates:", error);
+            }
+        }
+
+        // Logic menentukan posisi kiri/kanan berdasarkan anchor team
+        function processMatchLogic(matchNum, json, anchorLeft, anchorRight) {
+            const blueTeamData = json.teamdata.blueteam;
+            const redTeamData = json.teamdata.redteam;
+            const matchBlueName = blueTeamData.teamname;
+            const matchRedName = redTeamData.teamname;
+
+            let leftPicks = [];
+            let rightPicks = [];
+
+            if (matchBlueName === anchorLeft && matchRedName === anchorRight) {
+                leftPicks = blueTeamData.playerlist;
+                rightPicks = redTeamData.playerlist;
+                return { id: matchNum, left: leftPicks, right: rightPicks };
+            }
+            else if (matchRedName === anchorLeft && matchBlueName === anchorRight) {
+                leftPicks = redTeamData.playerlist;  
+                rightPicks = blueTeamData.playerlist; 
+                return { id: matchNum, left: leftPicks, right: rightPicks };
+            }
+            
+            // Jika nama tim tidak cocok sama sekali dengan anchor, abaikan (return null)
+            return null;
+        }
+
+        // Fungsi Render HTML (Hanya dipanggil jika data berubah)
+        function renderView(matchesList) {
+            CONTAINER.innerHTML = ''; // Bersihkan container
+
+            matchesList.forEach(match => {
+                createMatchRow(match.id, match.left, match.right);
+            });
+        }
+
+        function createMatchRow(gameNum, leftList, rightList) {
+            const row = document.createElement('div');
+            row.className = 'match-row';
+
+            // --- KIRI ---
+            const leftDiv = document.createElement('div');
+            leftDiv.className = 'team-side left';
+            leftList.forEach(player => {
+                leftDiv.appendChild(createHeroBox(player.hero));
+            });
+
+            // --- TENGAH ---
+            const centerDiv = document.createElement('div');
+            centerDiv.className = 'game-number';
+            centerDiv.textContent = `G${gameNum}`;
+
+            // --- KANAN ---
+            const rightDiv = document.createElement('div');
+            rightDiv.className = 'team-side right';
+            rightList.forEach(player => {
+                rightDiv.appendChild(createHeroBox(player.hero));
+            });
+
+            row.appendChild(leftDiv);
+            row.appendChild(centerDiv);
+            row.appendChild(rightDiv);
+
+            CONTAINER.appendChild(row);
+        }
+
+        function createHeroBox(heroName) {
+            const box = document.createElement('div');
+            box.className = 'hero-box';
+            
+            if (heroName) {
+                const img = document.createElement('img');
+                img.src = `Assets/HeroPick/${heroName}.png`;
+                img.onerror = function() { this.style.display = 'none'; };
+                box.appendChild(img);
+            }
+            return box;
+        }
+
+        // Jalankan sekali saat load
+        checkUpdates();
+
+        // Jalankan interval (Polling)
+        setInterval(checkUpdates, CHECK_INTERVAL);
+
+    </script>
+</body>
+</html>

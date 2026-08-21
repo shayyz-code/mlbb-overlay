@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previous Draft Analyzer</title>
+    <style>
+        /* === BAGIAN INI MEMASTIKAN FONT DAN ANIMASI TETAP ADA === */
+        @font-face {
+            font-family: 'myfonts';
+            src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
+
+        :root {
+            --bg-body: #1a1a1a;
+            --bg-hero: #3a3a3a;
+            
+            /* WARNA STATUS - HEX CODES */
+            --c-repick: #00ff00;    /* Hijau Neon */
+            --c-stolen: #FFD700;    /* Emas */
+            --c-banned: #ff0000;    /* Merah */
+            --c-rebanned: #8B0000;  /* Merah Gelap */
+            --c-picked-now: #21c460; /* Hijau Soft */
+        }
+
+        body {
+            font-family: 'myfonts', sans-serif;
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 1080px; width: 1920px;
+            overflow: hidden;
+        }
+
+        .mainbox {
+            width: 1920px; height: 1080px;
+            display: flex; align-items: center; justify-content: center;
+            /* Transisi jika layout berubah */
+            transition: all 0.5s ease;
+        }
+
+        .ghostbox { width: 950px; } 
+
+        /* CONTAINER TIM */
+        .camp {
+            width: 460px; height: 180px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            background-color: var(--bg-body);
+            border-radius: 0; 
+            color: #fff;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .picks, .bans {
+            display: flex; gap: 10px;
+            align-items: center; justify-content: center;
+        }
+
+        .picks { height: 100px; margin-bottom: 5px; }
+        .bans { height: 50px; margin-top: 5px; opacity: 0.9; }
+
+        /* === KARTU HERO (CONTAINER) === */
+        .hero {
+            width: 80px; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background-color: var(--bg-hero);
+            position: relative; 
+            overflow: hidden;
+            border-radius: 0;
+            
+            /* INI KUNCI ANIMASINYA: Transition pada Border & Shadow */
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        
+        .bans .hero { width: 80px; }
+
+        /* === GAMBAR HERO === */
+        .hero img {
+            width: 100%; height: auto; object-fit: cover; margin-top: 30px ;
+            transform: scale(1.15);
+            
+            /* INI KUNCI ANIMASI GAMBAR: Transition Transform & Filter */
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.8s ease;
+        }
+
+        .bans .hero img { filter: grayscale(100%); }
+        .picks .hero img { filter: grayscale(0%); }
+
+        /* === ANIMASI LABEL STATUS === */
+        .hero::after {
+            content: attr(data-label);
+            position: absolute; bottom: 0; width: 100%;
+            padding: 4px 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            font-size: 10px; 
+            text-align: center; letter-spacing: 2px;
+            font-weight: normal; 
+            
+            /* Posisi awal di bawah (sembunyi) */
+            transform: translateY(101%);
+            opacity: 0;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.6s ease;
+        }
+
+        /* === STATE CLASSES (LOGIKA VISUAL) === */
+        
+        /* 1. RE-PICKED */
+        .hero.re-picked { 
+            border-color: var(--c-repick); 
+            box-shadow: 0 0 20px var(--c-repick);
+            z-index: 10;
+        }
+        .hero.re-picked::after { 
+            background-color: var(--c-repick); color: #000; 
+            transform: translateY(0); opacity: 1;
+        }
+        .hero.re-picked img { transform: scale(1.35); } /* Zoom in */
+
+        /* 2. STOLEN */
+        .hero.stolen { 
+            border-color: var(--c-stolen); 
+            box-shadow: 0 0 20px var(--c-stolen);
+            z-index: 10;
+        }
+        .hero.stolen::after { 
+            background-color: var(--c-stolen); color: #000; 
+            transform: translateY(0); opacity: 1;
+        }
+        .hero.stolen img { transform: scale(1.35); }
+
+        /* 3. BANNED NOW */
+        .hero.banned-now { 
+            border-color: var(--c-banned); 
+            box-shadow: 0 0 25px var(--c-banned);
+            z-index: 10;
+        }
+        .hero.banned-now::after { 
+            background-color: var(--c-banned); color: #fff; 
+            transform: translateY(0); opacity: 1;
+        }
+        .hero.banned-now img { 
+            filter: grayscale(100%) !important; 
+            transform: scale(1.0); /* Zoom out / Recoil */
+            opacity: 0.7;
+        }
+
+        /* 4. RE-BANNED */
+        .hero.re-banned { 
+            border-color: var(--c-rebanned); 
+            box-shadow: 0 0 20px var(--c-rebanned);
+            z-index: 10;
+        }
+        .hero.re-banned::after { 
+            background-color: var(--c-rebanned); color: #fff; 
+            transform: translateY(0); opacity: 1;
+        }
+
+        /* 5. PICKED NOW */
+        .hero.picked-now { 
+            border-color: var(--c-picked-now); 
+            box-shadow: 0 0 25px var(--c-picked-now);
+            z-index: 10;
+        }
+        .hero.picked-now::after { 
+            background-color: var(--c-picked-now); color: #000; 
+            transform: translateY(0); opacity: 1;
+        }
+        .bans .hero.picked-now img { 
+            filter: grayscale(0%) !important; 
+            transform: scale(1.35) !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="mainbox">
+        <div class="camp" id="camp1">
+            <div class="picks" id="camp1-picks"></div>
+            <div class="bans" id="camp1-bans"></div>
+        </div>
+
+        <div class="ghostbox"></div>
+
+        <div class="camp" id="camp2">
+            <div class="picks" id="camp2-picks"></div>
+            <div class="bans" id="camp2-bans"></div>
+        </div>
+    </div>
+
+<script>
+    // --- STATE ---
+    let previousDraft = null;    
+    let currentDraft = null;     
+    
+    // Timer/Interval
+    let fetchInterval = null; 
+
+    const ws = new WebSocket('ws://' + window.location.host);
+
+    // --- HELPER: PARSE JSON STRUCTURE ---
+    function parseTeamData(teamObj) {
+        if (!teamObj) return { name: '', picks: [], bans: [] };
+        
+        const picks = [];
+        const bans = [];
+
+        if (teamObj.playerlist) {
+            teamObj.playerlist.forEach(p => {
+                picks.push({ hero: p.hero || null }); 
+                bans.push({ hero: p.banhero || null });
+            });
+        }
+
+        return {
+            name: teamObj.teamname || '',
+            picks: picks,
+            bans: bans
+        };
+    }
+
+    // --- FETCH DATA ---
+    async function fetchAllData() {
+        try {
+            const prevRes = await fetch('/database/savedmatch/matchdata1.json');
+            const prevJson = await prevRes.json();
+            previousDraft = prevJson; 
+
+            await fetchCurrentData();
+        } catch (e) { console.error("Error fetching previous data:", e); }
+    }
+
+    async function fetchCurrentData() {
+        try {
+            const res = await fetch('/database/matchdatateam.json');
+            const json = await res.json();
+            currentDraft = json; 
+            
+            renderAll();
+        } catch (e) { console.error("Error fetching current draft:", e); }
+    }
+
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'draftdata_update') { fetchCurrentData(); }
+        else if (msg.type === 'analyzer_update') { fetchAllData(); }
+    };
+
+    setInterval(() => {
+        fetchCurrentData();
+    }, 1000); 
+
+    // --- CORE LOGIC ---
+    function renderAll() {
+        if (!currentDraft || !previousDraft) return;
+
+        const curBlueRaw = currentDraft.teamdata.blueteam;
+        const curRedRaw = currentDraft.teamdata.redteam;
+        
+        const curBlueData = parseTeamData(curBlueRaw);
+        const curRedData = parseTeamData(curRedRaw);
+
+        const prevBlueRaw = previousDraft.teamdata.blueteam;
+        const prevRedRaw = previousDraft.teamdata.redteam;
+
+        const prevBlueData = parseTeamData(prevBlueRaw);
+        const prevRedData = parseTeamData(prevRedRaw);
+
+        // LOGIKA SWAP SISI
+        let displayLeft = prevBlueData; 
+        let displayRight = prevRedData; 
+
+        if (
+            (prevBlueData.name === curRedData.name && prevBlueData.name !== "") || 
+            (prevRedData.name === curBlueData.name && prevRedData.name !== "")
+        ) {
+            displayLeft = prevRedData;  
+            displayRight = prevBlueData; 
+        }
+
+        // LOGIKA STATUS MATCHING
+        const currLeftPicks = curBlueData.picks.map(h => h.hero).filter(h => h && h !== "idle");
+        const currRightPicks = curRedData.picks.map(h => h.hero).filter(h => h && h !== "idle");
+        
+        const currAllPicks = [...currLeftPicks, ...currRightPicks];
+        
+        const currAllBans = [
+            ...curBlueData.bans.map(h => h.hero),
+            ...curRedData.bans.map(h => h.hero)
+        ].filter(h => h && h !== "idle");
+
+        // RENDER
+        // Kita kirim parameter "pick" atau "ban" untuk logika CSS
+        updateHeroRow('camp1-picks', displayLeft.picks, 'pick', currLeftPicks, currRightPicks, currAllBans, currAllPicks);
+        updateHeroRow('camp1-bans', displayLeft.bans, 'ban', [], [], currAllBans, currAllPicks);
+
+        updateHeroRow('camp2-picks', displayRight.picks, 'pick', currRightPicks, currLeftPicks, currAllBans, currAllPicks);
+        updateHeroRow('camp2-bans', displayRight.bans, 'ban', [], [], currAllBans, currAllPicks);
+    }
+
+    // --- FUNGSI UPDATE YANG SUDAH DIPERBAIKI UNTUK ANIMASI ---
+    function updateHeroRow(containerId, heroList, type, listRePick, listStolen, listBanned, listAllPicks) {
+        const container = document.getElementById(containerId);
+        
+        // 1. SMART BUILD: Cek apakah struktur HTML perlu dibangun ulang?
+        // Kita hanya rebuild jika jumlah elemen tidak sesuai atau hero di dalamnya berbeda (kasus swap side)
+        let needsRebuild = false;
+        const existingCards = container.querySelectorAll('.hero');
+
+        if (existingCards.length !== heroList.length) {
+            needsRebuild = true;
+        } else {
+            // Cek konsistensi Hero Name untuk memastikan urutan tidak berubah
+            heroList.forEach((slot, idx) => {
+                const currentAttr = existingCards[idx].getAttribute('data-original-hero');
+                const incomingHero = slot.hero || 'empty';
+                if (currentAttr !== incomingHero) {
+                    needsRebuild = true;
+                }
+            });
+        }
+
+        // 2. JIKA PERLU REBUILD (Hanya terjadi saat load awal atau swap team)
+        if (needsRebuild) {
+            container.innerHTML = ''; // Reset total
+            heroList.forEach(slot => {
+                const card = document.createElement('div');
+                card.className = 'hero';
+                const heroName = slot.hero;
+                
+                // Simpan atribut identitas hero agar kita bisa cek nanti
+                card.setAttribute('data-original-hero', heroName || 'empty');
+
+                if (heroName && heroName !== "idle" && heroName !== "") {
+                    const img = document.createElement('img');
+                    img.src = `Assets/HeroPick/${heroName}.png`; 
+                    img.onerror = function() { this.style.display = 'none'; };
+                    card.appendChild(img);
+                }
+                container.appendChild(card);
+            });
+        }
+
+        // 3. UPDATE CLASS (Dilakukan ke elemen yang SUDAH ADA agar transisi CSS jalan)
+        // Ambil lagi referensi elemen (karena mungkin baru saja direbuild)
+        const cards = container.querySelectorAll('.hero');
+
+        heroList.forEach((slot, index) => {
+            const card = cards[index];
+            const heroName = slot.hero;
+
+            if (!heroName || heroName === "idle") return;
+
+            // Tentukan status baru
+            let statusClass = '';
+            let statusLabel = '';
+
+            if (type === 'pick') {
+                if (listRePick.includes(heroName)) {
+                    statusClass = 're-picked'; statusLabel = 'RE-PICKED';
+                } 
+                else if (listStolen.includes(heroName)) {
+                    statusClass = 'stolen'; statusLabel = 'STOLEN';
+                }
+                else if (listBanned.includes(heroName)) {
+                    statusClass = 'banned-now'; statusLabel = 'BANNED NOW';
+                }
+            } 
+            else if (type === 'ban') {
+                if (listBanned.includes(heroName)) {
+                    statusClass = 're-banned'; statusLabel = 'RE-BANNED';
+                }
+                else if (listAllPicks.includes(heroName)) {
+                    statusClass = 'picked-now'; statusLabel = 'PICKED';
+                }
+            }
+
+            // --- APPLICATOR LOGIC ---
+            // 1. Bersihkan class lama yang berkonflik (Reset state)
+            // Kita gunakan list class yang mungkin ada di CSS Anda
+            ['re-picked', 'stolen', 'banned-now', 're-banned', 'picked-now'].forEach(cls => {
+                if (cls !== statusClass) card.classList.remove(cls);
+            });
+
+            // 2. Tambahkan class baru (hanya jika belum ada, supaya trigger transisi jika berubah)
+            if (statusClass && !card.classList.contains(statusClass)) {
+                card.classList.add(statusClass);
+            }
+
+            // 3. Update Label
+            if (statusLabel) {
+                // Cek apakah label berubah untuk menghindari repaint berlebih (opsional)
+                if (card.getAttribute('data-label') !== statusLabel) {
+                    card.setAttribute('data-label', statusLabel);
+                }
+            } else {
+                card.removeAttribute('data-label');
+            }
+        });
+    }
+
+    fetchAllData();
+</script>
+</body>
+</html>

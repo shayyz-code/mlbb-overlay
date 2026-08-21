@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Result</title>
+    <style>
+        @font-face {
+            font-family: 'Big Noodle Titling';
+            src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+        }
+        :root {
+            --background-color: #0D0F12;
+            --font-color: #EAEAEA;
+            --accent-color: #A855F7;
+            --accent-glow: rgba(168, 85, 247, 0.5);
+            --active-color: #00FF8C;
+        }
+        body {
+            font-family: 'Big Noodle Titling', sans-serif;
+            color: var(--font-color);
+            display: flex;
+            margin: 0;
+            text-align: center;
+            background-color: transparent; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* Container untuk membungkus hasil */
+
+        .result-wrapper {
+            /* KONDISI AWAL (SEBELUM MUNCUL) */
+            opacity: 1;
+            
+            display: flex;
+            flex-direction: column;
+
+        }
+
+        /* KONDISI AKHIR (SETELAH MUNCUL) */
+        .result-wrapper.visible {
+            opacity: 1;
+        }
+
+
+        .map-box {
+            position: relative;
+
+            padding: 10px;
+
+        }
+
+        .map img {
+            display: block;
+            max-width: 600px;
+            height: auto;
+        }
+
+        /* Debug status di pojok kiri atas (Hapus jika tidak perlu) */
+        #debug-status {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: rgba(0,0,0,0.5);
+            color: lime;
+            font-size: 12px;
+            padding: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug-status">Ready...</div>
+    <div id="result-container"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const resultContainer = document.getElementById('result-container');
+            const debugStatus = document.getElementById('debug-status');
+            
+            // Variabel untuk melacak status terakhir agar tidak re-render berulang kali
+            let lastStatus = '';
+            let lastResult = '';
+
+            const updateDisplay = (state) => {
+                debugStatus.textContent = `Status: ${state.status} | Map: ${state.result}`;
+
+                // Jika Result kosong atau sedang Reset, bersihkan layar
+                if (!state.result || state.status === 'idle') {
+                    if (resultContainer.innerHTML !== '') {
+                        // Animasi keluar sebelum dihapus
+                        const wrapper = document.querySelector('.result-wrapper');
+                        if (wrapper) wrapper.classList.remove('visible');
+                        setTimeout(() => { resultContainer.innerHTML = ''; }, 500);
+                    }
+                    lastStatus = state.status;
+                    return;
+                }
+
+                // Cek apakah kita perlu membuat elemen HTML baru
+                // Kita buat baru jika: Container kosong ATAU Result berubah
+                const shouldRender = resultContainer.innerHTML === '' || state.result !== lastResult;
+
+                if (shouldRender) {
+                    resultContainer.innerHTML = `
+                        <div class="result-wrapper">
+                            <div class="map-box">
+                                <div class="map">
+                                    <img src="Assets/map/${state.result}.png" alt="${state.result}">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    lastResult = state.result;
+                }
+
+                // LOGIKA ANIMASI (Kuncinya di sini)
+                const wrapper = document.querySelector('.result-wrapper');
+                if (!wrapper) return;
+
+                if (state.status === 'finished') {
+                    // Jika status FINISHED:
+                    // 1. Force Reflow (Trik memaksa browser membaca posisi awal sebelum animasi)
+                    void wrapper.offsetWidth; 
+                    
+                    // 2. Tambahkan class visible agar transisi CSS jalan
+                    wrapper.classList.add('visible');
+                } else {
+                    // Jika status DRAWING:
+                    // Pastikan class visible DIHAPUS agar dia sembunyi dulu
+                    wrapper.classList.remove('visible');
+                }
+                
+                lastStatus = state.status;
+            };
+
+            // 1. Fetch Awal
+            fetch('/api/mapdraw')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.drawdata) updateDisplay(data.drawdata);
+                })
+                .catch(err => console.error(err));
+
+            // 2. WebSocket
+            const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = `${socketProtocol}//${window.location.host}`;
+            const ws = new WebSocket(socketUrl);
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'mapdraw_update') {
+                    updateDisplay(message.data);
+                }
+            };
+        });
+    </script>
+</body>
+</html>

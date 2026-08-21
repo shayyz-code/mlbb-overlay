@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw Control Deck</title>
+    <style>
+        /* ... COPY STYLE DARI FILE LAMA ANDA (Tidak ada perubahan CSS) ... */
+        @font-face { font-family: 'Big Noodle Titling'; src: url('Assets/Font/big_noodle_titling.ttf') format('truetype'); }
+        :root { --background-color: #0D0F12; --card-color: #1A1C20; --font-color: #EAEAEA; --accent-color: #A855F7; --accent-glow: rgba(168, 85, 247, 0.5); --border-color: #3f3f46; --red-side-accent: #F94868; --active-color: #00FF8C; --blob-color-1: #9333ea; --blob-color-2: #27272A; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Big Noodle Titling', sans-serif; background-color: var(--background-color); color: var(--font-color); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; letter-spacing: 1.5px; position: relative; padding: 40px 15px; }
+        .container { background-color: var(--card-color); padding: 30px; border: 1px solid var(--border-color); box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--accent-glow) inset; width: 90%; max-width: 500px; text-align: center; z-index: 1; }
+        h1 { color: var(--accent-color); margin-bottom: 25px; font-size: 3em; text-shadow: 0 0 10px var(--accent-glow); }
+        .mode-selection label, #fixed-options label { display: flex; align-items: center; justify-content: center; margin: 10px 0; cursor: pointer; border: 2px solid var(--border-color); transition: all 0.3s ease; }
+        .mode-selection label { font-size: 1.6em; padding: 10px; }
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + label { background-color: rgba(168, 85, 247, 0.1); color: var(--accent-color); font-weight: 600; border-color: var(--accent-color); box-shadow: 0 0 15px var(--accent-glow); text-shadow: 0 0 8px var(--accent-glow); }
+        #fixed-options { margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        #fixed-options h3 { grid-column: 1 / -1; margin-bottom: 10px; }
+        #fixed-options label { font-size: 1.4em; padding: 15px 10px; min-height: 70px; margin: 0; }
+        h3 { color: var(--font-color); font-size: 1.8em; margin-bottom: 10px; }
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        button { border: none; padding: 12px; font-family: 'Big Noodle Titling', sans-serif; font-size: 1.6em; letter-spacing: 1.5px; cursor: pointer; transition: all 0.3s ease; color: #fff; }
+        #start-draw-btn { background-color: var(--accent-color); box-shadow: 0 0 15px var(--accent-glow); }
+        #start-draw-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--accent-glow); }
+        #reset-btn { background-color: var(--red-side-accent); box-shadow: 0 0 15px rgba(249, 72, 104, 0.5); }
+        #reset-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(249, 72, 104, 0.5); }
+        #status-message { margin-top: 20px; color: var(--active-color); font-size: 1.3em; height: 25px; text-shadow: 0 0 8px var(--active-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DRAW CONTROL DECK</h1>
+        <div class="mode-selection">
+            <h3>SELECT MODE</h3>
+            <input type="radio" id="mode-random" name="draw-mode" value="random" checked>
+            <label for="mode-random">RANDOM</label>
+            <input type="radio" id="mode-fixed" name="draw-mode" value="fixed">
+            <label for="mode-fixed">FIXED DRAW</label>
+        </div>
+
+        <div id="fixed-options" style="display: none;">
+            <h3>PRE-SELECT TARGET</h3>
+            <input type="radio" id="map1" name="fixed-map" value="Broken Wall"><label for="map1">Broken Wall</label>
+            <input type="radio" id="map2" name="fixed-map" value="Dangereous Grass"><label for="map2">Dangereous Grass</label>
+            <input type="radio" id="map3" name="fixed-map" value="Expanding River"><label for="map3">Expanding River</label>
+            <input type="radio" id="map4" name="fixed-map" value="Flying Cloud"><label for="map4">Flying Cloud</label>
+        </div>
+
+        <div class="button-group">
+            <button id="start-draw-btn">START DRAW</button>
+            <button id="reset-btn">RESET</button>
+        </div>
+        <p id="status-message"></p>
+    </div>
+
+    <script>
+        const maps = ['Broken Wall', 'Dangereous Grass', 'Expanding River', 'Flying Cloud'];
+
+        // Fungsi untuk mengirim data ke Node.js
+        async function updateServer(data) {
+            try {
+                await fetch('/api/mapdraw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ drawdata: data })
+                });
+            } catch (err) {
+                console.error("Gagal update server:", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const fixedOptions = document.getElementById('fixed-options');
+            const startButton = document.getElementById('start-draw-btn');
+            const resetButton = document.getElementById('reset-btn');
+            const statusMessage = document.getElementById('status-message');
+
+            document.querySelectorAll('input[name="draw-mode"]').forEach(radio => {
+                radio.addEventListener('change', (event) => {
+                    fixedOptions.style.display = event.target.value === 'fixed' ? 'grid' : 'none';
+                });
+            });
+
+            startButton.addEventListener('click', async () => {
+                const selectedMode = document.querySelector('input[name="draw-mode"]:checked').value;
+                let result = null;
+
+                if (selectedMode === 'fixed') {
+                    const selectedMap = document.querySelector('input[name="fixed-map"]:checked');
+                    if (!selectedMap) { alert('Pilih target map untuk mode Fixed Draw!'); return; }
+                    result = selectedMap.value;
+                } else {
+                    // LOGIKA RANDOM DIJALANKAN DI SINI (SERVER/CONTROL SIDE)
+                    // Supaya hasil sinkron dan pasti.
+                    const randomIndex = Math.floor(Math.random() * maps.length);
+                    result = maps[randomIndex];
+                }
+
+                const drawState = {
+                    status: 'drawing',
+                    mode: selectedMode,
+                    fixedChoice: selectedMode === 'fixed' ? result : null,
+                    result: result, // Hasil sudah ditentukan sekarang
+                    timestamp: new Date().getTime()
+                };
+
+                statusMessage.textContent = 'SEQUENCE INITIATED...';
+                
+                // Kirim ke server
+                await updateServer(drawState);
+
+                setTimeout(() => statusMessage.textContent = '', 3000);
+            });
+
+            resetButton.addEventListener('click', async () => {
+                const resetState = {
+                    status: 'idle',
+                    mode: 'random',
+                    fixedChoice: null,
+                    result: null,
+                    timestamp: 0
+                };
+                
+                statusMessage.textContent = 'STATE RESET. AWAITING INPUT.';
+                
+                // Kirim reset ke server
+                await updateServer(resetState);
+
+                setTimeout(() => statusMessage.textContent = '', 3000);
+            });
+
+            if (document.getElementById('mode-fixed').checked) {
+                fixedOptions.style.display = 'grid';
+            }
+        });
+    </script>
+</body>
+</html>

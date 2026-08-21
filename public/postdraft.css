@@ -1,0 +1,180 @@
+@font-face {
+  font-family: "myfonts";
+  src: url("Assets/Font/big_noodle_titling.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --primarycolor: #fff;
+}
+
+body {
+  font-family: "myfonts", sans-serif;
+}
+
+.hide {
+  width: 0px;
+  height: 0px;
+  opacity: 0;
+}
+
+.mainbox {
+  width: 1920px;
+  height: 1080px;
+}
+.upper {
+  width: 1920px;
+  height: 239px;
+
+  display: flex;
+}
+
+.logoteam {
+  width: 249px;
+  height: 239px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-size: 100%;
+}
+
+.logoteam img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+}
+
+.teamnameblue {
+  width: 711px;
+  height: 239px;
+
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  font-size: 70px;
+  color: #ffffff;
+}
+
+.teamnamered {
+  width: 711px;
+  height: 239px;
+
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  font-size: 70px;
+  color: #ffffff;
+}
+
+.middle {
+  width: 1920px;
+  height: 582px;
+  background-color: rgba(21, 4, 59, 0.295);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pick {
+  width: 176px;
+  height: 543px;
+  border: 1px solid #ffffff;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: scale(1.41);
+  filter: contrast(1.1);
+  margin-left: -50px;
+  position: absolute;
+  z-index: 1;
+}
+
+.name-image-box {
+  position: absolute;
+  z-index: 2;
+}
+
+.name-image-box img {
+  scale: 0.4;
+  margin-top: 400px;
+}
+
+.pickmid {
+  width: 140px;
+  height: 582px;
+  background-size: 100%;
+}
+
+.lower {
+  width: 1900px;
+  height: 239px;
+}
+
+.bluenick {
+  width: 800px;
+  font-size: 40px;
+  color: aliceblue;
+  text-shadow: 2px 3px 5px #000000;
+  margin-top: -290px;
+  margin-left: 123px;
+  position: absolute;
+  z-index: 3;
+  rotate: -90deg;
+  letter-spacing: 1px;
+}
+
+.rednick {
+  width: 800px;
+  font-size: 40px;
+  color: aliceblue;
+  text-shadow: 2px 3px 5px #000000;
+  margin-top: -290px;
+  margin-left: -125px;
+  position: absolute;
+  z-index: 3;
+  rotate: -90deg;
+  letter-spacing: 1px;
+}
+
+.lanelogo {
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  z-index: 2;
+  top: 15px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bluelane {
+  right: 15px;
+}
+
+.redlane {
+  left: 15px;
+}
+
+.lanelogo img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  filter: sepia(100%) hue-rotate(210deg) saturate(300%);
+}
+
+.lane-icon {
+  padding: 2px;
+  background-color: var(--primarycolor);
+}

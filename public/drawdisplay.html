@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Selection Display</title>
+    <style>
+        @font-face {
+            font-family: 'Big Noodle Titling';
+            src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+        }
+        :root {
+            --background-color: #0D0F12;
+            --card-color: #ffffff;
+            --font-color: #EAEAEA;
+            --accent-color: #A855F7;
+            --accent-glow: rgba(168, 85, 247, 0.5);
+            --border-color: #3f3f46;
+            --active-color: #00FF8C;
+        }
+
+        body {
+            font-family: 'Big Noodle Titling', sans-serif;
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+            letter-spacing: 1.5px;
+            overflow-x: hidden;
+            /* Opsional: Background transparan jika ingin di-overlay di OBS */
+            background-color: transparent; 
+        }
+        
+        h1 {
+            margin-bottom: 40px;
+            font-size: 4em;
+            color: var(--font-color);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .map-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            width: 95%;
+            max-width: 1400px;
+        }
+
+        .map-card {
+            background-color: var(--card-color);
+            padding: 10px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.4s ease;
+            border-radius: 0;
+            opacity: 0.7;
+        }
+        
+        .gathering-power {
+            animation: gathering-pulse 1s infinite ease-in-out;
+        }
+        @keyframes gathering-pulse {
+            0%, 100% {
+                box-shadow: 0 0 10px 0px var(--aura-color, #fff);
+                opacity: 0.7;
+            }
+            50% {
+                box-shadow: 0 0 25px 5px var(--aura-color, #fff);
+                opacity: 0.9;
+            }
+        }
+        
+        .is-animating .map-card {
+             opacity: 0.4; 
+        }
+        .is-animating .map-card:not(.highlight) {
+            opacity: 0.4;
+        }
+
+        .has-result .map-card {
+            opacity: 0.3;
+            transform: scale(0.98);
+        }
+        .has-result .map-card:not(.selected):not(.charging-up) {
+            opacity: 0.3;
+            transform: scale(0.98);
+        }
+        
+        .map-card.highlight {
+            transform: scale(1.05) translateY(-10px);
+            border-color: var(--aura-color, #fff);
+            box-shadow: 0 10px 30px 5px var(--aura-color, #fff);
+            opacity: 1;
+            transition-duration: 0.15s;
+        }
+
+        .map-card.charging-up {
+            opacity: 1;
+            border-color: var(--aura-color, #fff);
+            animation: charge-up 1.2s ease-in-out forwards;
+        }
+        @keyframes charge-up {
+            0% {
+                transform: scale(1.05) translateY(-10px);
+                box-shadow: 0 10px 30px 5px var(--aura-color, #fff);
+            }
+            60% {
+                transform: scale(1.18);
+                box-shadow: 0 0 70px 30px #ffffff;
+            }
+            100% {
+                transform: scale(1.08);
+                box-shadow: 0 0 35px 8px var(--aura-color, #fff);
+            }
+        }
+
+        .map-card.selected {
+            opacity: 1;
+            transform: scale(1.08); 
+            animation: final-breath 2s infinite ease-in-out;
+            border-color: var(--aura-color, #fff);
+        }
+
+        @keyframes final-breath {
+            0%, 100% { transform: scale(1.08); box-shadow: 0 0 35px 8px var(--aura-color, #fff); }
+            50% { transform: scale(1.12); box-shadow: 0 0 55px 15px var(--aura-color, #fff); }
+        }
+
+        .map-card img {
+            max-width: 100%; height: auto; display: block; object-fit: cover; border-radius: 0;
+        }
+
+        @media (max-width: 1200px) { .map-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .map-container { grid-template-columns: 1fr; width: 80%; } }
+    </style>
+</head>
+<body>
+    <div class="map-container">
+        <div class="map-card" id="map-Broken_Wall" style="--aura-color: #a0522d;"><img src="Assets/map/Broken Wall.png" alt="Broken Wall"></div>
+        <div class="map-card" id="map-Dangereous_Grass" style="--aura-color: #2e8b57;"><img src="Assets/map/Dangereous Grass.png" alt="Dangereous Grass"></div>
+        <div class="map-card" id="map-Expanding_River" style="--aura-color: #4682b4;"><img src="Assets/map/Expanding River.png" alt="Expanding River"></div>
+        <div class="map-card" id="map-Flying_Cloud" style="--aura-color: #add8e6;"><img src="Assets/map/Flying Cloud.png" alt="Flying Cloud"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mapContainer = document.querySelector('.map-container');
+            const mapCards = Array.from(document.querySelectorAll('.map-card'));
+            const maps = [
+                { id: 'map-Broken_Wall', name: 'Broken Wall' },
+                { id: 'map-Dangereous_Grass', name: 'Dangereous Grass' },
+                { id: 'map-Expanding_River', name: 'Expanding River' },
+                { id: 'map-Flying_Cloud', name: 'Flying Cloud' }
+            ];
+            
+            let animationFrameId;
+
+            // --- FUNGSI UTAMA ---
+
+            const resetDisplay = () => {
+                cancelAnimationFrame(animationFrameId);
+                mapContainer.classList.remove('is-animating', 'has-result');
+                mapCards.forEach(card => {
+                    card.classList.remove('highlight', 'selected', 'charging-up', 'gathering-power');
+                    // Hapus event listener lama agar tidak menumpuk
+                    const clone = card.cloneNode(true);
+                    card.parentNode.replaceChild(clone, card);
+                });
+                // Re-select mapCards setelah replaceChild (karena cloneNode)
+                // Sebenarnya cara di atas agak agresif, tapi aman untuk animasi css one-off.
+                // Agar lebih simpel, kita hapus class saja sudah cukup, 
+                // tapi event listener 'animationend' perlu dihandle hati-hati.
+            };
+
+            // Kita perbaiki resetDisplay agar tidak perlu cloneNode (lebih performant)
+            const safeResetDisplay = () => {
+                cancelAnimationFrame(animationFrameId);
+                mapContainer.classList.remove('is-animating', 'has-result');
+                mapCards.forEach(card => {
+                    card.classList.remove('highlight', 'selected', 'charging-up', 'gathering-power');
+                });
+            };
+
+            const showFinalResult = (resultName) => {
+                const finalCard = document.getElementById(`map-${resultName.replace(/ /g, '_')}`);
+                mapContainer.classList.remove('is-animating');
+                mapContainer.classList.add('has-result');
+                
+                if (finalCard) {
+                    finalCard.classList.remove('highlight');
+                    finalCard.classList.add('charging-up');
+                    finalCard.addEventListener('animationend', () => {
+                        finalCard.classList.remove('charging-up');
+                        finalCard.classList.add('selected');
+                    }, { once: true });
+                }
+            };
+            
+            const startAnimation = (targetResult) => {
+                safeResetDisplay();
+                mapContainer.classList.add('is-animating');
+                
+                const finalIndex = maps.findIndex(m => m.name === targetResult);
+                
+                const duration = 8000; 
+                const totalRevolutions = 35; 
+                const targetPosition = (totalRevolutions * maps.length) + finalIndex + 0.5;
+                const easeInOutQuint = t => t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+                
+                let startTime = null;
+                let lastHighlightedIndex = -1;
+
+                function animationLoop(currentTime) {
+                    if (!startTime) startTime = currentTime;
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    const easedProgress = easeInOutQuint(progress);
+                    
+                    const currentPosition = easedProgress * targetPosition;
+                    const currentIndex = Math.floor(currentPosition) % maps.length;
+
+                    if (elapsedTime < 2000) {
+                        if (!mapCards[0].classList.contains('gathering-power')) {
+                           mapCards.forEach(c => c.classList.add('gathering-power'));
+                        }
+                    } else {
+                        if (mapCards[0].classList.contains('gathering-power')) {
+                            mapCards.forEach(c => c.classList.remove('gathering-power'));
+                        }
+                        if (currentIndex !== lastHighlightedIndex) {
+                            if (lastHighlightedIndex > -1) mapCards[lastHighlightedIndex].classList.remove('highlight');
+                            mapCards[currentIndex].classList.add('highlight');
+                            lastHighlightedIndex = currentIndex;
+                        }
+                    }
+
+                    if (progress < 1) {
+                        animationFrameId = requestAnimationFrame(animationLoop);
+                    } else {
+                        setTimeout(() => {
+                            showFinalResult(targetResult);
+                        }, 500);
+                    }
+                }
+                animationFrameId = requestAnimationFrame(animationLoop);
+            };
+
+            // --- KONEKSI SERVER & WEBSOCKET ---
+
+            fetch('/api/mapdraw')
+                .then(res => res.json())
+                .then(data => {
+                    const state = data.drawdata;
+                    if (state.status === 'finished') {
+                        showFinalResult(state.result);
+                    } else if (state.status === 'drawing') {
+                        showFinalResult(state.result);
+                    }
+                })
+                .catch(err => console.error("Error loading initial state:", err));
+
+            const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = `${socketProtocol}//${window.location.host}`;
+            const ws = new WebSocket(socketUrl);
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                
+                if (message.type === 'mapdraw_update') {
+                    const newState = message.data;
+                    
+                    if (newState.status === 'drawing') {
+                        startAnimation(newState.result);
+                    } else if (newState.status === 'idle') {
+                        safeResetDisplay();
+                    }
+                }
+            };
+
+            ws.onopen = () => console.log('Connected to MapDraw WebSocket');
+        });
+    </script>
+</body>
+</html>

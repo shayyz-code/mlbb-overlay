@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lane Display Overlay - Smart Update</title>
+    <style>
+        body {
+            background-color: transparent;
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .team-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+            /* background-color: rgba(0, 0, 0, 0.5); */ 
+        }
+
+        .lane-icon {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            display: block;
+            opacity: 1; /* Default terlihat */
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="team-container" id="blue-container">
+            <img id="player-lane-1-blue" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-2-blue" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-3-blue" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-4-blue" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-5-blue" class="lane-icon" src="Assets/lane/none.png" alt="">
+        </div>
+
+        <div class="team-container" id="red-container">
+            <img id="player-lane-1-red" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-2-red" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-3-red" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-4-red" class="lane-icon" src="Assets/lane/none.png" alt="">
+            <img id="player-lane-5-red" class="lane-icon" src="Assets/lane/none.png" alt="">
+        </div>
+    </div>
+
+    <script>
+        // Variabel untuk menyimpan data terakhir (Dirty Checking)
+        let lastDataString = "";
+
+        async function checkForUpdates() {
+            try {
+                // 1. Cek file JSON dengan timestamp anti-cache
+                const response = await fetch('database/matchdatateam.json?t=' + new Date().getTime());
+                if (!response.ok) return;
+                
+                const data = await response.json();
+
+                // 2. Konversi data objek ke string untuk perbandingan
+                const currentDataString = JSON.stringify(data);
+
+                // 3. LOGIC PENTING: Jika data sama persis, return (hemat resource)
+                if (currentDataString === lastDataString) {
+                    return; 
+                }
+
+                // Jika data beda, simpan dan render ulang
+                lastDataString = currentDataString;
+                console.log("Perubahan terdeteksi! Mengupdate gambar...");
+
+                renderLanes(data);
+
+            } catch (error) {
+                console.error("Gagal membaca data:", error);
+            }
+        }
+
+        function renderLanes(data) {
+            // Path default gambar jika kosong
+            const defaultLaneImage = "Assets/lane/none.png";
+
+            function updateImage(elementId, player) {
+                const imgElement = document.getElementById(elementId);
+                if (!imgElement) return;
+
+                // Reset handler error agar bersih setiap kali update
+                imgElement.onerror = null;
+
+                // Cek apakah data lane valid (ada isinya dan bukan "none")
+                if (player && player.lane && player.lane !== "none" && player.lane !== "") {
+                    const laneName = player.lane.toLowerCase(); // Paksa huruf kecil
+                    
+                    // Coba set gambar spesifik (misal: Assets/lane/gold.png)
+                    imgElement.src = `Assets/lane/${laneName}.png`;
+                    
+                    // Error Handling:
+                    // Jika file "gold.png" tidak ada di folder, otomatis ganti ke "none.png"
+                    imgElement.onerror = function() {
+                        this.src = defaultLaneImage;
+                        this.onerror = null; // Mencegah loop infinite
+                    };
+                } else {
+                    // Jika di JSON tertulis "none" atau kosong, pakai gambar default
+                    imgElement.src = defaultLaneImage;
+                }
+                
+                // Pastikan opacity 1 (terlihat)
+                imgElement.style.opacity = '1';
+            }
+
+            // Loop Blue Team
+            if (data.teamdata?.blueteam?.playerlist) {
+                data.teamdata.blueteam.playerlist.forEach((player, i) => {
+                    updateImage(`player-lane-${i + 1}-blue`, player);
+                });
+            }
+
+            // Loop Red Team
+            if (data.teamdata?.redteam?.playerlist) {
+                data.teamdata.redteam.playerlist.forEach((player, i) => {
+                    updateImage(`player-lane-${i + 1}-red`, player);
+                });
+            }
+        }
+
+        // Jalankan pengecekan pertama kali
+        checkForUpdates();
+
+        // Cek file setiap 500ms
+        setInterval(checkForUpdates, 500);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+
+@font-face {
+    font-family: 'myfonts';
+    src: url('Assets/Font/big_noodle_titling.ttf') format('truetype');
+
+  }
+
+  /* Menggunakan font di seluruh halaman */
+  body {
+    font-family: 'myfonts', sans-serif;
+    color: #fff;
+
+    
+  }
+
+.scoreboard{
+    width: 1920px;
+    height: 1080px;
+    background-image: url(Assets/Other/scoreboardocr.png);
+
+
+}
+
+.upper{
+    width: 1920px;
+    height: 94px;
+    
+  
+    display: flex;
+}
+
+.lower{
+    width: 1920px;
+    height: 30px;
+
+    display: flex;
+}
+
+.mapbox{
+    width: 336px;
+    height: 100%;
+    
+}
+
+.teamname{
+    width: 616px;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    font-size: 30px;
+
+
+
+    margin-top: -16px
+
+}
+
+.morelower{
+    width: 1920px;
+    height: 30px;
+    
+   
+    display: flex;
+   
+}
+
+.morebox{
+    width: 1000.5px;
+    height: 100%;
+
+    
+}
+
+.score{
+    width: 76.75px;
+    height: auto;
+    
+    color: #000000;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    margin-top: -92px;
+ 
+
+}
+
+.midmorebox{
+    width: 142.45px;
+    height: auto;
+    margin-left: -10px;
+}
+
+.logo{
+    width: 110px;
+    height: 110px;
+  
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+   
+}
+
+.logo img{
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.uppermid{
+    width: 1022px;
+    height: auto;
+
+    display: flex;
+    margin-top: 2px;
+
+   
+}
+
+.hide{
+    width: 0px;
+    height: 0px;
+    opacity: 0;
+}
+
+.frames{
+    width: 60px;
+    height: 62px;
+
+}
+
+.frames2{
+    width: 30px;
+    height: 62px;
+
+}
+
+.number{
+    width: 21px;
+    height: 62px;
+        display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 40px;
+}
+
+.golds{
+    width: 100px;
+    height: 62px;
+  
+        display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    font-size: 40px;
+    
+}
+
+.framemid{
+    width: 258px;
+    height: 62px;
+    display: flex;
+}
+
+.killscore{
+    width: 109px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    
+}
+
+.midkillscore{
+    width: 40px;
+    height: 62px;
+    margin-top: 109px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size:30px;
+    margin-left: 10px;
+    
+}
+
+#redlord{
+    margin-left: -50px;
+}
+
+#bluelord{
+    margin-left: 10px ;
+}
+
+#timer{
+    margin-left: -3px;
+    margin-top: -2px;
+}
+
+#homescore{
+    margin-left: -15px;
+}
+
+#awayscore{
+    margin-right: -25px;
+}

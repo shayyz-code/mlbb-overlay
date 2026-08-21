@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticker Display</title>
+    <style>
+      @font-face {
+        font-family: "Big Noodle Titling";
+        src: url("Assets/Font/big_noodle_titling.ttf") format("truetype");
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: transparent;
+        overflow: hidden;
+        font-family: "Big Noodle Titling", sans-serif;
+        height: 100vh;
+        display: flex;
+        align-items: flex-end; /* Bottom alignment */
+      }
+
+      #ticker-container {
+        width: 100%;
+        height: 60px; /* Adjust height as needed */
+        background: linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.8) 10%,
+          rgba(0, 0, 0, 0.8) 90%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        white-space: nowrap;
+        position: relative;
+        margin-bottom: 20px; /* Space from absolute bottom */
+        opacity: 0;
+        transition: opacity 0.5s;
+      }
+
+      #ticker-track {
+        display: flex;
+        width: fit-content;
+        /* Animation duration will be set by JS */
+        animation-name: scroll-left;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+      }
+
+      .ticker-item {
+        flex-shrink: 0;
+        padding-right: 4rem; /* Gap between repeated items */
+        font-size: 24px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        color: #ffffff;
+      }
+
+      /* Gradient Text Effect */
+      .gradient-text {
+        background: linear-gradient(to bottom, #ffffff 0%, #ffdab2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 5px;
+        text-shadow: none;
+        filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.8));
+      }
+
+      @keyframes scroll-left {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-50%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ticker-container">
+      <div id="ticker-track">
+        <!-- Content will be injected by JS -->
+      </div>
+    </div>
+
+    <script>
+      let tickerData = {
+        text: "",
+        speed: 15,
+        isRunning: false,
+      }
+
+      const container = document.getElementById("ticker-container")
+      const track = document.getElementById("ticker-track")
+
+      async function loadData() {
+        try {
+          const res = await fetch("/api/ticker")
+          const data = await res.json()
+          tickerData = data
+          updateDisplay()
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      function updateDisplay() {
+        if (!tickerData.isRunning || !tickerData.text) {
+          container.style.opacity = "0"
+          return
+        }
+
+        // 1. Measure text width to calculate repetitions
+        // We create a temporary invisible element
+        const tempSpan = document.createElement("div")
+        tempSpan.className = "ticker-item"
+        tempSpan.style.visibility = "hidden"
+        tempSpan.style.position = "absolute"
+        tempSpan.style.whiteSpace = "nowrap"
+        tempSpan.textContent = tickerData.text
+        document.body.appendChild(tempSpan)
+
+        // Add padding (4rem approx 64px) to width calculation
+        const itemWidth = tempSpan.offsetWidth
+        document.body.removeChild(tempSpan)
+
+        if (itemWidth === 0) return
+
+        const screenWidth = window.innerWidth
+
+        // Calculate how many items needed to fill > 100% of screen
+        // We add 1 extra to be safe
+        let repetitions = Math.ceil(screenWidth / itemWidth) + 1
+
+        // Ensure at least 1 repetition if text is super long
+        if (repetitions < 1) repetitions = 1
+
+        // 2. Build the "Chunk" HTML
+        // A chunk is the sequence of text items that fills the screen
+        let chunkHTML = ""
+        for (let i = 0; i < repetitions; i++) {
+          chunkHTML += `<div class="ticker-item gradient-text">${tickerData.text}</div>`
+        }
+
+        // 3. Inject TWO chunks into the track
+        // This creates the [Chunk][Chunk] structure.
+        // When we translate -50%, we move exactly one Chunk width.
+        // Since Chunk 2 is identical to Chunk 1, the loop is seamless.
+        track.innerHTML = chunkHTML + chunkHTML
+
+        // 4. Set Animation
+        container.style.opacity = "1"
+
+        // Reset animation
+        track.style.animation = "none"
+        track.offsetHeight /* trigger reflow */
+
+        // Apply new speed
+        track.style.animation = `scroll-left ${tickerData.speed}s linear infinite`
+      }
+
+      const ws = new WebSocket(`ws://${location.host}`)
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data)
+        if (msg.type === "ticker_update") {
+          tickerData = msg.data
+          updateDisplay()
+        }
+      }
+
+      // Handle window resize to recalculate repetitions if needed
+      let resizeTimeout
+      window.onresize = () => {
+        clearTimeout(resizeTimeout)
+        resizeTimeout = setTimeout(updateDisplay, 200)
+      }
+
+      loadData()
+    </script>
+  </body>
+</html>

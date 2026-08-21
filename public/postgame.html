@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="stylesheet" href="postgame.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Legends Match Stats</title>
+</head>
+<body>
+  
+  <div class="mainbox">
+
+    <div class="upper">
+
+      <div class="upperleft">
+        
+        <div class="blueredside">
+
+          <div class="score"> 
+            <div id="blue"></div>
+            <div id="name-box-2" class="hide"></div>
+          
+          </div>
+          <div class="logo">
+
+            <img id="displayImage1" src="" alt="Logo 1 Tidak Ada">
+
+          </div>
+          <div class="teamname">
+            <div id="name-box-1" class="name-box"></div>
+          </div>
+          
+        </div>
+
+      </div>
+      <div class="uppermid">
+        <div id="gamenumber"></div>
+      </div>
+      <div class="upperright">
+
+        <div class="blueredside">
+
+          
+    
+          <div class="teamname">
+         
+            <div id="name-box-8" class="name-box"></div>
+
+          </div>
+       
+          <div class="logo">
+
+            <img id="displayImage2" src="" alt="Logo 2 Tidak Ada">
+
+          </div>
+          <div class="score">
+       
+            <div id="red"></div>
+            <div id="name-box-9" class="hide"></div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="lower">
+
+      <div class="lowerleft">
+
+        <div class="boxteaminfo">
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-1" class="image-box">
+                <div id="image-box-1" class="image-box"><img id="image-display-1" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-3" class="bluenick"></div>
+              <div class="playerphoto blue">
+                <div class="name-image-box" id="name-image-box-3"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-2" class="image-box">
+                <div id="image-box-2" class="image-box"><img id="image-display-2" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-4" class="bluenick"></div>
+              <div class="playerphoto blue">
+                <div class="name-image-box" id="name-image-box-4"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-3" class="image-box">
+                <div id="image-box-3" class="image-box"><img id="image-display-3" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-5" class="bluenick"></div>
+              <div class="playerphoto blue">
+                <div class="name-image-box" id="name-image-box-5"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-4" class="image-box">
+                <div id="image-box-4" class="image-box"><img id="image-display-4" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-6" class="bluenick"></div>
+              <div class="playerphoto blue">
+                <div class="name-image-box" id="name-image-box-6"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-5" class="image-box">
+                <div id="image-box-5" class="image-box"><img id="image-display-5" src=""></div>
+            </div>
+
+            </div>
+            <div class="nickname">
+              <div id="name-box-7" class="bluenick"></div>
+              <div class="playerphoto blue">
+                <div class="name-image-box" id="name-image-box-7"></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+         <div class="team" id="team1"></div>
+
+      </div>
+      <div class="lowermid">
+
+        <div class="gameduration">
+          <div class="gametimetext">GAME DURATION</div>
+          <div class="gamedur"  id="gametime"></div>
+
+          <div class="turretlordturtle">
+
+            <div class="leftrightside">
+              <div class="team" id="stats1"> </div>
+
+            </div>
+
+            <div class="midside">
+
+              <div class="tltlogo1"></div>
+              <div class="tltlogo2"></div>
+              <div class="tltlogo3"></div>
+              <div class="tltlogo4"></div>
+
+            </div>
+
+            <div class="leftrightside">
+              
+
+              <div class="team" id="stats2"></div>
+              
+            </div>
+          </div>
+          
+          <div class="banhero">
+          
+
+            <div class="banside">
+
+              <div class="banmini">
+                <div id="frame-1" class="ban-frame">
+                  <div id="image-box-11" class="image-box"><img id="image-display-11" src=""></div>
+            
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-2" class="ban-frame">
+                  <div id="image-box-12" class="image-box"><img id="image-display-12" src=""></div>
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-3" class="ban-frame">
+                  <div id="image-box-13" class="image-box"><img id="image-display-13" src=""></div>
+                </div>
+              </div>
+              
+
+            </div>
+            <div class="banside2">
+
+              <div class="banmini">
+                <div id="frame-4" class="ban-frame">
+                  <div id="image-box-14" class="image-box"><img id="image-display-14" src=""></div>
+            
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-5" class="ban-frame">
+                  <div id="image-box-15" class="image-box"><img id="image-display-15" src=""></div>
+            
+                </div>
+              </div>
+
+              
+              
+
+            </div>
+            <div class="banside2">
+
+              <div class="banmini">
+                <div id="frame-9" class="ban-frame">
+                  <div id="image-box-19" class="image-box"><img id="image-display-19" src=""></div>
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-10" class="ban-frame">
+                  <div id="image-box-20" class="image-box"><img id="image-display-20" src=""></div>
+                </div>
+              </div>
+
+            
+              
+
+            </div>
+            <div class="banside">
+
+              <div class="banmini">
+                <div id="frame-6" class="ban-frame">
+                  <div id="image-box-16" class="image-box"><img id="image-display-16" src=""></div>
+            
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-7" class="ban-frame">
+                  <div id="image-box-17" class="image-box"><img id="image-display-17" src=""></div>
+                </div>
+              </div>
+
+              <div class="banmini">
+                <div id="frame-8" class="ban-frame">
+                  <div id="image-box-18" class="image-box"><img id="image-display-18" src=""></div>
+            
+                </div>
+              </div>
+              
+
+            </div>
+
+
+          </div>
+
+          <div class="bannedtext">
+            BANNED HEROES
+          </div>
+
+        </div>
+
+      </div>
+      <div class="lowerright">
+
+       <div id="team2"></div>
+
+        <div class="boxteaminfo">
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-6" class="image-box">
+                <div id="image-box-6" class="image-box"><img id="image-display-6" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-10" class="rednick"></div>
+              <div class="playerphoto red">
+                <div class="name-image-box" id="name-image-box-10"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-7" class="image-box">
+                <div id="image-box-7" class="image-box"><img id="image-display-7" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-11" class="rednick"></div>
+              <div class="playerphoto red">
+                <div class="name-image-box" id="name-image-box-11"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-8" class="image-box">
+                <div id="image-box-8" class="image-box"><img id="image-display-8" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-12" class="rednick"></div>
+              <div class="playerphoto red">
+                <div class="name-image-box" id="name-image-box-12"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-9" class="image-box">
+                <div id="image-box-9" class="image-box"><img id="image-display-9" src=""></div>
+            </div>
+            </div>
+            <div class="nickname">
+              <div id="name-box-13" class="rednick"></div>
+              <div class="playerphoto red">
+                <div class="name-image-box" id="name-image-box-13"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="heroandplayer">
+
+            <div class="hero">
+              <div id="box-10" class="image-box">
+                <div id="image-box-10" class="image-box"><img id="image-display-10" src=""></div>
+            </div>
+
+            </div>
+            <div class="nickname">
+              <div id="name-box-14" class="rednick"></div>
+              <div class="playerphoto red">
+                <div class="name-image-box" id="name-image-box-14"></div>
+              </div>
+              
+            </div>
+
+          </div>
+
+        </div>
+        </div>
+
+    </div>
+
+
+  </div>
+
+
+</body>
+<script src="script/postgame.js"> </script>
+<script src="script/displaynicknamelogo.js"></script>
+
+</html>

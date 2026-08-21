@@ -1,6 +1,7 @@
 import {
   currentPhase,
   selectedHeroIds,
+  type AssetPackStatus,
   type DraftCommand,
   type DraftSelection,
   type DraftState,
@@ -8,7 +9,14 @@ import {
   type Side,
 } from "@shayyz/contracts";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { fetchDraft, fetchHeroes, sendCommand, subscribeToDraft } from "./api";
+import {
+  fetchAssetStatus,
+  fetchDraft,
+  fetchHeroes,
+  sendCommand,
+  subscribeToDraft,
+} from "./api";
+import { HeroMedia } from "./HeroMedia";
 
 type WithoutRevision<T> = T extends unknown
   ? Omit<T, "expectedRevision">
@@ -37,6 +45,7 @@ function effectiveTimer(state: DraftState): number {
 function useDraft() {
   const [state, setState] = useState<DraftState>();
   const [heroes, setHeroes] = useState<Hero[]>([]);
+  const [assets, setAssets] = useState<AssetPackStatus>();
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState("");
   const [token, setToken] = useState(
@@ -44,10 +53,11 @@ function useDraft() {
   );
 
   useEffect(() => {
-    Promise.all([fetchDraft(), fetchHeroes()])
-      .then(([draft, catalog]) => {
+    Promise.all([fetchDraft(), fetchHeroes(), fetchAssetStatus()])
+      .then(([draft, catalog, assetStatus]) => {
         setState(draft);
         setHeroes(catalog);
+        setAssets(assetStatus);
       })
       .catch((reason: Error) => setError(reason.message));
     return subscribeToDraft(setState, setConnected);
@@ -74,7 +84,16 @@ function useDraft() {
     sessionStorage.setItem("shayyz-control-token", value);
   };
 
-  return { state, heroes, connected, error, token, saveToken, dispatch };
+  return {
+    state,
+    heroes,
+    assets,
+    connected,
+    error,
+    token,
+    saveToken,
+    dispatch,
+  };
 }
 
 function HeroMark({
@@ -90,7 +109,11 @@ function HeroMark({
       className={`hero-mark ${selection ? "is-locked" : ""}`}
       style={{ "--hero-seed": hero?.id.length ?? 1 } as CSSProperties}
     >
-      <span>{hero ? initials(hero.name) : "+"}</span>
+      <HeroMedia
+        key={hero?.id ?? "empty"}
+        hero={hero}
+        fallback={hero ? initials(hero.name) : "+"}
+      />
       {selection?.source === "detector" && <small>AI</small>}
       <strong>{name}</strong>
     </div>
@@ -101,15 +124,23 @@ function TeamDraft({
   state,
   side,
   heroes,
+  cueUrls,
 }: {
   state: DraftState;
   side: Side;
   heroes: Map<string, Hero>;
+  cueUrls?: Record<string, string> | undefined;
 }) {
   const team = state.teams[side];
-  const active = currentPhase(state)?.side === side;
+  const phase = currentPhase(state);
+  const active = phase?.side === side;
+  const cueId = phase
+    ? `${side}${phase.kind === "pick" ? "Pick" : "Ban"}`
+    : undefined;
+  const cueUrl = active && cueId ? cueUrls?.[cueId] : undefined;
   return (
     <section className={`team-draft team-${side} ${active ? "is-active" : ""}`}>
+      {cueUrl && <img className="phase-cue" src={cueUrl} alt="" />}
       <header>
         <div className="team-emblem">{initials(team.shortName)}</div>
         <div>
@@ -184,7 +215,7 @@ function TeamEditor({
 }
 
 function ControlPage() {
-  const { state, heroes, connected, error, token, saveToken, dispatch } =
+  const { state, heroes, assets, connected, error, token, saveToken, dispatch } =
     useDraft();
   const [query, setQuery] = useState("");
   const used = useMemo(
@@ -221,6 +252,11 @@ function ControlPage() {
           <div>
             <strong>{connected ? "Live sync" : "Reconnecting"}</strong>
             <small>Revision {state.revision}</small>
+            <small>
+              {assets?.enabled
+                ? `${assets.displayName}: ${assets.coverage.portraits}/${assets.coverage.heroes} portraits · ${assets.coverage.posters} posters · ${assets.coverage.voices} voices`
+                : "Private media pack not loaded"}
+            </small>
           </div>
         </div>
         <label className="token-field">
@@ -359,6 +395,7 @@ function ControlPage() {
               state={state}
               side="blue"
               heroes={new Map(heroes.map((hero) => [hero.id, hero]))}
+              cueUrls={assets?.cueUrls}
             />
             <div className="versus-divider">
               <span>VS</span>
@@ -370,6 +407,7 @@ function ControlPage() {
               state={state}
               side="red"
               heroes={new Map(heroes.map((hero) => [hero.id, hero]))}
+              cueUrls={assets?.cueUrls}
             />
           </section>
         </div>
@@ -379,7 +417,7 @@ function ControlPage() {
 }
 
 function OverlayPage() {
-  const { state, heroes, connected } = useDraft();
+  const { state, heroes, assets, connected } = useDraft();
   const [, rerender] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => rerender((value) => value + 1), 250);
@@ -417,7 +455,12 @@ function OverlayPage() {
         </div>
       </header>
       <div className="overlay-teams">
-        <TeamDraft state={state} side="blue" heroes={catalog} />
+        <TeamDraft
+          state={state}
+          side="blue"
+          heroes={catalog}
+          cueUrls={assets?.cueUrls}
+        />
         <div className="overlay-versus">
           <span>VS</span>
           <small>
@@ -426,7 +469,12 @@ function OverlayPage() {
               : state.phaseIndex + 1}
           </small>
         </div>
-        <TeamDraft state={state} side="red" heroes={catalog} />
+        <TeamDraft
+          state={state}
+          side="red"
+          heroes={catalog}
+          cueUrls={assets?.cueUrls}
+        />
       </div>
       <footer className="overlay-footer">
         <span>UNOFFICIAL COMMUNITY BROADCAST</span>

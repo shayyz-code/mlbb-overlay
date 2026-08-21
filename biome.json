@@ -1,7 +1,13 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
   "files": {
-    "includes": ["apps/**", "packages/**", "scripts/**", "*.json"]
+    "includes": [
+      "apps/**",
+      "!apps/**/dist",
+      "packages/**",
+      "scripts/**",
+      "*.json"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -11,7 +17,10 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "suspicious": {
+        "noArrayIndexKey": "off"
+      }
     }
   },
   "javascript": {

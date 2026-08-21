@@ -1,13 +1,18 @@
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 import type { EventEnvelope } from "@shayyz/contracts";
 import { createBunWebSocket } from "hono/bun";
+import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 import { createApp } from "./app";
 import { DraftStore } from "./store";
 
 const host = process.env.SHAYYZ_HOST ?? "127.0.0.1";
 const port = Number(process.env.SHAYYZ_PORT ?? 3000);
-const runtimeDirectory = resolve(process.env.SHAYYZ_RUNTIME_DIR ?? "./runtime");
+const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const runtimeDirectory = process.env.SHAYYZ_RUNTIME_DIR
+  ? resolve(process.env.SHAYYZ_RUNTIME_DIR)
+  : join(projectRoot, "runtime");
 const isLoopback =
   host === "127.0.0.1" || host === "localhost" || host === "::1";
 const controlToken = isLoopback
@@ -18,15 +23,16 @@ await store.initialize();
 
 const clients = new Set<WSContext>();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
-const app = createApp({
+const application = createApp({
   store,
   ...(controlToken ? { controlToken } : {}),
-  webRoot: resolve("apps/web/dist"),
+  webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);
     for (const client of clients) client.send(payload);
   },
 });
+const app = new Hono();
 
 app.get(
   "/api/v1/events",
@@ -47,6 +53,7 @@ app.get(
     },
   })),
 );
+app.route("/", application);
 
 Bun.serve({ hostname: host, port, fetch: app.fetch, websocket });
 

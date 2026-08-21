@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
 import type { EventEnvelope } from "@shayyz/contracts";
 import { DraftCommandSchema } from "@shayyz/contracts";
 import { serveStatic } from "hono/bun";
@@ -91,7 +90,7 @@ export function createApp(options: AppOptions): Hono {
 
   if (options.webRoot && existsSync(options.webRoot)) {
     app.use("/assets/*", serveStatic({ root: options.webRoot }));
-    app.get("*", serveStatic({ path: join(options.webRoot, "index.html") }));
+    app.get("*", serveStatic({ root: options.webRoot, path: "index.html" }));
   } else {
     app.notFound((context) =>
       context.json({ error: "The web application has not been built." }, 404),

@@ -14,6 +14,7 @@ export const HeroSchema = z.object({
   name: z.string().min(1).max(80),
   portraitUrl: z.string().optional(),
   posterUrl: z.string().optional(),
+  voiceUrl: z.string().optional(),
 });
 export type Hero = z.infer<typeof HeroSchema>;
 
@@ -66,6 +67,22 @@ export const AssetPackManifestSchema = z.object({
     .default({}),
 });
 export type AssetPackManifest = z.infer<typeof AssetPackManifestSchema>;
+
+export const AssetPackStatusSchema = z.object({
+  enabled: z.boolean(),
+  packId: z.string().optional(),
+  displayName: z.string().optional(),
+  gameBuild: z.string().optional(),
+  coverage: z.object({
+    heroes: z.number().int().nonnegative(),
+    portraits: z.number().int().nonnegative(),
+    posters: z.number().int().nonnegative(),
+    voices: z.number().int().nonnegative(),
+  }),
+  missingHeroIds: z.array(z.string()),
+  cueUrls: z.record(z.string(), z.string()),
+});
+export type AssetPackStatus = z.infer<typeof AssetPackStatusSchema>;
 
 export const TeamSchema = z.object({
   name: z.string().min(1).max(60),

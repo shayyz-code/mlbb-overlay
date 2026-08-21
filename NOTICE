@@ -1,0 +1,23 @@
+SHAYYZ MLBB OVERLAY
+
+FalseJL attribution
+-------------------
+The non-empty source and configuration files recorded by commit 5d384cd and
+tag `falsejl-v4.1-import` were imported from the publicly distributed FalseJL
+MLBB Overlay Tool v4.1 download. FalseJL's original in-application terms allow
+free personal and commercial use, customization, modification, and further
+development, while prohibiting sale, resale, or for-profit distribution of the
+tool itself.
+
+SHAYYZ attribution
+------------------
+The five files that were empty at import time (`.gitignore`, `AGENTS.md`,
+`CONTRIBUTING.md`, `LICENSE`, and `README.md`) and every original change after
+the import tag are copyright (c) 2026 Aung Min Khant.
+
+Third-party material
+--------------------
+Mobile Legends: Bang Bang and related names, artwork, characters, logos,
+audio, video, fonts, and other media belong to their respective owners. They
+are not covered by the software license. The public repository intentionally
+does not publish the unverified media bundle from the downloaded archive.

@@ -17,6 +17,56 @@ export const HeroSchema = z.object({
 });
 export type Hero = z.infer<typeof HeroSchema>;
 
+export const AssetFileSchema = z.object({
+  path: z
+    .string()
+    .min(1)
+    .refine(
+      (value) =>
+        !value.startsWith("/") &&
+        !value.includes("\\") &&
+        !value.split("/").some((part) => part === "" || part === ".."),
+      "Asset paths must be safe relative POSIX paths.",
+    ),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  mimeType: z.enum([
+    "image/png",
+    "image/gif",
+    "video/webm",
+    "video/mp4",
+    "audio/ogg",
+  ]),
+});
+export type AssetFile = z.infer<typeof AssetFileSchema>;
+
+export const HeroMediaSchema = z.object({
+  portrait: AssetFileSchema.optional(),
+  poster: AssetFileSchema.optional(),
+  voice: AssetFileSchema.optional(),
+});
+export type HeroMedia = z.infer<typeof HeroMediaSchema>;
+
+export const AssetPackManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  pack: z.object({
+    id: z.string().regex(/^[a-z0-9-]+$/),
+    displayName: z.string().min(1).max(80),
+    usage: z.literal("personal-local-no-redistribution"),
+    createdAt: z.string().datetime(),
+    gameBuild: z.string().optional(),
+  }),
+  heroes: z.record(z.string().regex(/^[a-z0-9-]+$/), HeroMediaSchema),
+  cues: z
+    .object({
+      bluePick: AssetFileSchema.optional(),
+      redPick: AssetFileSchema.optional(),
+      blueBan: AssetFileSchema.optional(),
+      redBan: AssetFileSchema.optional(),
+    })
+    .default({}),
+});
+export type AssetPackManifest = z.infer<typeof AssetPackManifestSchema>;
+
 export const TeamSchema = z.object({
   name: z.string().min(1).max(60),
   shortName: z.string().min(1).max(8),

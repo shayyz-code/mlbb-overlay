@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "./app";
@@ -80,5 +80,18 @@ describe("draft API", () => {
     });
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ currentRevision: 1 });
+  });
+
+  test("serves the web application for nested OBS routes", async () => {
+    const { store } = await setup();
+    const webRoot = await mkdtemp(join(tmpdir(), "shayyz-web-"));
+    directories.push(webRoot);
+    await mkdir(join(webRoot, "assets"));
+    await writeFile(join(webRoot, "index.html"), "<h1>SHAYYZ</h1>");
+    const app = createApp({ store, webRoot });
+
+    const response = await app.request("/overlay/draft");
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("SHAYYZ");
   });
 });

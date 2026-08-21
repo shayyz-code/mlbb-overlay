@@ -1,0 +1,42 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+.turbo/
+playwright-report/
+test-results/
+
+# Runtime state and operator-provided assets
+runtime/*
+!runtime/.gitkeep
+vendor-assets/*
+!vendor-assets/README.md
+captures/
+models/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+~$*
+
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Legacy generated/runtime files
+public/serverip.txt
+public/database/savedmatch/
+public/database/*.xlsm
+public/Assets/

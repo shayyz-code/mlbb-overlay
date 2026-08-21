@@ -1,0 +1,27 @@
+{
+  "source": "FalseJL MLBB Overlay Tool v4.1 public download",
+  "sourceWebsite": "https://www.falsejl.my.id/",
+  "importDate": "2026-08-21",
+  "commit": "5d384cd",
+  "tag": "falsejl-v4.1-import",
+  "included": [
+    "server.js",
+    "package.json",
+    "CLAUDE.md",
+    "FALSEMLBBOVELAYFIX.bat",
+    "FALSEMLBBOVERLAYTOOL.BAT",
+    "public/**/*.html",
+    "public/**/*.css",
+    "public/**/*.js",
+    "public/External/*.json",
+    "public/database/*.json"
+  ],
+  "excluded": [
+    "the five zero-byte SHAYYZ scaffold files",
+    "operating-system metadata",
+    "screenshots and preview captures",
+    "runtime match archives and server address",
+    "office binaries and temporary files",
+    "media without documented redistribution permission"
+  ]
+}

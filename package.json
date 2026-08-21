@@ -1,17 +1,32 @@
 {
-  "name": "shayyz-mlbboverlay",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "shayyz-mlbb-overlay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A macOS-first MLBB broadcast overlay system for OBS Studio.",
+  "author": "Aung Min Khant",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "bun run --filter '*' dev",
+    "build": "tsc -p tsconfig.json",
+    "start": "bun run --cwd apps/server start",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test",
+    "test:e2e": "playwright test",
+    "check:english": "bun run scripts/check-english.ts",
+    "check:gitignore": "bun run scripts/check-gitignore.ts",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run build && bun run check:english && bun run check:gitignore"
   },
-  "keywords": [],
-  "author": "Aung Min Khant <aungminkhant.shay@gmail.com>",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "express": "^5.1.0",
-    "multer": "^2.0.2",
-    "ws": "^8.18.3"
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@playwright/test": "^1.55.0",
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.9.0"
   }
 }

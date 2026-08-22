@@ -188,6 +188,25 @@ export type DetectorStatus = z.infer<typeof DetectorStatusSchema>;
 export const DetectorModeCommandSchema = z.object({ mode: DetectorModeSchema });
 export type DetectorModeCommand = z.infer<typeof DetectorModeCommandSchema>;
 
+export const DetectorFrameRequestSchema = z.object({
+  sourceName: z.string().trim().min(1).max(120),
+});
+export const DetectorFrameSchema = z.object({
+  imageData: z.string().regex(/^data:image\/png;base64,/),
+});
+export const DetectorCalibrationSaveSchema = z.object({
+  profile: DetectorProfileSchema,
+  emptyFrameData: z.string().regex(/^data:image\/png;base64,/),
+});
+export const DetectorCalibrationResultSchema = z.object({
+  profile: DetectorProfileSchema,
+  restartRequired: z.literal(true),
+});
+export type DetectorFrameRequest = z.infer<typeof DetectorFrameRequestSchema>;
+export type DetectorCalibrationSave = z.infer<
+  typeof DetectorCalibrationSaveSchema
+>;
+
 export const IdlePosterJobsSchema = z.object({
   schemaVersion: z.literal(1),
   model: z.object({

@@ -2,6 +2,8 @@ import {
   AssetPackStatusSchema,
   DraftStateSchema,
   DetectorProposalSchema,
+  DetectorCalibrationResultSchema,
+  DetectorFrameSchema,
   DetectorStatusSchema,
   EventEnvelopeSchema,
   HeroSchema,
@@ -9,6 +11,7 @@ import {
   type DraftCommand,
   type DraftState,
   type DetectorMode,
+  type DetectorCalibrationSave,
   type DetectorProposal,
   type DetectorStatus,
   type Hero,
@@ -74,6 +77,40 @@ export async function reviewDetectorProposal(
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Proposal review failed.");
   return DetectorProposalSchema.parse(body);
+}
+
+export async function captureDetectorFrame(
+  sourceName: string,
+  token: string,
+): Promise<string> {
+  const response = await fetch("/api/v1/detector/calibration/frame", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ sourceName }),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Frame capture failed.");
+  return DetectorFrameSchema.parse(body).imageData;
+}
+
+export async function saveDetectorCalibration(
+  input: DetectorCalibrationSave,
+  token: string,
+): Promise<true> {
+  const response = await fetch("/api/v1/detector/profile", {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(input),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Calibration save failed.");
+  return DetectorCalibrationResultSchema.parse(body).restartRequired;
 }
 
 export async function fetchAssetStatus(): Promise<AssetPackStatus> {

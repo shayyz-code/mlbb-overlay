@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
 import type { EventEnvelope } from "@shayyz/contracts";
 import {
+  DetectorCalibrationSaveSchema,
+  DetectorFrameRequestSchema,
   DetectorModeCommandSchema,
   DraftCommandSchema,
 } from "@shayyz/contracts";
@@ -15,6 +17,7 @@ import { heroes } from "./heroes";
 import { RevisionConflictError, type DraftStore } from "./store";
 import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
+import type { DetectorCalibrationService } from "./calibration";
 
 export interface AppOptions {
   store: DraftStore;
@@ -24,6 +27,7 @@ export interface AppOptions {
   assetPack?: LocalAssetPack;
   detector?: DetectorCoordinator;
   detectorLifecycle?: DetectorLifecycle;
+  detectorCalibration?: DetectorCalibrationService;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -74,6 +78,64 @@ export function createApp(options: AppOptions): Hono {
   app.get("/api/v1/detector/status", (context) =>
     context.json(options.detector?.status() ?? null),
   );
+  app.get("/api/v1/detector/profile", async (context) =>
+    context.json(
+      options.detectorCalibration
+        ? await options.detectorCalibration.load()
+        : null,
+    ),
+  );
+  app.post(
+    "/api/v1/detector/calibration/frame",
+    requireControlToken,
+    async (context) => {
+      if (!options.detectorCalibration)
+        return context.json(
+          { error: "Detector calibration is not configured." },
+          503,
+        );
+      try {
+        const { sourceName } = DetectorFrameRequestSchema.parse(
+          await context.req.json(),
+        );
+        return context.json({
+          imageData: await options.detectorCalibration.capture(sourceName),
+        });
+      } catch (error) {
+        return context.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Calibration capture failed.",
+          },
+          400,
+        );
+      }
+    },
+  );
+  app.put("/api/v1/detector/profile", requireControlToken, async (context) => {
+    if (!options.detectorCalibration)
+      return context.json(
+        { error: "Detector calibration is not configured." },
+        503,
+      );
+    try {
+      const input = DetectorCalibrationSaveSchema.parse(
+        await context.req.json(),
+      );
+      const profile = await options.detectorCalibration.save(input);
+      return context.json({ profile, restartRequired: true });
+    } catch (error) {
+      return context.json(
+        {
+          error:
+            error instanceof Error ? error.message : "Calibration save failed.",
+        },
+        400,
+      );
+    }
+  });
   app.put("/api/v1/detector/mode", requireControlToken, async (context) => {
     if (!options.detector)
       return context.json({ error: "The detector is not configured." }, 503);

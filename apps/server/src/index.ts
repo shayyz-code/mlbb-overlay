@@ -19,6 +19,7 @@ import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 import { createApp } from "./app";
 import { LocalAssetPack } from "./assets";
+import { DetectorCalibrationService } from "./calibration";
 import { DraftStore } from "./store";
 import { DetectorCoordinator } from "./detector";
 import { DetectorLifecycle, validateObsUrl } from "./detector-lifecycle";
@@ -50,6 +51,11 @@ const detectorProfilePath = resolve(
   process.env.SHAYYZ_DETECTOR_PROFILE ??
     join(runtimeDirectory, "detector/profile.json"),
 );
+const detectorEmptyFramePath = resolve(
+  process.env.SHAYYZ_DETECTOR_EMPTY_FRAME ??
+    join(runtimeDirectory, "detector/empty-frame.png"),
+);
+const detectorProfileStore = new DetectorProfileStore(detectorProfilePath);
 const heroIds = heroes.map((hero) => hero.id);
 let detectorProfile: DetectorProfile | null = null;
 let detectorReferences: Awaited<
@@ -58,7 +64,7 @@ let detectorReferences: Awaited<
 let detectorEmptyFrame: Uint8Array | null = null;
 let detectorSetupError: Error | null = null;
 try {
-  detectorProfile = await new DetectorProfileStore(detectorProfilePath).load();
+  detectorProfile = await detectorProfileStore.load();
   if (detectorProfile) {
     const referenceDirectory = resolve(
       process.env.SHAYYZ_DETECTOR_REFERENCES ??
@@ -70,14 +76,7 @@ try {
     detectorReferences = (
       await loadReferenceDescriptors(referenceDirectory, heroIds)
     ).references;
-    detectorEmptyFrame = new Uint8Array(
-      await readFile(
-        resolve(
-          process.env.SHAYYZ_DETECTOR_EMPTY_FRAME ??
-            join(runtimeDirectory, "detector/empty-frame.png"),
-        ),
-      ),
-    );
+    detectorEmptyFrame = new Uint8Array(await readFile(detectorEmptyFramePath));
   }
 } catch (error) {
   detectorSetupError =
@@ -124,6 +123,19 @@ const detectorLifecycle = new DetectorLifecycle(detector, async () => {
     onError: (error) => detectorLifecycle.report(error),
   });
 });
+const detectorCalibration = new DetectorCalibrationService({
+  profileStore: detectorProfileStore,
+  emptyFramePath: detectorEmptyFramePath,
+  screenshotSource: (sourceName) =>
+    new ObsScreenshotSource({
+      url: validateObsUrl(process.env.SHAYYZ_OBS_URL ?? "ws://127.0.0.1:4455"),
+      sourceName,
+      imageFormat: "png",
+      ...(process.env.SHAYYZ_OBS_PASSWORD
+        ? { password: process.env.SHAYYZ_OBS_PASSWORD }
+        : {}),
+    }),
+});
 
 const clients = new Set<WSContext>();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
@@ -133,6 +145,7 @@ const application = createApp({
   ...(assetPack ? { assetPack } : {}),
   detector,
   detectorLifecycle,
+  detectorCalibration,
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);

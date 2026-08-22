@@ -8,6 +8,7 @@ export {
   validateDetectorProfile,
 } from "./profile";
 export {
+  decodeScreenshot,
   ObsDraftRecognitionLoop,
   type DraftCandidate,
   type DraftDetectionContext,
@@ -116,10 +117,7 @@ function dot(left: Float32Array, right: Float32Array): number {
   return result;
 }
 
-function normalizedSimilarity(
-  left: Float32Array,
-  right: Float32Array,
-): number {
+function normalizedSimilarity(left: Float32Array, right: Float32Array): number {
   const leftEnergy = dot(left, left);
   const rightEnergy = dot(right, right);
   if (leftEnergy === 0 && rightEnergy === 0) return 1;
@@ -325,6 +323,7 @@ export interface ObsScreenshotOptions {
   width?: number;
   height?: number;
   quality?: number;
+  imageFormat?: "jpg" | "png";
   timeoutMs?: number;
 }
 
@@ -399,7 +398,7 @@ export class ObsScreenshotSource {
           requestId,
           requestData: {
             sourceName: this.options.sourceName,
-            imageFormat: "jpg",
+            imageFormat: this.options.imageFormat ?? "jpg",
             ...(this.options.width ? { imageWidth: this.options.width } : {}),
             ...(this.options.height
               ? { imageHeight: this.options.height }

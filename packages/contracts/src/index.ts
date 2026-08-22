@@ -187,6 +187,34 @@ export const DetectorModelManifestSchema = z
   });
 export type DetectorModelManifest = z.infer<typeof DetectorModelManifestSchema>;
 
+export const DetectorDatasetManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  createdAt: z.string().datetime(),
+  samples: z.array(
+    z.object({
+      heroId: z.string().regex(/^[a-z0-9-]+$/),
+      kind: SelectionKindSchema,
+      side: SideSchema,
+      slot: z.number().int().min(0).max(4),
+      gameBuild: z.string().min(1),
+      sessionId: z.string().regex(/^[a-zA-Z0-9-]+$/),
+      split: z.enum(["train", "validation", "test"]),
+      source: z.object({
+        kind: z.enum(["local-capture", "roboflow-seed", "synthetic"]),
+        license: z.string().min(1),
+        attribution: z.string().min(1).optional(),
+      }),
+      file: z.object({
+        path: SafeRelativePathSchema,
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      }),
+    }),
+  ),
+});
+export type DetectorDatasetManifest = z.infer<
+  typeof DetectorDatasetManifestSchema
+>;
+
 export const DetectorSlotSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,

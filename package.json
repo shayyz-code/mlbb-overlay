@@ -25,6 +25,7 @@
     "posters": "bun run scripts/private-posters.ts",
     "draft-refs": "bun run scripts/private-draft-references.ts",
     "detector:benchmark": "bun run scripts/detector-benchmark.ts",
+    "detector:sample": "bun run scripts/private-detector-dataset.ts",
     "idle-posters": "bun run scripts/private-idle-posters.ts",
     "check:english": "bun run scripts/check-english.ts",
     "check:gitignore": "bun run scripts/check-gitignore.ts",
@@ -34,6 +35,7 @@
     "@biomejs/biome": "^2.2.0",
     "@playwright/test": "^1.55.0",
     "@types/bun": "^1.3.0",
+    "sharp": "^0.35.3",
     "typescript": "^5.9.0"
   }
 }

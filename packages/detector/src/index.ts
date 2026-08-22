@@ -7,6 +7,12 @@ export {
   loadReferenceDescriptors,
   validateDetectorProfile,
 } from "./profile";
+export {
+  ObsDraftRecognitionLoop,
+  type DraftCandidate,
+  type DraftDetectionContext,
+  type ScreenshotSource,
+} from "./runtime";
 
 export interface VisualObservation<T = unknown> {
   key: string;
@@ -110,13 +116,24 @@ function dot(left: Float32Array, right: Float32Array): number {
   return result;
 }
 
+function normalizedSimilarity(
+  left: Float32Array,
+  right: Float32Array,
+): number {
+  const leftEnergy = dot(left, left);
+  const rightEnergy = dot(right, right);
+  if (leftEnergy === 0 && rightEnergy === 0) return 1;
+  if (leftEnergy === 0 || rightEnergy === 0) return 0.5;
+  return (dot(left, right) + 1) / 2;
+}
+
 export function descriptorSimilarity(
   left: ImageDescriptor,
   right: ImageDescriptor,
   kind: "pick" | "ban" = "pick",
 ): number {
-  const luminance = (dot(left.luminance, right.luminance) + 1) / 2;
-  const edges = (dot(left.edges, right.edges) + 1) / 2;
+  const luminance = normalizedSimilarity(left.luminance, right.luminance);
+  const edges = normalizedSimilarity(left.edges, right.edges);
   let histogram = 0;
   for (let index = 0; index < left.histogram.length; index += 1)
     histogram += Math.min(

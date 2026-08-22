@@ -1,6 +1,9 @@
 import { existsSync } from "node:fs";
 import type { EventEnvelope } from "@shayyz/contracts";
-import { DraftCommandSchema } from "@shayyz/contracts";
+import {
+  DetectorModeCommandSchema,
+  DraftCommandSchema,
+} from "@shayyz/contracts";
 import { serveStatic } from "hono/bun";
 import { Hono } from "hono";
 import {
@@ -10,6 +13,7 @@ import {
 } from "./assets";
 import { heroes } from "./heroes";
 import { RevisionConflictError, type DraftStore } from "./store";
+import type { DetectorCoordinator } from "./detector";
 
 export interface AppOptions {
   store: DraftStore;
@@ -17,6 +21,7 @@ export interface AppOptions {
   webRoot?: string;
   broadcast?: (event: EventEnvelope) => void;
   assetPack?: LocalAssetPack;
+  detector?: DetectorCoordinator;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -45,6 +50,7 @@ export function createApp(options: AppOptions): Hono {
     }
     return next();
   };
+  options.detector?.setEventSink(emit);
 
   app.get("/api/v1/system/status", (context) =>
     context.json({
@@ -63,6 +69,52 @@ export function createApp(options: AppOptions): Hono {
       options.assetPack?.status(heroIds) ?? emptyAssetStatus(heroIds),
     ),
   );
+  app.get("/api/v1/detector/status", (context) =>
+    context.json(options.detector?.status() ?? null),
+  );
+  app.put("/api/v1/detector/mode", requireControlToken, async (context) => {
+    if (!options.detector)
+      return context.json({ error: "The detector is not configured." }, 503);
+    try {
+      const { mode } = DetectorModeCommandSchema.parse(
+        await context.req.json(),
+      );
+      return context.json(options.detector.setMode(mode));
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "Invalid mode." },
+        400,
+      );
+    }
+  });
+  for (const action of ["accept", "reject"] as const) {
+    app.post(
+      `/api/v1/detector/proposals/:id/${action}`,
+      requireControlToken,
+      async (context) => {
+        if (!options.detector)
+          return context.json(
+            { error: "The detector is not configured." },
+            503,
+          );
+        try {
+          const proposal =
+            action === "accept"
+              ? await options.detector.accept(context.req.param("id"))
+              : options.detector.reject(context.req.param("id"));
+          return context.json(proposal);
+        } catch (error) {
+          return context.json(
+            {
+              error:
+                error instanceof Error ? error.message : "Invalid proposal.",
+            },
+            409,
+          );
+        }
+      },
+    );
+  }
   app.get("/api/v1/media/heroes/:id/:kind", (context) => {
     const kind = context.req.param("kind") as HeroMediaKind;
     if (!(["portrait", "poster", "voice"] as string[]).includes(kind))

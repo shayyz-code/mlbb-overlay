@@ -48,3 +48,16 @@ bun run draft-refs verify --output captures/detector-references/VERSION/pick-art
 
 Highlight heroes manually. This workflow never sends input to the game and does
 not extract package files. Draft-slot PNGs and their timing map stay local.
+
+## Local AI idle posters
+
+Install ComfyUI locally with the `svd_xt_1_1.safetensors` checkpoint and keep it
+on loopback. Prepare a deterministic local queue after all portraits exist:
+
+```sh
+bun run idle-posters prepare --model-revision svd-xt-1.1 --complete
+```
+
+The pipeline uses subtle SVD motion and converts 25 generated frames into a
+silent four-second ping-pong VP9 loop. Inspect every poster before broadcast;
+use `--force` only when deliberately replacing an existing local result.

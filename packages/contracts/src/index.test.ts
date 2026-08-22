@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   AssetPackManifestSchema,
   DraftReferenceMapSchema,
+  IdlePosterJobsSchema,
   STANDARD_TEN_BAN_FORMAT,
   applySelection,
   createDefaultDraftState,
@@ -97,6 +98,29 @@ test("draft reference maps require a positive crop when configured", () => {
     DraftReferenceMapSchema.safeParse({
       ...base,
       crop: { x: 0, y: 0, width: 0, height: 100 },
+    }).success,
+  ).toBe(false);
+});
+
+test("idle poster jobs cap identity-changing augmentation", () => {
+  const base = {
+    schemaVersion: 1,
+    model: { checkpoint: "svd_xt_1_1.safetensors", revision: "1.1" },
+    parameters: {
+      width: 576,
+      height: 1024,
+      frames: 25,
+      sourceFps: 6,
+      motionBucketId: 40,
+      augmentationLevel: 0.02,
+    },
+    jobs: [],
+  };
+  expect(IdlePosterJobsSchema.safeParse(base).success).toBe(true);
+  expect(
+    IdlePosterJobsSchema.safeParse({
+      ...base,
+      parameters: { ...base.parameters, augmentationLevel: 0.04 },
     }).success,
   ).toBe(false);
 });

@@ -111,6 +111,53 @@ export const DraftReferenceMapSchema = z.object({
 });
 export type DraftReferenceMap = z.infer<typeof DraftReferenceMapSchema>;
 
+export const IdlePosterJobsSchema = z.object({
+  schemaVersion: z.literal(1),
+  model: z.object({
+    checkpoint: z.string().min(1),
+    revision: z.string().min(1),
+  }),
+  parameters: z.object({
+    width: z.literal(576),
+    height: z.literal(1024),
+    frames: z.literal(25),
+    sourceFps: z.literal(6),
+    motionBucketId: z.number().int().min(1).max(255),
+    augmentationLevel: z.number().min(0).max(0.03),
+  }),
+  jobs: z.array(
+    z.object({
+      heroId: z.string().regex(/^[a-z0-9-]+$/),
+      source: z.string().min(1),
+      sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      seed: z.number().int().nonnegative(),
+      status: z.enum(["pending", "generated", "rejected"]),
+      outputSha256: z
+        .string()
+        .regex(/^[a-f0-9]{64}$/)
+        .optional(),
+    }),
+  ),
+});
+export type IdlePosterJobs = z.infer<typeof IdlePosterJobsSchema>;
+
+export const PrivateAssetProvenanceSchema = z.object({
+  schemaVersion: z.literal(1),
+  assets: z.record(
+    z.string(),
+    z.object({
+      sourceUrl: z.string().url(),
+      retrievedAt: z.string().datetime(),
+      sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      rights: z.literal("personal-local-no-redistribution"),
+      transformations: z.array(z.string()),
+    }),
+  ),
+});
+export type PrivateAssetProvenance = z.infer<
+  typeof PrivateAssetProvenanceSchema
+>;
+
 export const TeamSchema = z.object({
   name: z.string().min(1).max(60),
   shortName: z.string().min(1).max(8),

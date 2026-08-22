@@ -56,6 +56,7 @@ on loopback. Prepare a deterministic local queue after all portraits exist:
 
 ```sh
 bun run idle-posters prepare --model-revision svd-xt-1.1 --complete
+bun run idle-posters generate --comfy http://127.0.0.1:8188 --limit 1
 ```
 
 The pipeline uses subtle SVD motion and converts 25 generated frames into a

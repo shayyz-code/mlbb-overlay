@@ -24,6 +24,7 @@
     "android:audit": "bun run scripts/audit-android.ts",
     "posters": "bun run scripts/private-posters.ts",
     "draft-refs": "bun run scripts/private-draft-references.ts",
+    "detector:benchmark": "bun run scripts/detector-benchmark.ts",
     "idle-posters": "bun run scripts/private-idle-posters.ts",
     "check:english": "bun run scripts/check-english.ts",
     "check:gitignore": "bun run scripts/check-gitignore.ts",

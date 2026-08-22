@@ -207,6 +207,64 @@ export type DetectorCalibrationSave = z.infer<
   typeof DetectorCalibrationSaveSchema
 >;
 
+const ReplayFramePathSchema = z
+  .string()
+  .regex(/\.(?:png|jpe?g)$/i)
+  .refine(
+    (value) =>
+      !value.startsWith("/") &&
+      !value.includes("\\") &&
+      !value.split("/").some((part) => part === "" || part === ".."),
+    "Replay frame paths must be safe and relative.",
+  );
+export const DetectorReplayManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  drafts: z.array(
+    z.object({
+      id: z.string().min(1),
+      selections: z
+        .array(
+          z.object({
+            expectedHeroId: z.string().regex(/^[a-z0-9-]+$/),
+            transitionAtMs: z.number().int().nonnegative(),
+            frames: z
+              .array(
+                z.object({
+                  path: ReplayFramePathSchema,
+                  observedAtMs: z.number().int().nonnegative(),
+                }),
+              )
+              .min(4),
+          }),
+        )
+        .length(20),
+    }),
+  ),
+});
+export type DetectorReplayManifest = z.infer<
+  typeof DetectorReplayManifestSchema
+>;
+
+export const DetectorBenchmarkReportSchema = z.object({
+  schemaVersion: z.literal(1),
+  profileId: z.string(),
+  generatedAt: z.string().datetime(),
+  draftCount: z.number().int().nonnegative(),
+  referenceCount: z.number().int().nonnegative(),
+  selections: z.number().int().nonnegative(),
+  correct: z.number().int().nonnegative(),
+  wrong: z.number().int().nonnegative(),
+  missed: z.number().int().nonnegative(),
+  precision: z.number().min(0).max(1),
+  recall: z.number().min(0).max(1),
+  p95LatencyMs: z.number().nonnegative().nullable(),
+  eligible: z.boolean(),
+  failures: z.array(z.string()),
+});
+export type DetectorBenchmarkReport = z.infer<
+  typeof DetectorBenchmarkReportSchema
+>;
+
 export const IdlePosterJobsSchema = z.object({
   schemaVersion: z.literal(1),
   model: z.object({

@@ -67,6 +67,21 @@ Promotion targets:
 - 50 complete drafts and 100 objective events across supported profiles;
 - zero automatic state commits until the operator-acceptance workflow ships.
 
+## Offline promotion
+
+Keep annotated frames and manifests under ignored `captures/`. Each manifest
+contains 20 annotated selections per complete draft. Run the production matcher
+offline, inspect its report, and promote only a passing matching profile:
+
+```sh
+bun run detector:benchmark run --manifest captures/replays/manifest.json --profile runtime/detector/profile.json --references captures/detector-references/VERSION/pick-art --empty-frame runtime/detector/empty-frame.png
+bun run detector:benchmark promote --profile runtime/detector/profile.json --report captures/detector-benchmark-report.json
+```
+
+Promotion requires 50 complete drafts, all 133 references, 99.5% precision, 98%
+recall, and p95 latency no greater than one second. Until explicit promotion,
+confidence-tiered mode safely falls back to operator proposals.
+
 ## Primary sources
 
 - [OBS WebSocket project and security guidance](https://github.com/obsproject/obs-websocket)

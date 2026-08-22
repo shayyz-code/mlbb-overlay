@@ -118,6 +118,75 @@ export const DetectorModeSchema = z.enum([
 ]);
 export type DetectorMode = z.infer<typeof DetectorModeSchema>;
 
+const SafeRelativePathSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      !value.startsWith("/") &&
+      !value.includes("\\") &&
+      !value.split("/").some((part) => part === "" || part === ".."),
+    "Paths must be safe relative POSIX paths.",
+  );
+
+export const DetectorModelManifestSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    id: z.string().regex(/^[a-z0-9-]+$/),
+    revision: z.string().regex(/^[a-f0-9]{7,64}$/),
+    architecture: z.literal("mobilenet-v3-small"),
+    model: z.object({
+      path: SafeRelativePathSchema,
+      sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      sizeBytes: z
+        .number()
+        .int()
+        .positive()
+        .max(16 * 1024 * 1024),
+      precision: z.enum(["fp32", "int8"]),
+      inputName: z.literal("input"),
+      outputName: z.literal("logits"),
+    }),
+    input: z.object({
+      width: z.literal(224),
+      height: z.literal(224),
+      channels: z.literal(3),
+      layout: z.literal("nchw"),
+      colorSpace: z.literal("rgb"),
+      mean: z.tuple([z.number(), z.number(), z.number()]),
+      std: z.tuple([
+        z.number().positive(),
+        z.number().positive(),
+        z.number().positive(),
+      ]),
+    }),
+    labels: z.array(z.string().regex(/^[a-z0-9-]+$/)).length(135),
+    validation: z.object({
+      validatedAt: z.string().datetime().nullable(),
+      top1Accuracy: z.number().min(0).max(1).nullable(),
+      macroRecall: z.number().min(0).max(1).nullable(),
+      unknownFalseAcceptRate: z.number().min(0).max(1).nullable(),
+    }),
+  })
+  .superRefine((manifest, context) => {
+    if (new Set(manifest.labels).size !== manifest.labels.length)
+      context.addIssue({
+        code: "custom",
+        path: ["labels"],
+        message: "Model labels must be unique.",
+      });
+    if (
+      manifest.labels.at(-2) !== "empty" ||
+      manifest.labels.at(-1) !== "unknown"
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["labels"],
+        message: "Model labels must end with empty and unknown.",
+      });
+  });
+export type DetectorModelManifest = z.infer<typeof DetectorModelManifestSchema>;
+
 export const DetectorSlotSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,

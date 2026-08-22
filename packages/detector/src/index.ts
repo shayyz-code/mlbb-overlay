@@ -14,6 +14,14 @@ export {
   type DraftDetectionContext,
   type ScreenshotSource,
 } from "./runtime";
+export {
+  classifyLogits,
+  loadDetectorModelBundle,
+  OnnxSlotClassifier,
+  prepareClassifierInput,
+  type ClassifierResult,
+  type DetectorModelBundle,
+} from "./model";
 
 export interface VisualObservation<T = unknown> {
   key: string;

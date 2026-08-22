@@ -338,6 +338,102 @@ button.danger {
 .timer-controls select {
   padding: 9px;
 }
+.detector-panel {
+  margin: 0 0 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(37, 185, 255, 0.25);
+  background: linear-gradient(
+    120deg,
+    rgba(37, 185, 255, 0.08),
+    var(--panel) 55%
+  );
+}
+.detector-heading,
+.detector-controls,
+.detector-proposal,
+.proposal-actions {
+  display: flex;
+  align-items: center;
+}
+.detector-heading {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.detector-heading h2 {
+  margin: 2px 0 0;
+}
+.detector-state {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.detector-state.online,
+.detector-readiness .ready {
+  border-color: rgba(62, 242, 163, 0.45);
+  color: var(--success);
+}
+.detector-controls {
+  gap: 12px;
+}
+.detector-controls label,
+.detector-readiness {
+  display: grid;
+  gap: 5px;
+}
+.detector-controls label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.detector-controls button {
+  align-self: end;
+  min-height: 38px;
+}
+.detector-readiness {
+  margin-left: auto;
+  text-align: right;
+}
+.detector-readiness span {
+  color: var(--gold);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.detector-error,
+.detector-hint {
+  margin: 12px 0 0;
+  color: #ff9bad;
+  font-size: 0.76rem;
+}
+.detector-hint {
+  color: var(--muted);
+}
+.detector-proposal {
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.detector-proposal > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.detector-proposal > div:nth-child(2) > span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+.proposal-actions {
+  gap: 8px;
+  margin-left: auto;
+}
+.proposal-actions .accept {
+  border-color: rgba(62, 242, 163, 0.45);
+  color: var(--success);
+}
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(420px, 1.35fr) minmax(360px, 0.65fr);
@@ -429,6 +525,10 @@ button.danger {
   top: 3px;
   right: 4px;
   color: var(--gold);
+}
+.detector-proposal .hero-mark {
+  width: 76px;
+  flex: 0 0 76px;
 }
 .draft-preview {
   padding-bottom: 14px;
@@ -737,6 +837,16 @@ button.danger {
   }
   .workspace-grid {
     grid-template-columns: 1fr;
+  }
+  .detector-controls,
+  .detector-proposal {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .detector-readiness,
+  .proposal-actions {
+    margin-left: 0;
+    text-align: left;
   }
 }
 

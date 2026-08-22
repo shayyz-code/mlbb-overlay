@@ -5,6 +5,8 @@ import {
   type DraftCommand,
   type DraftSelection,
   type DraftState,
+  type DetectorMode,
+  type DetectorStatus,
   type Hero,
   type Side,
 } from "@shayyz/contracts";
@@ -18,8 +20,12 @@ import {
 import {
   fetchAssetStatus,
   fetchDraft,
+  fetchDetectorStatus,
   fetchHeroes,
   sendCommand,
+  reviewDetectorProposal,
+  setDetectorMode,
+  setDetectorRunning,
   subscribeToDraft,
 } from "./api";
 import { HeroMedia } from "./HeroMedia";
@@ -258,9 +264,147 @@ function TeamEditor({
   );
 }
 
+function DetectorPanel({ heroes, token }: { heroes: Hero[]; token: string }) {
+  const [status, setStatus] = useState<DetectorStatus>();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const refresh = () =>
+      fetchDetectorStatus()
+        .then(setStatus)
+        .catch((reason: Error) => setError(reason.message));
+    refresh();
+    const timer = window.setInterval(refresh, 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      setStatus(await fetchDetectorStatus());
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Detector action failed.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!status) return null;
+  const proposal = status.pendingProposal;
+  const hero = heroes.find((item) => item.id === proposal?.heroId);
+  return (
+    <section className="detector-panel">
+      <div className="detector-heading">
+        <div>
+          <small>Opt-in visual beta</small>
+          <h2>OBS Draft Detector</h2>
+        </div>
+        <span className={`detector-state ${status.running ? "online" : ""}`}>
+          {status.running ? "Scanning" : "Stopped"}
+        </span>
+      </div>
+      <div className="detector-controls">
+        <label>
+          Detection mode
+          <select
+            value={status.mode}
+            disabled={busy}
+            onChange={(event) =>
+              run(async () => {
+                setStatus(
+                  await setDetectorMode(
+                    event.target.value as DetectorMode,
+                    token,
+                  ),
+                );
+              })
+            }
+          >
+            <option value="off">Off</option>
+            <option value="proposal">Proposals only</option>
+            <option value="confidence-tiered">Confidence-tiered</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          disabled={busy || status.mode === "off" || !status.profileConfigured}
+          onClick={() => run(() => setDetectorRunning(!status.running, token))}
+        >
+          {status.running ? "Stop detector" : "Start detector"}
+        </button>
+        <div className="detector-readiness">
+          <small>References</small>
+          <strong>
+            {status.referenceCount} / {status.expectedReferenceCount}
+          </strong>
+          <span className={status.automaticReady ? "ready" : ""}>
+            {status.automaticReady ? "Automatic ready" : "Proposal fallback"}
+          </span>
+        </div>
+      </div>
+      {(error || status.lastError) && (
+        <p className="detector-error">{error || status.lastError}</p>
+      )}
+      {!status.profileConfigured && (
+        <p className="detector-hint">
+          Calibrate a local profile before starting. Automatic application stays
+          locked until all 133 references are validated.
+        </p>
+      )}
+      {proposal && (
+        <div className="detector-proposal">
+          <HeroMark hero={hero} />
+          <div>
+            <small>Recognition proposal</small>
+            <strong>{hero?.name ?? proposal.heroId}</strong>
+            <span>
+              {proposal.side} {proposal.kind} {proposal.slot + 1} · confidence{" "}
+              {(proposal.confidence * 100).toFixed(1)}% · margin{" "}
+              {(proposal.runnerUpMargin * 100).toFixed(1)}% ·{" "}
+              {proposal.evidenceFrames} frames
+            </span>
+          </div>
+          <div className="proposal-actions">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                run(() => reviewDetectorProposal(proposal.id, "reject", token))
+              }
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              className="accept"
+              disabled={busy}
+              onClick={() =>
+                run(() => reviewDetectorProposal(proposal.id, "accept", token))
+              }
+            >
+              Accept hero
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ControlPage() {
-  const { state, heroes, assets, connected, error, token, saveToken, dispatch } =
-    useDraft();
+  const {
+    state,
+    heroes,
+    assets,
+    connected,
+    error,
+    token,
+    saveToken,
+    dispatch,
+  } = useDraft();
   const [query, setQuery] = useState("");
   const used = useMemo(
     () => (state ? selectedHeroIds(state) : new Set<string>()),
@@ -409,6 +553,8 @@ function ControlPage() {
             </select>
           </div>
         </div>
+
+        <DetectorPanel heroes={heroes} token={token} />
 
         <div className="workspace-grid">
           <section className="hero-library">

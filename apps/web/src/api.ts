@@ -1,15 +1,80 @@
 import {
   AssetPackStatusSchema,
   DraftStateSchema,
+  DetectorProposalSchema,
+  DetectorStatusSchema,
   EventEnvelopeSchema,
   HeroSchema,
   type AssetPackStatus,
   type DraftCommand,
   type DraftState,
+  type DetectorMode,
+  type DetectorProposal,
+  type DetectorStatus,
   type Hero,
 } from "@shayyz/contracts";
 
 const HeroesSchema = HeroSchema.array();
+
+async function detectorRequest(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<DetectorStatus> {
+  const response = await fetch(`/api/v1/detector/${path}`, {
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Detector request failed.");
+  return DetectorStatusSchema.parse(body);
+}
+
+export async function fetchDetectorStatus(): Promise<DetectorStatus> {
+  const response = await fetch("/api/v1/detector/status");
+  if (!response.ok) throw new Error("Unable to load detector status.");
+  return DetectorStatusSchema.parse(await response.json());
+}
+
+export function setDetectorMode(
+  mode: DetectorMode,
+  token: string,
+): Promise<DetectorStatus> {
+  return detectorRequest("mode", token, {
+    method: "PUT",
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export function setDetectorRunning(
+  running: boolean,
+  token: string,
+): Promise<DetectorStatus> {
+  return detectorRequest(running ? "start" : "stop", token, {
+    method: "POST",
+  });
+}
+
+export async function reviewDetectorProposal(
+  id: string,
+  action: "accept" | "reject",
+  token: string,
+): Promise<DetectorProposal> {
+  const response = await fetch(
+    `/api/v1/detector/proposals/${encodeURIComponent(id)}/${action}`,
+    {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    },
+  );
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Proposal review failed.");
+  return DetectorProposalSchema.parse(body);
+}
 
 export async function fetchAssetStatus(): Promise<AssetPackStatus> {
   const response = await fetch("/api/v1/assets/status");

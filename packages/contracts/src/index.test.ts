@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   AssetPackManifestSchema,
+  DetectorProfileSchema,
   DraftReferenceMapSchema,
   IdlePosterJobsSchema,
   STANDARD_TEN_BAN_FORMAT,
@@ -100,6 +101,32 @@ test("draft reference maps require a positive crop when configured", () => {
       crop: { x: 0, y: 0, width: 0, height: 100 },
     }).success,
   ).toBe(false);
+});
+
+test("detector profiles require all twenty draft slots", () => {
+  const slots = ["blue", "red"].flatMap((side) =>
+    ["pick", "ban"].flatMap((kind) =>
+      Array.from({ length: 5 }, (_, slot) => ({
+        side,
+        kind,
+        slot,
+        rect: { x: slot * 10, y: 0, width: 10, height: 10 },
+      })),
+    ),
+  );
+  expect(
+    DetectorProfileSchema.parse({
+      schemaVersion: 1,
+      id: "ranked-en-1080p",
+      gameBuild: "2.1.0",
+      language: "en",
+      sourceName: "MLBB",
+      frame: { width: 1920, height: 1080 },
+      slots,
+      thresholds: {},
+      validation: { referenceCount: 133, validatedAt: null },
+    }).slots,
+  ).toHaveLength(20);
 });
 
 test("idle poster jobs cap identity-changing augmentation", () => {

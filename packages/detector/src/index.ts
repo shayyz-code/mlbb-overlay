@@ -1,5 +1,13 @@
 export type DetectionKind = "draft-selection" | "turtle-kill" | "lord-kill";
 
+export {
+  DetectorProfileStore,
+  describeEncodedImage,
+  isAutomaticProfileReady,
+  loadReferenceDescriptors,
+  validateDetectorProfile,
+} from "./profile";
+
 export interface VisualObservation<T = unknown> {
   key: string;
   kind: DetectionKind;

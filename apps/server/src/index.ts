@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url";
-import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   currentPhase,
@@ -9,10 +8,12 @@ import {
 } from "@shayyz/contracts";
 import {
   DetectorProfileStore,
+  OnnxSlotClassifier,
   ObsDraftRecognitionLoop,
   ObsScreenshotSource,
   isAutomaticProfileReady,
-  loadReferenceDescriptors,
+  loadDetectorModelBundle,
+  type DetectorModelBundle,
 } from "@shayyz/detector";
 import { createBunWebSocket } from "hono/bun";
 import { Hono } from "hono";
@@ -56,27 +57,21 @@ const detectorEmptyFramePath = resolve(
     join(runtimeDirectory, "detector/empty-frame.png"),
 );
 const detectorProfileStore = new DetectorProfileStore(detectorProfilePath);
+const detectorModelManifestPath = resolve(
+  process.env.SHAYYZ_DETECTOR_MODEL ??
+    join(projectRoot, "vendor-assets/mlbb-personal/detector/manifest.json"),
+);
 const heroIds = heroes.map((hero) => hero.id);
 let detectorProfile: DetectorProfile | null = null;
-let detectorReferences: Awaited<
-  ReturnType<typeof loadReferenceDescriptors>
->["references"] = [];
-let detectorEmptyFrame: Uint8Array | null = null;
+let detectorModel: DetectorModelBundle | null = null;
 let detectorSetupError: Error | null = null;
 try {
   detectorProfile = await detectorProfileStore.load();
   if (detectorProfile) {
-    const referenceDirectory = resolve(
-      process.env.SHAYYZ_DETECTOR_REFERENCES ??
-        join(
-          projectRoot,
-          `captures/detector-references/${detectorProfile.gameBuild}/pick-art`,
-        ),
+    detectorModel = await loadDetectorModelBundle(
+      detectorModelManifestPath,
+      heroIds,
     );
-    detectorReferences = (
-      await loadReferenceDescriptors(referenceDirectory, heroIds)
-    ).references;
-    detectorEmptyFrame = new Uint8Array(await readFile(detectorEmptyFramePath));
   }
 } catch (error) {
   detectorSetupError =
@@ -85,14 +80,16 @@ try {
 const detector = new DetectorCoordinator({
   store,
   profile: detectorProfile,
-  referenceCount: detectorReferences.length,
+  referenceCount: detectorModel ? 133 : 0,
   automaticReady:
     detectorProfile !== null &&
-    isAutomaticProfileReady(detectorProfile, detectorReferences.length),
+    detectorModel !== null &&
+    detectorModel.manifest.validation.validatedAt !== null &&
+    isAutomaticProfileReady(detectorProfile, 133),
 });
 detector.setError(detectorSetupError);
 const detectorLifecycle = new DetectorLifecycle(detector, async () => {
-  if (!detectorProfile || !detectorEmptyFrame)
+  if (!detectorProfile || !detectorModel)
     throw (
       detectorSetupError ?? new Error("Detector local files are incomplete.")
     );
@@ -106,8 +103,7 @@ const detectorLifecycle = new DetectorLifecycle(detector, async () => {
   return new ObsDraftRecognitionLoop({
     source,
     profile: detectorProfile,
-    references: detectorReferences,
-    emptyFrame: detectorEmptyFrame,
+    classifier: await OnnxSlotClassifier.create(detectorModel),
     context: () => {
       const state = store.state;
       return {

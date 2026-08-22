@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { DetectorProfileSchema } from "@shayyz/contracts";
 import sharp from "sharp";
 import {
-  describeEncodedImage,
   ObsDraftRecognitionLoop,
   type DraftCandidate,
   type ScreenshotSource,
@@ -28,16 +27,12 @@ async function frame(filled: boolean): Promise<Uint8Array> {
 
 describe("OBS draft recognition", () => {
   test("emits the expected phase after empty and three stable frames", async () => {
-    const empty = await frame(false);
-    const filled = await frame(true);
-    const screenshots = [empty, filled, filled, filled];
+    const screenshot = await frame(false);
     const source: ScreenshotSource = {
       connect: async () => undefined,
       close: () => undefined,
       screenshot: async () => {
-        const next = screenshots.shift();
-        if (!next) throw new Error("Missing screenshot fixture.");
-        return `data:image/png;base64,${Buffer.from(next).toString("base64")}`;
+        return `data:image/png;base64,${Buffer.from(screenshot).toString("base64")}`;
       },
     };
     const profile = DetectorProfileSchema.parse({
@@ -67,21 +62,26 @@ describe("OBS draft recognition", () => {
       validation: { referenceCount: 133, validatedAt: null },
     });
     const candidates: DraftCandidate[] = [];
+    const results = [
+      { label: "empty", confidence: 0.99 },
+      { label: "miya", confidence: 0.99 },
+      { label: "miya", confidence: 0.99 },
+      { label: "miya", confidence: 0.99 },
+    ];
     const loop = new ObsDraftRecognitionLoop({
       source,
       profile,
-      references: [
-        {
-          heroId: "miya",
-          descriptor: await describeEncodedImage(filled, {
-            x: 0,
-            y: 0,
-            width: 10,
-            height: 10,
-          }),
+      classifier: {
+        classify: async () => {
+          const result = results.shift();
+          if (!result) throw new Error("Missing classifier fixture.");
+          return {
+            ...result,
+            runnerUpConfidence: 0,
+            margin: result.confidence,
+          };
         },
-      ],
-      emptyFrame: empty,
+      },
       context: () => ({
         revision: 0,
         phaseIndex: 0,

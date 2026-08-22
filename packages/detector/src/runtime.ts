@@ -3,14 +3,8 @@ import type {
   DraftPhase,
   SelectionKind,
 } from "@shayyz/contracts";
-import {
-  descriptorSimilarity,
-  rankReferences,
-  SlotTransitionGate,
-  type ImageDescriptor,
-  type ReferenceDescriptor,
-} from ".";
-import { describeEncodedImage } from "./profile";
+import { SlotTransitionGate, type RankedMatch } from ".";
+import type { ClassifierResult } from "./model";
 
 export interface ScreenshotSource {
   connect(): Promise<void>;
@@ -38,7 +32,12 @@ export interface DraftCandidate {
   observedAt: number;
 }
 
-type EmptyDescriptors = Map<string, ImageDescriptor>;
+export interface SlotClassifier {
+  classify(
+    image: Uint8Array,
+    rect: DetectorProfile["slots"][number]["rect"],
+  ): Promise<ClassifierResult>;
+}
 
 function slotKey(phase: DraftPhase): string {
   return `${phase.side}:${phase.kind}:${phase.slot}`;
@@ -51,7 +50,6 @@ export function decodeScreenshot(dataUri: string): Uint8Array {
 }
 
 export class ObsDraftRecognitionLoop {
-  private readonly emptyDescriptors: EmptyDescriptors = new Map();
   private gate: SlotTransitionGate | undefined;
   private contextKey: string | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -61,8 +59,7 @@ export class ObsDraftRecognitionLoop {
     private readonly options: {
       source: ScreenshotSource;
       profile: DetectorProfile;
-      references: ReferenceDescriptor[];
-      emptyFrame: Uint8Array;
+      classifier: SlotClassifier;
       context: () => DraftDetectionContext;
       candidate: (candidate: DraftCandidate) => void | Promise<void>;
       intervalMs?: number;
@@ -72,12 +69,6 @@ export class ObsDraftRecognitionLoop {
 
   async initialize(): Promise<void> {
     await this.options.source.connect();
-    for (const slot of this.options.profile.slots) {
-      this.emptyDescriptors.set(
-        `${slot.side}:${slot.kind}:${slot.slot}`,
-        await describeEncodedImage(this.options.emptyFrame, slot.rect),
-      );
-    }
   }
 
   async start(): Promise<void> {
@@ -110,19 +101,27 @@ export class ObsDraftRecognitionLoop {
     const slot = this.options.profile.slots.find(
       (item) => slotKey(item) === slotKey(context.phase as DraftPhase),
     );
-    const empty = this.emptyDescriptors.get(slotKey(context.phase));
-    if (!slot || !empty) throw new Error("The active draft slot is not calibrated.");
+    if (!slot) throw new Error("The active draft slot is not calibrated.");
     const screenshot = decodeScreenshot(await this.options.source.screenshot());
-    const descriptor = await describeEncodedImage(screenshot, slot.rect);
-    const used = new Set(context.usedHeroIds);
-    const match = rankReferences(
-      descriptor,
-      this.options.references.filter(({ heroId }) => !used.has(heroId)),
-      context.phase.kind,
+    const result = await this.options.classifier.classify(
+      screenshot,
+      slot.rect,
     );
+    const used = new Set(context.usedHeroIds);
+    const match: RankedMatch | null =
+      result.label === "empty" ||
+      result.label === "unknown" ||
+      used.has(result.label)
+        ? null
+        : {
+            heroId: result.label,
+            confidence: result.confidence,
+            runnerUpConfidence: result.runnerUpConfidence,
+            margin: result.margin,
+          };
     const proposal = this.gate?.observe({
       observedAt,
-      emptyConfidence: descriptorSimilarity(descriptor, empty, context.phase.kind),
+      emptyConfidence: result.label === "empty" ? result.confidence : 0,
       match,
     });
     if (!proposal || !match) return;

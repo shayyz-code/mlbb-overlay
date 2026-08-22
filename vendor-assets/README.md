@@ -49,6 +49,26 @@ bun run draft-refs verify --output captures/detector-references/VERSION/pick-art
 Highlight heroes manually. This workflow never sends input to the game and does
 not extract package files. Draft-slot PNGs and their timing map stay local.
 
+## Synthetic detector dataset
+
+The slot classifier can be trained without collecting or labeling live drafts.
+After importing all 133 private portraits, generate close-up pick, ban, empty,
+and unknown samples with deterministic face crops, edge fades, team treatments,
+blur, and compression:
+
+```sh
+bun run detector:synthesize -- \
+  --game-build VERSION \
+  --attribution "Portrait source and URL" \
+  --variants 24 \
+  --seed 20260822
+```
+
+The command verifies every portrait against the private asset manifest and
+writes a balanced dataset to ignored `captures/detector-synthetic/`. It refuses
+to overwrite an existing dataset. Use a new output directory for another run.
+Neither source portraits nor generated samples belong in the public repository.
+
 ## Local AI idle posters
 
 Install ComfyUI locally with the `svd_xt_1_1.safetensors` checkpoint and keep it

@@ -29,6 +29,7 @@ import {
   subscribeToDraft,
 } from "./api";
 import { HeroMedia } from "./HeroMedia";
+import { CalibrationWizard } from "./CalibrationWizard";
 import { newestAddedHeroId } from "./voice";
 
 type WithoutRevision<T> = T extends unknown
@@ -268,6 +269,7 @@ function DetectorPanel({ heroes, token }: { heroes: Hero[]; token: string }) {
   const [status, setStatus] = useState<DetectorStatus>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
   useEffect(() => {
     const refresh = () =>
       fetchDetectorStatus()
@@ -335,6 +337,13 @@ function DetectorPanel({ heroes, token }: { heroes: Hero[]; token: string }) {
         >
           {status.running ? "Stop detector" : "Start detector"}
         </button>
+        <button
+          type="button"
+          disabled={busy || status.running}
+          onClick={() => setCalibrating(!calibrating)}
+        >
+          {calibrating ? "Hide calibration" : "Calibrate"}
+        </button>
         <div className="detector-readiness">
           <small>References</small>
           <strong>
@@ -389,6 +398,13 @@ function DetectorPanel({ heroes, token }: { heroes: Hero[]; token: string }) {
             </button>
           </div>
         </div>
+      )}
+      {calibrating && (
+        <CalibrationWizard
+          token={token}
+          referenceCount={status.referenceCount}
+          onClose={() => setCalibrating(false)}
+        />
       )}
     </section>
   );

@@ -26,6 +26,7 @@
     "draft-refs": "bun run scripts/private-draft-references.ts",
     "detector:benchmark": "bun run scripts/detector-benchmark.ts",
     "detector:sample": "bun run scripts/private-detector-dataset.ts",
+    "detector:synthesize": "bun run scripts/private-synthetic-dataset.ts",
     "idle-posters": "bun run scripts/private-idle-posters.ts",
     "check:english": "bun run scripts/check-english.ts",
     "check:gitignore": "bun run scripts/check-gitignore.ts",

@@ -1,13 +1,20 @@
-import { mkdir, readFile, rename } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { mkdir, readFile, rename, rm } from "node:fs/promises";
+import { basename, dirname, relative, resolve } from "node:path";
 import {
   AssetPackManifestSchema,
+  IdlePosterJobsSchema,
   type AssetPackManifest,
   type IdlePosterJobs,
 } from "../packages/contracts/src/index";
 import { canonicalHeroIds } from "./import-assets";
 
 type IdleJob = IdlePosterJobs["jobs"][number];
+type Runner = (command: string[]) => Promise<{ code: number; stderr: string }>;
+type RawGenerator = (
+  queue: IdlePosterJobs,
+  job: IdleJob,
+  source: string,
+) => Promise<Blob[]>;
 
 export function deterministicSeed(heroId: string, revision: string): number {
   const hash = new Bun.CryptoHasher("sha256")
@@ -80,13 +87,9 @@ export function comfyPrompt(
       inputs: { samples: ["3", 0], vae: ["15", 2] },
     },
     "10": {
-      class_type: "SaveAnimatedWEBP",
+      class_type: "SaveImage",
       inputs: {
         filename_prefix: `shayyz-${job.heroId}-${job.seed}`,
-        fps: parameters.sourceFps,
-        lossless: false,
-        quality: 95,
-        method: "default",
         images: ["8", 0],
       },
     },
@@ -121,11 +124,13 @@ export function comfyPrompt(
 
 export function posterFfmpegArguments(input: string, output: string): string[] {
   const filter =
-    "[0:v]trim=end_frame=25,split[f][r];[r]trim=start_frame=1:end_frame=24,reverse[rr];[f][rr]concat=n=2:v=1:a=0,setpts=N/(12*TB),minterpolate=fps=30,crop=576:768:0:46,scale=540:720:flags=lanczos[v]";
+    "[0:v]trim=end_frame=25,setpts=PTS-STARTPTS,split[f][r];[r]trim=start_frame=1:end_frame=24,reverse,setpts=PTS-STARTPTS[rr];[f][rr]concat=n=2:v=1:a=0,setpts=N/(12*TB),minterpolate=fps=30,setpts=PTS*24/23,tpad=stop_mode=clone:stop_duration=1,crop=576:768:0:46,scale=540:720:flags=lanczos[v]";
   return [
     "-hide_banner",
     "-loglevel",
     "error",
+    "-framerate",
+    "6",
     "-i",
     input,
     "-filter_complex",
@@ -164,9 +169,208 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   await rename(temporary, path);
 }
 
+export async function requestComfyOutput(options: {
+  endpoint: string;
+  queue: IdlePosterJobs;
+  job: IdleJob;
+  source: string;
+  fetcher?: typeof fetch;
+  sleep?: (milliseconds: number) => Promise<void>;
+  maxPolls?: number;
+}): Promise<Blob[]> {
+  const base = localComfyUrl(options.endpoint);
+  const fetcher = options.fetcher ?? fetch;
+  const form = new FormData();
+  form.append(
+    "image",
+    new File(
+      [await Bun.file(options.source).arrayBuffer()],
+      basename(options.source),
+    ),
+  );
+  form.append("type", "input");
+  form.append("overwrite", "true");
+  const upload = await fetcher(new URL("/upload/image", base), {
+    method: "POST",
+    body: form,
+  });
+  if (!upload.ok) throw new Error(`ComfyUI upload failed: ${upload.status}`);
+  const uploaded = (await upload.json()) as {
+    name: string;
+    subfolder?: string;
+  };
+  const image = uploaded.subfolder
+    ? `${uploaded.subfolder}/${uploaded.name}`
+    : uploaded.name;
+  const queued = await fetcher(new URL("/prompt", base), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      prompt: comfyPrompt(options.queue, options.job, image),
+    }),
+  });
+  if (!queued.ok) throw new Error(`ComfyUI prompt failed: ${queued.status}`);
+  const { prompt_id: promptId } = (await queued.json()) as {
+    prompt_id: string;
+  };
+  const sleep = options.sleep ?? Bun.sleep;
+  for (let attempt = 0; attempt < (options.maxPolls ?? 3_600); attempt += 1) {
+    await sleep(2_000);
+    const history = await fetcher(new URL(`/history/${promptId}`, base));
+    if (!history.ok)
+      throw new Error(`ComfyUI history failed: ${history.status}`);
+    const values = (await history.json()) as Record<
+      string,
+      {
+        status?: { status_str?: string };
+        outputs?: Record<
+          string,
+          {
+            images?: Array<{
+              filename: string;
+              subfolder: string;
+              type: string;
+            }>;
+          }
+        >;
+      }
+    >;
+    const entry = values[promptId];
+    if (entry?.status?.status_str === "error")
+      throw new Error("ComfyUI generation failed.");
+    const outputs = entry?.outputs?.["10"]?.images;
+    if (!outputs) continue;
+    return Promise.all(
+      outputs.map(async (output) => {
+        const result = await fetcher(
+          new URL(`/view?${new URLSearchParams(output)}`, base),
+        );
+        if (!result.ok)
+          throw new Error(`ComfyUI output failed: ${result.status}`);
+        return result.blob();
+      }),
+    );
+  }
+  throw new Error("ComfyUI generation timed out after two hours.");
+}
+
+async function sha256(path: string): Promise<string> {
+  return new Bun.CryptoHasher("sha256")
+    .update(await Bun.file(path).arrayBuffer())
+    .digest("hex");
+}
+
+export async function generateIdlePosters(options: {
+  queuePath: string;
+  packPath: string;
+  rawRoot: string;
+  endpoint: string;
+  ffmpeg: string;
+  limit: number;
+  force: boolean;
+  run: Runner;
+  generateRaw?: RawGenerator;
+}) {
+  if (
+    !Number.isInteger(options.limit) ||
+    options.limit < 1 ||
+    options.limit > 133
+  )
+    throw new Error("--limit must be an integer from 1 to 133.");
+  const queue = IdlePosterJobsSchema.parse(
+    JSON.parse(await readFile(options.queuePath, "utf8")),
+  );
+  const pack = AssetPackManifestSchema.parse(
+    JSON.parse(await readFile(options.packPath, "utf8")),
+  );
+  const packRoot = dirname(resolve(options.packPath));
+  const selected = queue.jobs
+    .filter((job) => options.force || job.status !== "generated")
+    .slice(0, options.limit);
+  const generateRaw =
+    options.generateRaw ??
+    ((currentQueue, job, source) =>
+      requestComfyOutput({
+        endpoint: options.endpoint,
+        queue: currentQueue,
+        job,
+        source,
+      }));
+  for (const job of selected) {
+    const source = resolve(job.source);
+    if ((await sha256(source)) !== job.sourceSha256)
+      throw new Error(`Source checksum mismatch: ${job.heroId}`);
+    const raw = resolve(options.rawRoot, `${job.heroId}-${job.seed}`);
+    await mkdir(dirname(raw), { recursive: true });
+    if (!(await Bun.file(resolve(raw, "frame-000.png")).exists()) || options.force) {
+      const temporaryRaw = `${raw}.tmp-${crypto.randomUUID()}`;
+      try {
+        const frames = await generateRaw(queue, job, source);
+        if (frames.length !== queue.parameters.frames)
+          throw new Error(
+            `ComfyUI returned ${frames.length} frames for ${job.heroId}; expected ${queue.parameters.frames}.`,
+          );
+        await rm(temporaryRaw, { force: true, recursive: true });
+        await mkdir(temporaryRaw, { recursive: true });
+        await Promise.all(
+          frames.map((frame, index) =>
+            Bun.write(
+              resolve(temporaryRaw, `frame-${String(index).padStart(3, "0")}.png`),
+              frame,
+            ),
+          ),
+        );
+        await rm(raw, { force: true, recursive: true });
+        await rename(temporaryRaw, raw);
+      } catch (error) {
+        await rm(temporaryRaw, { force: true, recursive: true });
+        throw error;
+      }
+    }
+    const target = resolve(packRoot, "heroes", job.heroId, "poster.webm");
+    await mkdir(dirname(target), { recursive: true });
+    const temporary = `${target}.tmp-${crypto.randomUUID()}.webm`;
+    const result = await options.run([
+      options.ffmpeg,
+      ...posterFfmpegArguments(resolve(raw, "frame-%03d.png"), temporary),
+    ]);
+    if (result.code !== 0) {
+      await rm(temporary, { force: true });
+      throw new Error(`ffmpeg failed for ${job.heroId}: ${result.stderr}`);
+    }
+    await rename(temporary, target);
+    const outputSha256 = await sha256(target);
+    job.status = "generated";
+    job.outputSha256 = outputSha256;
+    pack.heroes[job.heroId] = {
+      ...pack.heroes[job.heroId],
+      poster: {
+        path: relative(packRoot, target),
+        sha256: outputSha256,
+        mimeType: "video/webm",
+      },
+    };
+    await writeJsonAtomic(options.packPath, pack);
+    await writeJsonAtomic(options.queuePath, queue);
+  }
+  return {
+    generated: selected.length,
+    pending: queue.jobs.filter((job) => job.status !== "generated").length,
+  };
+}
+
 function argument(name: string): string | undefined {
   const index = Bun.argv.indexOf(name);
   return index < 0 ? undefined : Bun.argv[index + 1];
+}
+
+async function run(command: string[]) {
+  const process = Bun.spawn(command, { stdout: "inherit", stderr: "pipe" });
+  const [stderr, code] = await Promise.all([
+    new Response(process.stderr).text(),
+    process.exited,
+  ]);
+  return { code, stderr };
 }
 if (import.meta.main) {
   const command = Bun.argv[2];
@@ -190,5 +394,17 @@ if (import.meta.main) {
     await mkdir(dirname(queuePath), { recursive: true });
     await writeJsonAtomic(queuePath, queue);
     console.log(`Private idle queue written with ${queue.jobs.length} jobs.`);
-  } else throw new Error("Use prepare.");
+  } else if (command === "generate") {
+    const result = await generateIdlePosters({
+      queuePath,
+      packPath,
+      rawRoot: resolve(argument("--raw") ?? "captures/idle-raw"),
+      endpoint: argument("--comfy") ?? "http://127.0.0.1:8188",
+      ffmpeg: argument("--ffmpeg") ?? "ffmpeg",
+      limit: Number(argument("--limit") ?? "1"),
+      force: Bun.argv.includes("--force"),
+      run,
+    });
+    console.log(JSON.stringify(result, null, 2));
+  } else throw new Error("Use prepare or generate.");
 }

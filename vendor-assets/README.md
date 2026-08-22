@@ -69,6 +69,33 @@ writes a balanced dataset to ignored `captures/detector-synthetic/`. It refuses
 to overwrite an existing dataset. Use a new output directory for another run.
 Neither source portraits nor generated samples belong in the public repository.
 
+After private training and ONNX parity evaluation, package only a model that
+passes every release gate:
+
+```sh
+bun run detector:release -- \
+  --model captures/model-training/RUN/model.onnx \
+  --metrics captures/model-training/RUN/metrics.json \
+  --output captures/model-release
+```
+
+The packager requires 98.5% top-1 accuracy, 97% macro recall, at most 0.5%
+unknown false accepts, ONNX parity within 0.001, and a model below 16 MB.
+
+The verified FP32 model is published as
+[SHAYYZ MLBB Draft Classifier](https://huggingface.co/shayyzhf/shayyz-mlbb-draft-classifier)
+under CC BY 4.0. Install it into the server's ignored default model directory:
+
+```sh
+hf download shayyzhf/shayyz-mlbb-draft-classifier \
+  --include manifest.json model.onnx \
+  --local-dir vendor-assets/mlbb-personal/detector
+```
+
+The training dataset remains private. Synthetic holdout results do not replace
+the required live replay benchmark, so use proposal mode until the current game
+build and OBS profile pass that separate validation.
+
 ## Local AI idle posters
 
 Install ComfyUI locally with the `svd_xt_1_1.safetensors` checkpoint and keep it

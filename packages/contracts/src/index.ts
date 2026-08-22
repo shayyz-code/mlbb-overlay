@@ -84,6 +84,33 @@ export const AssetPackStatusSchema = z.object({
 });
 export type AssetPackStatus = z.infer<typeof AssetPackStatusSchema>;
 
+export const PixelRectSchema = z.object({
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+export type PixelRect = z.infer<typeof PixelRectSchema>;
+
+export const DraftReferenceMapSchema = z.object({
+  schemaVersion: z.literal(1),
+  gameBuild: z.string().min(1),
+  crop: PixelRectSchema.nullable(),
+  output: z.object({
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  }),
+  clips: z.array(
+    z.object({
+      heroId: z.string().regex(/^[a-z0-9-]+$/),
+      name: z.string().min(1).optional(),
+      input: z.string(),
+      atSeconds: z.number().finite().nonnegative().nullable(),
+    }),
+  ),
+});
+export type DraftReferenceMap = z.infer<typeof DraftReferenceMapSchema>;
+
 export const TeamSchema = z.object({
   name: z.string().min(1).max(60),
   shortName: z.string().min(1).max(8),
@@ -132,9 +159,7 @@ export const PresentationSettingsSchema = z
     voiceEnabled: z.boolean().default(false),
   })
   .default({ voiceEnabled: false });
-export type PresentationSettings = z.infer<
-  typeof PresentationSettingsSchema
->;
+export type PresentationSettings = z.infer<typeof PresentationSettingsSchema>;
 
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),

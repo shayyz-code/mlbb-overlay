@@ -14,6 +14,7 @@ import {
 import { heroes } from "./heroes";
 import { RevisionConflictError, type DraftStore } from "./store";
 import type { DetectorCoordinator } from "./detector";
+import type { DetectorLifecycle } from "./detector-lifecycle";
 
 export interface AppOptions {
   store: DraftStore;
@@ -22,6 +23,7 @@ export interface AppOptions {
   broadcast?: (event: EventEnvelope) => void;
   assetPack?: LocalAssetPack;
   detector?: DetectorCoordinator;
+  detectorLifecycle?: DetectorLifecycle;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -79,6 +81,7 @@ export function createApp(options: AppOptions): Hono {
       const { mode } = DetectorModeCommandSchema.parse(
         await context.req.json(),
       );
+      if (mode === "off") options.detectorLifecycle?.stop();
       return context.json(options.detector.setMode(mode));
     } catch (error) {
       return context.json(
@@ -87,6 +90,34 @@ export function createApp(options: AppOptions): Hono {
       );
     }
   });
+  for (const action of ["start", "stop"] as const) {
+    app.post(
+      `/api/v1/detector/${action}`,
+      requireControlToken,
+      async (context) => {
+        if (!options.detector || !options.detectorLifecycle)
+          return context.json(
+            { error: "The detector is not configured." },
+            503,
+          );
+        try {
+          if (action === "start") await options.detectorLifecycle.start();
+          else options.detectorLifecycle.stop();
+          return context.json(options.detector.status());
+        } catch (error) {
+          return context.json(
+            {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Detector lifecycle failed.",
+            },
+            409,
+          );
+        }
+      },
+    );
+  }
   for (const action of ["accept", "reject"] as const) {
     app.post(
       `/api/v1/detector/proposals/:id/${action}`,

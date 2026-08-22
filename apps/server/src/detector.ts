@@ -17,6 +17,7 @@ type EventSink = (
 export class DetectorCoordinator {
   private mode: DetectorMode = "off";
   private running = false;
+  private lastError: string | null = null;
   private pending: DetectorProposal | null = null;
   private sink: EventSink = () => undefined;
 
@@ -37,6 +38,10 @@ export class DetectorCoordinator {
     this.running = running;
   }
 
+  setError(error: Error | null): void {
+    this.lastError = error?.message ?? null;
+  }
+
   status(): DetectorStatus {
     this.supersedeStale();
     return {
@@ -47,7 +52,7 @@ export class DetectorCoordinator {
       expectedReferenceCount: 133,
       automaticReady: this.options.automaticReady,
       pendingProposal: this.pending,
-      lastError: null,
+      lastError: this.lastError,
     };
   }
 

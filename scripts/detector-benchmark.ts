@@ -10,7 +10,10 @@ import {
 import {
   DetectorProfileStore,
   ObsDraftRecognitionLoop,
+  describeEncodedImage,
+  descriptorSimilarity,
   loadReferenceDescriptors,
+  rankReferences,
   type DraftCandidate,
   type ScreenshotSource,
 } from "../packages/detector/src/index";
@@ -102,6 +105,17 @@ export async function replayBenchmark(options: {
     ids,
   );
   const emptyFrame = new Uint8Array(await readFile(options.emptyFramePath));
+  const emptyDescriptors = new Map(
+    await Promise.all(
+      profile.slots.map(
+        async (slot) =>
+          [
+            JSON.stringify(slot.rect),
+            await describeEncodedImage(emptyFrame, slot.rect),
+          ] as const,
+      ),
+    ),
+  );
   const outcomes: BenchmarkOutcome[] = [];
 
   for (const draft of options.manifest.drafts) {
@@ -117,8 +131,39 @@ export async function replayBenchmark(options: {
     const loop = new ObsDraftRecognitionLoop({
       source,
       profile,
-      references,
-      emptyFrame,
+      classifier: {
+        classify: async (image, rect) => {
+          const slot = profile.slots.find(
+            (candidate) =>
+              JSON.stringify(candidate.rect) === JSON.stringify(rect),
+          );
+          const empty = emptyDescriptors.get(JSON.stringify(rect));
+          if (!slot || !empty)
+            throw new Error("Benchmark slot is not calibrated.");
+          const descriptor = await describeEncodedImage(image, rect);
+          const emptyConfidence = descriptorSimilarity(
+            descriptor,
+            empty,
+            slot.kind,
+          );
+          if (emptyConfidence >= profile.thresholds.empty)
+            return {
+              label: "empty",
+              confidence: emptyConfidence,
+              runnerUpConfidence: 0,
+              margin: emptyConfidence,
+            };
+          const match = rankReferences(descriptor, references, slot.kind);
+          return match
+            ? { label: match.heroId, ...match }
+            : {
+                label: "unknown",
+                confidence: 1,
+                runnerUpConfidence: 0,
+                margin: 1,
+              };
+        },
+      },
       context: () => ({
         revision: phaseIndex,
         phaseIndex,

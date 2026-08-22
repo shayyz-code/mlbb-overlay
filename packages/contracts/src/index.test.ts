@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   AssetPackManifestSchema,
+  DraftReferenceMapSchema,
   STANDARD_TEN_BAN_FORMAT,
   applySelection,
   createDefaultDraftState,
@@ -79,6 +80,23 @@ test("asset manifests reject unsafe paths", () => {
           },
         },
       },
+    }).success,
+  ).toBe(false);
+});
+
+test("draft reference maps require a positive crop when configured", () => {
+  const base = {
+    schemaVersion: 1,
+    gameBuild: "2.1.95.12065",
+    crop: null,
+    output: { width: 256, height: 256 },
+    clips: [],
+  };
+  expect(DraftReferenceMapSchema.safeParse(base).success).toBe(true);
+  expect(
+    DraftReferenceMapSchema.safeParse({
+      ...base,
+      crop: { x: 0, y: 0, width: 0, height: 100 },
     }).success,
   ).toBe(false);
 });

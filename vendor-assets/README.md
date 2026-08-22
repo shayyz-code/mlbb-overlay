@@ -34,3 +34,17 @@ bun run assets:verify --complete
 Navigate the game yourself while recording. Set each recording path, hero start
 time, and crop in ignored `captures/poster-map.json`. Existing posters are
 preserved unless `--force` is explicit; `--complete` requires all 133 heroes.
+
+## Draft-slot reference workflow
+
+Record sessions with `bun run posters record`, then create and fill an ignored
+map with `bun run draft-refs template --game-build VERSION`. Set one fixed pick
+slot crop plus each hero recording and timestamp, then run:
+
+```sh
+bun run draft-refs extract --complete
+bun run draft-refs verify --output captures/detector-references/VERSION/pick-art --complete
+```
+
+Highlight heroes manually. This workflow never sends input to the game and does
+not extract package files. Draft-slot PNGs and their timing map stay local.

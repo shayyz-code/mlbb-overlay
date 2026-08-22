@@ -18,6 +18,192 @@ export interface DetectorProposal<T = unknown> {
   evidenceFrames: number;
 }
 
+export interface RgbImage {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+export interface ImageDescriptor {
+  luminance: Float32Array;
+  edges: Float32Array;
+  histogram: Float32Array;
+}
+
+export interface ReferenceDescriptor {
+  heroId: string;
+  descriptor: ImageDescriptor;
+}
+
+export interface RankedMatch {
+  heroId: string;
+  confidence: number;
+  runnerUpConfidence: number;
+  margin: number;
+}
+
+function normalized(values: Float32Array): Float32Array {
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  let magnitude = 0;
+  const centered = values.map((value) => {
+    const result = value - mean;
+    magnitude += result * result;
+    return result;
+  });
+  const divisor = Math.sqrt(magnitude) || 1;
+  return centered.map((value) => value / divisor);
+}
+
+export function describeImage(image: RgbImage): ImageDescriptor {
+  if (image.width < 2 || image.height < 2)
+    throw new Error("Descriptor images must be at least 2x2 pixels.");
+  if (image.data.length !== image.width * image.height * 3)
+    throw new Error("Descriptor images must contain packed RGB pixels.");
+  const luminance = new Float32Array(image.width * image.height);
+  const histogram = new Float32Array(24);
+  for (let index = 0; index < luminance.length; index += 1) {
+    const offset = index * 3;
+    const red = image.data[offset] ?? 0;
+    const green = image.data[offset + 1] ?? 0;
+    const blue = image.data[offset + 2] ?? 0;
+    luminance[index] = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+    const redBin = Math.min(7, Math.floor(red / 32));
+    const greenBin = 8 + Math.min(7, Math.floor(green / 32));
+    const blueBin = 16 + Math.min(7, Math.floor(blue / 32));
+    histogram[redBin] = (histogram[redBin] ?? 0) + 1;
+    histogram[greenBin] = (histogram[greenBin] ?? 0) + 1;
+    histogram[blueBin] = (histogram[blueBin] ?? 0) + 1;
+  }
+  for (let index = 0; index < histogram.length; index += 1)
+    histogram[index] = (histogram[index] ?? 0) / (luminance.length * 3);
+  const edges = new Float32Array(luminance.length);
+  for (let y = 0; y < image.height - 1; y += 1) {
+    for (let x = 0; x < image.width - 1; x += 1) {
+      const index = y * image.width + x;
+      const dx = (luminance[index + 1] ?? 0) - (luminance[index] ?? 0);
+      const dy =
+        (luminance[index + image.width] ?? 0) - (luminance[index] ?? 0);
+      edges[index] = Math.sqrt(dx * dx + dy * dy);
+    }
+  }
+  return {
+    luminance: normalized(luminance),
+    edges: normalized(edges),
+    histogram,
+  };
+}
+
+function dot(left: Float32Array, right: Float32Array): number {
+  if (left.length !== right.length)
+    throw new Error("Descriptor vectors must have matching lengths.");
+  let result = 0;
+  for (let index = 0; index < left.length; index += 1)
+    result += (left[index] ?? 0) * (right[index] ?? 0);
+  return result;
+}
+
+export function descriptorSimilarity(
+  left: ImageDescriptor,
+  right: ImageDescriptor,
+  kind: "pick" | "ban" = "pick",
+): number {
+  const luminance = (dot(left.luminance, right.luminance) + 1) / 2;
+  const edges = (dot(left.edges, right.edges) + 1) / 2;
+  let histogram = 0;
+  for (let index = 0; index < left.histogram.length; index += 1)
+    histogram += Math.min(
+      left.histogram[index] ?? 0,
+      right.histogram[index] ?? 0,
+    );
+  const weights: [number, number, number] =
+    kind === "ban" ? [0.6, 0.35, 0.05] : [0.55, 0.25, 0.2];
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      luminance * weights[0] + edges * weights[1] + histogram * weights[2],
+    ),
+  );
+}
+
+export function rankReferences(
+  candidate: ImageDescriptor,
+  references: ReferenceDescriptor[],
+  kind: "pick" | "ban" = "pick",
+): RankedMatch | null {
+  const ranked = references
+    .map((reference) => ({
+      heroId: reference.heroId,
+      confidence: descriptorSimilarity(candidate, reference.descriptor, kind),
+    }))
+    .sort((left, right) => right.confidence - left.confidence);
+  const best = ranked[0];
+  if (!best) return null;
+  const runnerUpConfidence = ranked[1]?.confidence ?? 0;
+  return {
+    ...best,
+    runnerUpConfidence,
+    margin: Math.max(0, best.confidence - runnerUpConfidence),
+  };
+}
+
+export interface SlotMatchObservation {
+  observedAt: number;
+  emptyConfidence: number;
+  match: RankedMatch | null;
+}
+
+export interface SlotTransitionOptions extends ObservationGateOptions {
+  emptyThreshold?: number;
+  proposalThreshold?: number;
+  proposalMargin?: number;
+}
+
+export class SlotTransitionGate {
+  private armed = false;
+  private readonly gate: ObservationGate;
+  private readonly emptyThreshold: number;
+  private readonly proposalThreshold: number;
+  private readonly proposalMargin: number;
+
+  constructor(options: SlotTransitionOptions = {}) {
+    this.emptyThreshold = options.emptyThreshold ?? 0.98;
+    this.proposalThreshold = options.proposalThreshold ?? 0.94;
+    this.proposalMargin = options.proposalMargin ?? 0.015;
+    this.gate = new ObservationGate(options);
+  }
+
+  get isArmed(): boolean {
+    return this.armed;
+  }
+
+  observe(
+    observation: SlotMatchObservation,
+  ): DetectorProposal<{ heroId: string; runnerUpMargin: number }> | null {
+    if (observation.emptyConfidence >= this.emptyThreshold) {
+      this.armed = true;
+      this.gate.reset();
+      return null;
+    }
+    if (!this.armed || !observation.match) return null;
+    const eligible =
+      observation.match.confidence >= this.proposalThreshold &&
+      observation.match.margin >= this.proposalMargin;
+    const proposal = this.gate.observe({
+      key: observation.match.heroId,
+      kind: "draft-selection",
+      confidence: eligible ? observation.match.confidence : 0,
+      observedAt: observation.observedAt,
+      payload: {
+        heroId: observation.match.heroId,
+        runnerUpMargin: observation.match.margin,
+      },
+    });
+    if (proposal) this.armed = false;
+    return proposal;
+  }
+}
+
 export interface ObservationGateOptions {
   minimumConfidence?: number;
   requiredFrames?: number;
@@ -43,6 +229,10 @@ export class ObservationGate {
     this.options = { ...defaults, ...options };
     if (this.options.requiredFrames < 1)
       throw new Error("requiredFrames must be at least one.");
+  }
+
+  reset(): void {
+    this.candidate = undefined;
   }
 
   observe<T>(observation: VisualObservation<T>): DetectorProposal<T> | null {

@@ -111,6 +111,68 @@ export const DraftReferenceMapSchema = z.object({
 });
 export type DraftReferenceMap = z.infer<typeof DraftReferenceMapSchema>;
 
+export const DetectorModeSchema = z.enum([
+  "off",
+  "proposal",
+  "confidence-tiered",
+]);
+export type DetectorMode = z.infer<typeof DetectorModeSchema>;
+
+export const DetectorSlotSchema = z.object({
+  side: SideSchema,
+  kind: SelectionKindSchema,
+  slot: z.number().int().min(0).max(4),
+  rect: PixelRectSchema,
+});
+export type DetectorSlot = z.infer<typeof DetectorSlotSchema>;
+
+export const DetectorProfileSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  gameBuild: z.string().min(1),
+  language: z.string().min(2).max(16),
+  sourceName: z.string().min(1),
+  frame: z.object({
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  }),
+  slots: z.array(DetectorSlotSchema).length(20),
+  thresholds: z.object({
+    proposal: z.number().min(0).max(1).default(0.94),
+    automatic: z.number().min(0).max(1).default(0.985),
+    proposalMargin: z.number().min(0).max(1).default(0.015),
+    automaticMargin: z.number().min(0).max(1).default(0.025),
+    empty: z.number().min(0).max(1).default(0.98),
+  }),
+  validation: z.object({
+    referenceCount: z.number().int().min(0).max(133),
+    validatedAt: z.string().datetime().nullable(),
+  }),
+});
+export type DetectorProfile = z.infer<typeof DetectorProfileSchema>;
+
+export const DetectorProposalSchema = z.object({
+  id: z.string().uuid(),
+  heroId: z.string().regex(/^[a-z0-9-]+$/),
+  side: SideSchema,
+  kind: SelectionKindSchema,
+  slot: z.number().int().min(0).max(4),
+  phaseIndex: z.number().int().nonnegative(),
+  draftRevision: z.number().int().nonnegative(),
+  confidence: z.number().min(0).max(1),
+  runnerUpMargin: z.number().min(0).max(1),
+  evidenceFrames: z.number().int().positive(),
+  proposedAt: z.string().datetime(),
+  status: z.enum([
+    "pending",
+    "accepted",
+    "rejected",
+    "superseded",
+    "auto-applied",
+  ]),
+});
+export type DetectorProposal = z.infer<typeof DetectorProposalSchema>;
+
 export const IdlePosterJobsSchema = z.object({
   schemaVersion: z.literal(1),
   model: z.object({

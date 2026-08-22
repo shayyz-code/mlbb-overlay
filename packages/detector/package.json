@@ -7,5 +7,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@shayyz/contracts": "workspace:*",
+    "sharp": "^0.35.3"
   }
 }

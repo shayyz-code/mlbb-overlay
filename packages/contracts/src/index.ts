@@ -173,6 +173,21 @@ export const DetectorProposalSchema = z.object({
 });
 export type DetectorProposal = z.infer<typeof DetectorProposalSchema>;
 
+export const DetectorStatusSchema = z.object({
+  mode: DetectorModeSchema,
+  running: z.boolean(),
+  profileConfigured: z.boolean(),
+  referenceCount: z.number().int().nonnegative(),
+  expectedReferenceCount: z.literal(133),
+  automaticReady: z.boolean(),
+  pendingProposal: DetectorProposalSchema.nullable(),
+  lastError: z.string().nullable(),
+});
+export type DetectorStatus = z.infer<typeof DetectorStatusSchema>;
+
+export const DetectorModeCommandSchema = z.object({ mode: DetectorModeSchema });
+export type DetectorModeCommand = z.infer<typeof DetectorModeCommandSchema>;
+
 export const IdlePosterJobsSchema = z.object({
   schemaVersion: z.literal(1),
   model: z.object({

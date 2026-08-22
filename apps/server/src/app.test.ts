@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "./app";
 import { assetFixture } from "./asset-fixture";
+import { DetectorCoordinator } from "./detector";
 import { DraftStore } from "./store";
 
 const directories: string[] = [];
@@ -60,6 +61,33 @@ describe("draft API", () => {
         })
       ).status,
     ).toBe(200);
+  });
+
+  test("protects detector mode changes with the LAN token", async () => {
+    const { store } = await setup();
+    const detector = new DetectorCoordinator({
+      store,
+      profile: null,
+      referenceCount: 0,
+      automaticReady: false,
+    });
+    const app = createApp({ store, detector, controlToken: "secret-token" });
+    const body = JSON.stringify({ mode: "proposal" });
+
+    expect(
+      (await app.request("/api/v1/detector/mode", { method: "PUT", body }))
+        .status,
+    ).toBe(401);
+    const response = await app.request("/api/v1/detector/mode", {
+      method: "PUT",
+      body,
+      headers: {
+        authorization: "Bearer secret-token",
+        "content-type": "application/json",
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ mode: "proposal" });
   });
 
   test("reports revision conflicts", async () => {

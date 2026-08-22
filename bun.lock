@@ -16,6 +16,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@shayyz/contracts": "workspace:*",
+        "@shayyz/detector": "workspace:*",
         "hono": "^4.9.0",
       },
     },

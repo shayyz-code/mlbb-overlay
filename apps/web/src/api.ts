@@ -7,6 +7,7 @@ import {
   DetectorStatusSchema,
   EventEnvelopeSchema,
   HeroSchema,
+  TeamLogoUploadResultSchema,
   type AssetPackStatus,
   type DraftCommand,
   type DraftState,
@@ -15,6 +16,8 @@ import {
   type DetectorProposal,
   type DetectorStatus,
   type Hero,
+  type Side,
+  type TeamLogoUploadResult,
 } from "@shayyz/contracts";
 
 const HeroesSchema = HeroSchema.array();
@@ -146,6 +149,23 @@ export async function sendCommand(
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Draft command failed.");
   return DraftStateSchema.parse(body);
+}
+
+export async function uploadTeamLogo(
+  side: Side,
+  file: File,
+  token: string,
+): Promise<TeamLogoUploadResult> {
+  const form = new FormData();
+  form.set("logo", file);
+  const response = await fetch(`/api/v1/team-logos/${side}`, {
+    method: "POST",
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Logo upload failed.");
+  return TeamLogoUploadResultSchema.parse(body);
 }
 
 export function subscribeToDraft(

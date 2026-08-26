@@ -25,6 +25,7 @@ import { DraftStore } from "./store";
 import { DetectorCoordinator } from "./detector";
 import { DetectorLifecycle, validateObsUrl } from "./detector-lifecycle";
 import { heroes } from "./heroes";
+import { TeamLogoStore } from "./team-logos";
 
 const host = process.env.SHAYYZ_HOST ?? "127.0.0.1";
 const port = Number(process.env.SHAYYZ_PORT ?? 3000);
@@ -39,6 +40,7 @@ const controlToken = isLoopback
   : process.env.SHAYYZ_CONTROL_TOKEN || crypto.randomUUID().replaceAll("-", "");
 const store = new DraftStore(runtimeDirectory);
 await store.initialize();
+const teamLogos = new TeamLogoStore(join(runtimeDirectory, "team-logos"));
 const configuredAssetManifest = process.env.SHAYYZ_ASSET_PACK;
 const assetManifest = configuredAssetManifest
   ? resolve(configuredAssetManifest)
@@ -142,6 +144,7 @@ const application = createApp({
   detector,
   detectorLifecycle,
   detectorCalibration,
+  teamLogos,
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);

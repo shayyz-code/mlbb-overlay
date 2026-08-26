@@ -35,7 +35,8 @@ export class DraftStore {
     try {
       const saved = JSON.parse(await readFile(this.filePath, "utf8"));
       this.#state = DraftStateSchema.parse(saved);
-      if (saved.presentation === undefined) await this.persist();
+      if (saved.presentation === undefined || saved.scoreboard === undefined)
+        await this.persist();
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         const backup = `${this.filePath}.corrupt-${Date.now()}`;
@@ -80,6 +81,7 @@ export class DraftStore {
         const reset = createDefaultDraftState();
         reset.teams = structuredClone(this.#state.teams);
         reset.presentation = structuredClone(this.#state.presentation);
+        reset.scoreboard = structuredClone(this.#state.scoreboard);
         reset.revision = this.#state.revision;
         this.#state = this.withRevision(reset);
         break;
@@ -90,6 +92,10 @@ export class DraftStore {
         [next.selections.blue, next.selections.red] = [
           next.selections.red,
           next.selections.blue,
+        ];
+        [next.scoreboard.scores.blue, next.scoreboard.scores.red] = [
+          next.scoreboard.scores.red,
+          next.scoreboard.scores.blue,
         ];
         this.#state = this.withRevision(next);
         break;
@@ -131,6 +137,18 @@ export class DraftStore {
         }
         next.timer.running = false;
         next.timer.startedAt = null;
+        this.#state = this.withRevision(next);
+        break;
+      }
+      case "set-scoreboard-score": {
+        const next = this.state;
+        next.scoreboard.scores[command.side] = command.score;
+        this.#state = this.withRevision(next);
+        break;
+      }
+      case "reset-scoreboard": {
+        const next = this.state;
+        next.scoreboard.scores = { blue: 0, red: 0 };
         this.#state = this.withRevision(next);
         break;
       }

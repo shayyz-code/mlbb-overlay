@@ -30,6 +30,7 @@ import {
   uploadTeamLogo,
 } from "./api";
 import { CalibrationWizard } from "./CalibrationWizard";
+import { CompactDraftOverlay } from "./CompactDraftOverlay";
 import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
 import { newestAddedHeroId } from "./voice";
@@ -928,7 +929,7 @@ function ScoreboardOverlayPage() {
 }
 
 function OverlayPage() {
-  const { state, heroes, assets, connected, draftEvent } = useDraft();
+  const { state, heroes, connected, draftEvent } = useDraft();
   const [, rerender] = useState(0);
   useHeroVoice(state, heroes, draftEvent);
   useEffect(() => {
@@ -937,67 +938,13 @@ function OverlayPage() {
   }, []);
   if (!state) return null;
 
-  const catalog = new Map(heroes.map((hero) => [hero.id, hero]));
-  const phase = currentPhase(state);
   return (
-    <main className="overlay-canvas">
-      <div className="overlay-grid" />
-      <header className="overlay-header">
-        <div className="overlay-brand">
-          <span>S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <div className="phase-display">
-          <small>
-            {state.status === "complete"
-              ? "Draft locked"
-              : `${phase?.side ?? ""} ${phase?.kind ?? ""}`}
-          </small>
-          <strong>{String(effectiveTimer(state)).padStart(2, "0")}</strong>
-          <span className={connected ? "online" : ""}>
-            {connected ? "LIVE" : "SYNC"}
-          </span>
-        </div>
-        <div className="format-label">
-          <small>Competitive draft</small>
-          <strong>{state.format.name}</strong>
-        </div>
-      </header>
-      <div className="overlay-teams">
-        <TeamDraft
-          state={state}
-          side="blue"
-          heroes={catalog}
-          cueUrls={assets?.cueUrls}
-        />
-        <div className="overlay-versus">
-          <span>VS</span>
-          <small>
-            {state.phaseIndex + 1 > state.format.phases.length
-              ? state.format.phases.length
-              : state.phaseIndex + 1}
-          </small>
-        </div>
-        <TeamDraft
-          state={state}
-          side="red"
-          heroes={catalog}
-          cueUrls={assets?.cueUrls}
-        />
-      </div>
-      <footer className="overlay-footer">
-        <span>UNOFFICIAL COMMUNITY BROADCAST</span>
-        <strong>
-          {phase
-            ? `${phase.side.toUpperCase()} ${phase.kind.toUpperCase()}`
-            : "READY FOR BATTLE"}
-        </strong>
-        <span>SHAYYZ.GG / LOCAL</span>
-      </footer>
-    </main>
+    <CompactDraftOverlay
+      state={state}
+      heroes={heroes}
+      connected={connected}
+      remainingSeconds={effectiveTimer(state)}
+    />
   );
 }
 

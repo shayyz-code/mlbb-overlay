@@ -83,14 +83,12 @@ small {
   border-right: 1px solid var(--line);
   background: rgba(7, 10, 17, 0.9);
 }
-.brand-lockup,
-.overlay-brand {
+.brand-lockup {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.brand-rune,
-.overlay-brand > span {
+.brand-rune {
   width: 42px;
   height: 46px;
   display: grid;
@@ -102,12 +100,10 @@ small {
     sans-serif;
   box-shadow: 0 0 28px rgba(37, 185, 255, 0.35);
 }
-.brand-lockup div,
-.overlay-brand div {
+.brand-lockup div {
   display: grid;
 }
-.brand-lockup strong,
-.overlay-brand strong {
+.brand-lockup strong {
   font-size: 1.25rem;
 }
 .control-sidebar nav {
@@ -706,184 +702,6 @@ button.danger {
   font:
     800 1.4rem "Arial Narrow",
     sans-serif;
-}
-
-.overlay-canvas {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  min-height: 560px;
-  overflow: hidden;
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 34px 50px 28px;
-}
-.overlay-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.12;
-  background-image:
-    linear-gradient(rgba(83, 112, 161, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(83, 112, 161, 0.18) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: linear-gradient(to bottom, black, transparent 65%);
-  pointer-events: none;
-}
-.overlay-header {
-  position: relative;
-  height: 82px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  padding: 0 22px;
-  clip-path: polygon(
-    16px 0,
-    calc(50% - 165px) 0,
-    calc(50% - 150px) 14px,
-    calc(50% + 150px) 14px,
-    calc(50% + 165px) 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% 100%,
-    0 100%,
-    0 16px
-  );
-  border-bottom: 2px solid rgba(247, 198, 95, 0.62);
-  background: linear-gradient(
-    90deg,
-    rgba(7, 23, 39, 0.97),
-    rgba(10, 13, 22, 0.98) 38%,
-    rgba(10, 13, 22, 0.98) 62%,
-    rgba(35, 9, 18, 0.97)
-  );
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
-}
-.overlay-brand > span {
-  width: 34px;
-  height: 38px;
-  font-size: 1.1rem;
-}
-.format-label {
-  text-align: right;
-  display: grid;
-}
-.phase-display {
-  align-self: start;
-  min-width: 250px;
-  height: 104px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 22px 14px;
-  clip-path: polygon(10% 0, 90% 0, 100% 25%, 84% 100%, 16% 100%, 0 25%);
-  background: linear-gradient(#20283a, #090d15 30%);
-  border-top: 2px solid var(--gold);
-  text-align: center;
-}
-.phase-display strong {
-  color: var(--gold);
-  font-size: 3.2rem;
-  line-height: 1;
-}
-.phase-display > span {
-  color: var(--muted);
-  font:
-    700 0.65rem "Arial Narrow",
-    sans-serif;
-  letter-spacing: 0.12em;
-}
-.phase-display > span.online {
-  color: var(--success);
-}
-.overlay-teams {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr);
-  align-items: end;
-  gap: 16px;
-  margin-bottom: 5vh;
-}
-.overlay-teams .team-draft {
-  margin: 0;
-  padding: 22px;
-  min-height: 430px;
-  border-width: 1px 1px 4px;
-  backdrop-filter: blur(10px);
-  background: linear-gradient(
-    120deg,
-    rgba(6, 34, 55, 0.95),
-    rgba(8, 12, 20, 0.88) 65%
-  );
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.38);
-}
-.overlay-teams .team-red {
-  background: linear-gradient(
-    240deg,
-    rgba(57, 9, 25, 0.95),
-    rgba(8, 12, 20, 0.88) 65%
-  );
-}
-.overlay-teams .team-draft header {
-  margin-bottom: 28px;
-}
-.overlay-teams .team-draft header h2 {
-  font-size: clamp(1.8rem, 3vw, 3.2rem);
-}
-.overlay-teams .team-emblem {
-  width: 66px;
-  height: 66px;
-  font-size: 1.05rem;
-}
-.overlay-teams .ban-row {
-  margin-bottom: 16px;
-}
-.overlay-teams .ban-row .hero-mark {
-  min-height: 68px;
-}
-.overlay-teams .pick-row .hero-mark {
-  min-height: 210px;
-}
-.overlay-teams .pick-row .hero-initials {
-  font-size: 2rem;
-}
-.overlay-teams .hero-mark strong {
-  font-size: 0.9rem;
-  padding: 10px 5px;
-}
-.overlay-versus {
-  align-self: center;
-  display: grid;
-  place-items: center;
-  color: var(--gold);
-}
-.overlay-versus span {
-  font:
-    800 3.6rem "Arial Narrow",
-    sans-serif;
-  text-shadow: 0 0 24px rgba(247, 198, 95, 0.35);
-}
-.overlay-footer {
-  position: relative;
-  min-height: 42px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 20px;
-  padding: 0 18px;
-  border-top: 1px solid var(--line);
-  background: rgba(7, 10, 16, 0.88);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-}
-.overlay-footer strong {
-  color: var(--text);
-}
-.overlay-footer span:last-child {
-  text-align: right;
 }
 
 .scoreboard-control-main {

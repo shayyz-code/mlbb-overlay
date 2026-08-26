@@ -1,0 +1,405 @@
+.compact-draft-canvas {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text);
+  font-family: "Barlow Condensed", Inter, sans-serif;
+}
+
+.compact-draft-strip {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1920px;
+  height: 367px;
+  display: grid;
+  grid-template-rows: 92.5px 274.5px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(6, 29, 48, 0.98),
+    rgba(7, 10, 17, 0.99) 38%,
+    rgba(7, 10, 17, 0.99) 62%,
+    rgba(48, 8, 20, 0.98)
+  );
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.compact-draft-header,
+.compact-draft-lower {
+  display: grid;
+  grid-template-columns: 725px 470px 725px;
+}
+
+.compact-draft-header {
+  border-block: 1px solid rgba(159, 178, 214, 0.22);
+}
+
+.compact-team-header {
+  display: grid;
+  grid-template-columns: 400px 325px;
+  min-width: 0;
+}
+
+.compact-team-header.compact-red {
+  grid-template-columns: 325px 400px;
+}
+
+.compact-ban-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 9px 8px;
+}
+
+.compact-ban-slot {
+  position: relative;
+  height: 72.5px;
+  overflow: hidden;
+  border: 1px solid rgba(159, 178, 214, 0.2);
+  background: #090d16;
+  filter: saturate(0.35);
+}
+
+.compact-ban-slot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 48%,
+    rgba(255, 64, 93, 0.7) 49%,
+    rgba(255, 64, 93, 0.7) 52%,
+    transparent 53%
+  );
+  opacity: 0.45;
+}
+
+.compact-ban-slot:not(.is-locked) .hero-visual {
+  opacity: 0.18;
+}
+
+.compact-ban-slot > span {
+  position: absolute;
+  z-index: 2;
+  right: 5px;
+  bottom: 3px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 10px;
+}
+
+.compact-ban-slot.is-active {
+  border-color: var(--gold);
+  filter: none;
+  box-shadow: inset 0 0 18px rgba(247, 198, 95, 0.38);
+}
+
+.compact-ban-slot.is-active::after {
+  opacity: 0;
+}
+
+.compact-team-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 24px;
+  border-inline: 1px solid rgba(159, 178, 214, 0.18);
+  background: linear-gradient(90deg, rgba(37, 185, 255, 0.1), transparent);
+}
+
+.compact-red .compact-team-name {
+  align-items: flex-end;
+  text-align: right;
+  background: linear-gradient(270deg, rgba(255, 64, 93, 0.1), transparent);
+}
+
+.compact-team-name strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 27px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-draft-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  border-inline: 1px solid rgba(247, 198, 95, 0.3);
+  background: linear-gradient(180deg, #161c2a, #090c14);
+}
+
+.compact-draft-brand > span {
+  width: 42px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
+  background: linear-gradient(145deg, var(--blue), #6b5bff);
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.compact-draft-brand > div {
+  display: grid;
+}
+
+.compact-draft-brand strong {
+  font-size: 25px;
+}
+
+.compact-draft-lower {
+  border-bottom: 1px solid rgba(159, 178, 214, 0.22);
+}
+
+.compact-team-picks {
+  display: grid;
+  grid-template-columns: repeat(5, 145px);
+  min-width: 0;
+}
+
+.compact-pick-slot {
+  display: grid;
+  grid-template-rows: 227px 47.5px;
+  min-width: 0;
+}
+
+.compact-pick-media {
+  position: relative;
+  overflow: hidden;
+  border-inline: 1px solid rgba(159, 178, 214, 0.18);
+  background: linear-gradient(155deg, #11293c, #090c14 68%);
+}
+
+.compact-red .compact-pick-media {
+  background: linear-gradient(205deg, #3d101d, #090c14 68%);
+}
+
+.compact-pick-media .hero-visual img,
+.compact-pick-media .hero-visual video,
+.compact-ban-slot .hero-visual img,
+.compact-ban-slot .hero-visual video {
+  object-fit: cover;
+  object-position: center 18%;
+}
+
+.compact-pick-media .hero-initials {
+  font-size: 30px;
+}
+
+.compact-pick-media > span {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 9px;
+  padding: 4px 6px;
+  border-left: 2px solid var(--blue);
+  background: rgba(4, 7, 12, 0.72);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.compact-red .compact-pick-media > span {
+  left: auto;
+  right: 9px;
+  border-right: 2px solid var(--red);
+  border-left: 0;
+}
+
+.compact-pick-media > small {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  bottom: 8px;
+  color: var(--gold);
+}
+
+.compact-pick-name {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 0 8px;
+  border: 1px solid rgba(159, 178, 214, 0.18);
+  border-bottom: 4px solid var(--blue);
+  background: #0a0e17;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.compact-red .compact-pick-name {
+  border-bottom-color: var(--red);
+}
+
+.compact-pick-slot:not(.is-locked) .hero-visual {
+  opacity: 0.16;
+}
+
+.compact-pick-slot.is-active .compact-pick-media {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 28px rgba(247, 198, 95, 0.45);
+  animation: compact-slot-pulse 1.8s ease-in-out infinite;
+}
+
+.compact-pick-slot.is-active .hero-visual {
+  opacity: 0.36;
+}
+
+.compact-draft-center {
+  display: grid;
+  grid-template-rows: 151px 42px 81.5px;
+  border-inline: 1px solid rgba(159, 178, 214, 0.22);
+  background: linear-gradient(
+    180deg,
+    rgba(18, 24, 39, 0.99),
+    rgba(7, 10, 17, 0.99)
+  );
+}
+
+.compact-center-score {
+  display: grid;
+  grid-template-columns: 90px 58px 54px 58px 90px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.compact-team-logo {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  clip-path: polygon(
+    13% 0,
+    87% 0,
+    100% 13%,
+    100% 87%,
+    87% 100%,
+    13% 100%,
+    0 87%,
+    0 13%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #080c15;
+}
+
+.compact-team-logo-blue {
+  box-shadow: inset 0 0 20px rgba(37, 185, 255, 0.22);
+}
+
+.compact-team-logo-red {
+  box-shadow: inset 0 0 20px rgba(255, 64, 93, 0.22);
+}
+
+.compact-center-score .compact-team-logo img {
+  position: absolute;
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+}
+
+.compact-team-logo > span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.compact-score {
+  color: var(--gold);
+  font-size: 58px;
+  line-height: 1;
+  text-align: center;
+}
+
+.compact-score-blue {
+  text-shadow: 0 0 18px rgba(37, 185, 255, 0.28);
+}
+
+.compact-score-red {
+  text-shadow: 0 0 18px rgba(255, 64, 93, 0.28);
+}
+
+.compact-versus {
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.compact-phase-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-block: 1px solid rgba(159, 178, 214, 0.14);
+  background: rgba(4, 7, 12, 0.52);
+}
+
+.compact-phase-row strong {
+  font-size: 16px;
+}
+
+.compact-phase-row > span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+
+.compact-phase-row > span.is-online {
+  color: var(--success);
+}
+
+.compact-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.compact-timer-track {
+  width: 420px;
+  height: 6px;
+  overflow: hidden;
+  background: rgba(159, 178, 214, 0.14);
+}
+
+.compact-timer-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--gold), var(--red));
+  box-shadow: 0 0 12px rgba(247, 198, 95, 0.45);
+  transition: width 250ms linear;
+}
+
+.compact-timer > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.compact-timer strong {
+  color: var(--gold);
+  font-size: 26px;
+}
+
+@keyframes compact-slot-pulse {
+  50% {
+    box-shadow: inset 0 0 38px rgba(247, 198, 95, 0.68);
+  }
+}

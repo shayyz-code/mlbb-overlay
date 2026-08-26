@@ -980,8 +980,7 @@ button.danger {
 .scoreboard-center {
   left: 886.42px;
   width: 166.61px;
-  grid-template-columns: 30px auto;
-  gap: 7px;
+  place-items: center;
   clip-path: polygon(
     10px 0,
     calc(100% - 10px) 0,
@@ -993,19 +992,10 @@ button.danger {
   border-color: rgba(247, 198, 95, 0.52);
   background: linear-gradient(#1b2231, #070a10 50%);
 }
-.scoreboard-center span {
-  width: 28px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
-  background: linear-gradient(145deg, var(--display-cyan), var(--display-blue));
-  font-weight: 900;
-}
 .scoreboard-center strong {
   color: #e8edf7;
-  font-size: 15px;
-  letter-spacing: 0.13em;
+  font-size: 17px;
+  letter-spacing: 0.16em;
 }
 .scoreboard-team-card .scoreboard-logo {
   position: relative;

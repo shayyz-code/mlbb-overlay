@@ -253,12 +253,8 @@ export function CompactDraftOverlay({
       <div className="compact-draft-strip">
         <header className="compact-draft-header">
           <TeamHeader state={state} side="blue" heroes={catalog} />
-          <div className="compact-draft-brand">
-            <span>S</span>
-            <div>
-              <strong>SHAYYZ</strong>
-              <small>Competitive draft</small>
-            </div>
+          <div className="compact-draft-title">
+            <strong>Competitive Draft</strong>
           </div>
           <TeamHeader state={state} side="red" heroes={catalog} />
         </header>

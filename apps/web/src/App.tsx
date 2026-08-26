@@ -914,8 +914,7 @@ function ScoreboardOverlayPage() {
         {state.scoreboard.scores.blue}
       </div>
       <div className="scoreboard-center">
-        <span>S</span>
-        <strong>SHAYYZ</strong>
+        <strong>VS</strong>
       </div>
       <div className="scoreboard-score scoreboard-score-red">
         {state.scoreboard.scores.red}

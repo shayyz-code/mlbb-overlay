@@ -19,6 +19,20 @@ Visual draft detection is being developed as an opt-in beta. Turtle and Lord
 event detection remains a later milestone and is not presented as production
 ready.
 
+## Tournament draft order
+
+The manual controller follows the standard MLBB ten-ban tournament sequence:
+
+1. Opening bans: Blue, Red, Blue, Red, Blue, Red.
+2. First picks: Blue 1; Red 1-2; Blue 2-3; Red 3.
+3. Second bans: Red, Blue, Red, Blue.
+4. Final picks: Red 4; Blue 4-5; Red 5.
+
+This order is documented by the
+[IESF MLBB Tournament Mode Organizer Guide](https://iesf.org/wp-content/uploads/2024/01/MLBB-Organizers-Guideline-1.pdf)
+and is visible in the
+[official MSC 2025 broadcast](https://www.youtube.com/watch?v=xvTBMaWGK5A&t=2910s).
+
 ## Development
 
 Requirements: macOS, Bun 1.3 or newer, and OBS Studio 28 or newer.

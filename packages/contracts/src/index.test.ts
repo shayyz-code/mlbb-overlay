@@ -1,17 +1,45 @@
 import { describe, expect, test } from "bun:test";
 import {
   AssetPackManifestSchema,
-  DetectorProfileSchema,
-  DraftReferenceMapSchema,
-  IdlePosterJobsSchema,
-  STANDARD_TEN_BAN_FORMAT,
   applySelection,
   createDefaultDraftState,
   currentPhase,
+  DetectorProfileSchema,
+  type DraftPhase,
+  DraftReferenceMapSchema,
+  IdlePosterJobsSchema,
+  STANDARD_TEN_BAN_FORMAT,
   selectedHeroIds,
 } from "./index";
 
+const tournamentPhases: DraftPhase[] = [
+  { side: "blue", kind: "ban", slot: 0 },
+  { side: "red", kind: "ban", slot: 0 },
+  { side: "blue", kind: "ban", slot: 1 },
+  { side: "red", kind: "ban", slot: 1 },
+  { side: "blue", kind: "ban", slot: 2 },
+  { side: "red", kind: "ban", slot: 2 },
+  { side: "blue", kind: "pick", slot: 0 },
+  { side: "red", kind: "pick", slot: 0 },
+  { side: "red", kind: "pick", slot: 1 },
+  { side: "blue", kind: "pick", slot: 1 },
+  { side: "blue", kind: "pick", slot: 2 },
+  { side: "red", kind: "pick", slot: 2 },
+  { side: "red", kind: "ban", slot: 3 },
+  { side: "blue", kind: "ban", slot: 3 },
+  { side: "red", kind: "ban", slot: 4 },
+  { side: "blue", kind: "ban", slot: 4 },
+  { side: "red", kind: "pick", slot: 3 },
+  { side: "blue", kind: "pick", slot: 3 },
+  { side: "blue", kind: "pick", slot: 4 },
+  { side: "red", kind: "pick", slot: 4 },
+];
+
 describe("standard draft contract", () => {
+  test("uses the verified MLBB tournament phase order", () => {
+    expect(STANDARD_TEN_BAN_FORMAT.phases).toEqual(tournamentPhases);
+  });
+
   test("contains five bans and five picks per side", () => {
     for (const side of ["blue", "red"] as const) {
       expect(
@@ -29,7 +57,8 @@ describe("standard draft contract", () => {
 
   test("advances phases and completes after twenty selections", () => {
     let state = createDefaultDraftState(new Date("2026-08-21T00:00:00.000Z"));
-    for (let index = 0; index < 20; index += 1) {
+    for (const [index, expectedPhase] of tournamentPhases.entries()) {
+      expect(currentPhase(state)).toEqual(expectedPhase);
       state = applySelection(state, {
         heroId: `hero-${index}`,
         source: "manual",

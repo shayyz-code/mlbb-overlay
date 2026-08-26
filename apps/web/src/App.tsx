@@ -1,14 +1,14 @@
 import {
-  currentPhase,
-  selectedHeroIds,
   type AssetPackStatus,
+  currentPhase,
+  type DetectorMode,
+  type DetectorStatus,
   type DraftCommand,
   type DraftSelection,
   type DraftState,
-  type DetectorMode,
-  type DetectorStatus,
   type Hero,
   type Side,
+  selectedHeroIds,
 } from "@shayyz/contracts";
 import {
   type CSSProperties,
@@ -19,17 +19,18 @@ import {
 } from "react";
 import {
   fetchAssetStatus,
-  fetchDraft,
   fetchDetectorStatus,
+  fetchDraft,
   fetchHeroes,
-  sendCommand,
   reviewDetectorProposal,
+  sendCommand,
   setDetectorMode,
   setDetectorRunning,
   subscribeToDraft,
 } from "./api";
-import { HeroMedia } from "./HeroMedia";
 import { CalibrationWizard } from "./CalibrationWizard";
+import { operatorPhaseLabel } from "./draft-turn";
+import { HeroMedia } from "./HeroMedia";
 import { newestAddedHeroId } from "./voice";
 
 type WithoutRevision<T> = T extends unknown
@@ -529,9 +530,7 @@ function ControlPage() {
           <div>
             <small>Current phase</small>
             <strong>
-              {phase
-                ? `${phase.side.toUpperCase()} ${phase.kind.toUpperCase()} ${phase.slot + 1}`
-                : "DRAFT COMPLETE"}
+              {operatorPhaseLabel(state.format, state.phaseIndex)}
             </strong>
           </div>
           <div className="progress-track">

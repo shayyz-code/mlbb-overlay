@@ -5,6 +5,7 @@ import {
   createDefaultDraftState,
   currentPhase,
   DetectorProfileSchema,
+  DraftCommandSchema,
   type DraftPhase,
   DraftReferenceMapSchema,
   IdlePosterJobsSchema,
@@ -83,6 +84,21 @@ describe("standard draft contract", () => {
 
   test("keeps hero voice playback off by default", () => {
     expect(createDefaultDraftState().presentation.voiceEnabled).toBe(false);
+  });
+
+  test("starts with a zero-zero scoreboard and validates score commands", () => {
+    expect(createDefaultDraftState().scoreboard.scores).toEqual({
+      blue: 0,
+      red: 0,
+    });
+    expect(
+      DraftCommandSchema.safeParse({
+        type: "set-scoreboard-score",
+        expectedRevision: 0,
+        side: "blue",
+        score: 100,
+      }).success,
+    ).toBe(false);
   });
 });
 

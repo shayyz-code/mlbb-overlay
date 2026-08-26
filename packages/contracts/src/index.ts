@@ -416,6 +416,13 @@ export const TeamSchema = z.object({
 });
 export type Team = z.infer<typeof TeamSchema>;
 
+export const TeamLogoUploadResultSchema = z.object({
+  logoUrl: z.string().startsWith("/api/v1/media/team-logos/"),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+});
+export type TeamLogoUploadResult = z.infer<typeof TeamLogoUploadResultSchema>;
+
 export const DraftPhaseSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,
@@ -459,6 +466,18 @@ export const PresentationSettingsSchema = z
   .default({ voiceEnabled: false });
 export type PresentationSettings = z.infer<typeof PresentationSettingsSchema>;
 
+export const ScoreboardSettingsSchema = z
+  .object({
+    scores: z
+      .object({
+        blue: z.number().int().min(0).max(99).default(0),
+        red: z.number().int().min(0).max(99).default(0),
+      })
+      .default({ blue: 0, red: 0 }),
+  })
+  .default({ scores: { blue: 0, red: 0 } });
+export type ScoreboardSettings = z.infer<typeof ScoreboardSettingsSchema>;
+
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.string().datetime(),
@@ -472,6 +491,7 @@ export const DraftStateSchema = z.object({
   }),
   timer: DraftTimerSchema,
   presentation: PresentationSettingsSchema,
+  scoreboard: ScoreboardSettingsSchema,
 });
 export type DraftState = z.infer<typeof DraftStateSchema>;
 
@@ -500,6 +520,12 @@ export const DraftCommandSchema = z.discriminatedUnion("type", [
   }),
   CommandBaseSchema.extend({ type: z.literal("start-timer") }),
   CommandBaseSchema.extend({ type: z.literal("pause-timer") }),
+  CommandBaseSchema.extend({
+    type: z.literal("set-scoreboard-score"),
+    side: SideSchema,
+    score: z.number().int().min(0).max(99),
+  }),
+  CommandBaseSchema.extend({ type: z.literal("reset-scoreboard") }),
   CommandBaseSchema.extend({
     type: z.literal("set-presentation"),
     presentation: PresentationSettingsSchema,
@@ -572,6 +598,7 @@ export function createDefaultDraftState(now = new Date()): DraftState {
       startedAt: null,
     },
     presentation: { voiceEnabled: false },
+    scoreboard: { scores: { blue: 0, red: 0 } },
   };
 }
 

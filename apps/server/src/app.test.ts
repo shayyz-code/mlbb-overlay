@@ -6,6 +6,7 @@ import { createApp } from "./app";
 import { assetFixture } from "./asset-fixture";
 import { DetectorCoordinator } from "./detector";
 import { DraftStore } from "./store";
+import { TeamLogoStore } from "./team-logos";
 
 const directories: string[] = [];
 afterEach(async () =>
@@ -19,9 +20,14 @@ async function setup(controlToken?: string) {
   directories.push(directory);
   const store = new DraftStore(directory);
   await store.initialize();
+  const teamLogos = new TeamLogoStore(join(directory, "team-logos"));
   return {
     store,
-    app: createApp({ store, ...(controlToken ? { controlToken } : {}) }),
+    app: createApp({
+      store,
+      teamLogos,
+      ...(controlToken ? { controlToken } : {}),
+    }),
   };
 }
 
@@ -143,5 +149,54 @@ describe("draft API", () => {
     expect(
       (await app.request("/api/v1/media/heroes/layla/portrait")).status,
     ).toBe(404);
+  });
+
+  test("uploads and serves allowlisted runtime team logos", async () => {
+    const { app } = await setup("secret-token");
+    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+    const form = new FormData();
+    form.set("logo", new File([png], "team.png", { type: "image/png" }));
+
+    expect(
+      (
+        await app.request("/api/v1/team-logos/blue", {
+          method: "POST",
+          body: form,
+        })
+      ).status,
+    ).toBe(401);
+
+    const response = await app.request("/api/v1/team-logos/blue", {
+      method: "POST",
+      body: form,
+      headers: { authorization: "Bearer secret-token" },
+    });
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { logoUrl: string };
+    const media = await app.request(result.logoUrl);
+    expect(media.status).toBe(200);
+    expect(media.headers.get("content-type")).toBe("image/png");
+    expect(new Uint8Array(await media.arrayBuffer())).toEqual(png);
+    expect(
+      (await app.request("/api/v1/media/team-logos/not-allowlisted.png"))
+        .status,
+    ).toBe(404);
+  });
+
+  test("rejects mislabeled and unsupported team logos", async () => {
+    const { app } = await setup();
+    const form = new FormData();
+    form.set(
+      "logo",
+      new File(["not an image"], "team.png", { type: "image/png" }),
+    );
+    const response = await app.request("/api/v1/team-logos/red", {
+      method: "POST",
+      body: form,
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: "The uploaded file does not match its image type.",
+    });
   });
 });

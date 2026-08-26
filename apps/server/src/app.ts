@@ -5,6 +5,7 @@ import {
   DetectorFrameRequestSchema,
   DetectorModeCommandSchema,
   DraftCommandSchema,
+  SideSchema,
 } from "@shayyz/contracts";
 import { serveStatic } from "hono/bun";
 import { Hono } from "hono";
@@ -18,6 +19,7 @@ import { RevisionConflictError, type DraftStore } from "./store";
 import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
 import type { DetectorCalibrationService } from "./calibration";
+import type { TeamLogoStore } from "./team-logos";
 
 export interface AppOptions {
   store: DraftStore;
@@ -28,6 +30,7 @@ export interface AppOptions {
   detector?: DetectorCoordinator;
   detectorLifecycle?: DetectorLifecycle;
   detectorCalibration?: DetectorCalibrationService;
+  teamLogos?: TeamLogoStore;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -219,6 +222,30 @@ export function createApp(options: AppOptions): Hono {
     const asset = options.assetPack?.cue(context.req.param("id"));
     return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
   });
+  app.post("/api/v1/team-logos/:side", requireControlToken, async (context) => {
+    if (!options.teamLogos)
+      return context.json({ error: "Team logo storage is unavailable." }, 503);
+    try {
+      SideSchema.parse(context.req.param("side"));
+      const logo = (await context.req.raw.formData()).get("logo");
+      if (!(logo instanceof File))
+        return context.json({ error: "A logo file is required." }, 400);
+      return context.json(await options.teamLogos.save(logo));
+    } catch (error) {
+      return context.json(
+        {
+          error: error instanceof Error ? error.message : "Logo upload failed.",
+        },
+        400,
+      );
+    }
+  });
+  app.get("/api/v1/media/team-logos/:filename", async (context) => {
+    const asset = await options.teamLogos?.resolve(
+      context.req.param("filename"),
+    );
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
 
   app.post("/api/v1/draft/commands", requireControlToken, async (context) => {
     try {
@@ -248,11 +275,16 @@ export function createApp(options: AppOptions): Hono {
     "/display2ban6.html",
     "/displaycostum.html",
     "/displaycostumban6.html",
+    "/scoreboard.html",
   ];
   for (const route of legacyRoutes) {
     app.get(route, (context) =>
       context.redirect(
-        route.includes("control") ? "/control/draft" : "/overlay/draft",
+        route === "/scoreboard.html"
+          ? "/overlay/scoreboard"
+          : route.includes("control")
+            ? "/control/draft"
+            : "/overlay/draft",
         308,
       ),
     );

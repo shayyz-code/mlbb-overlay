@@ -11,7 +11,6 @@ import {
   type DetectorStatus,
   DetectorStatusSchema,
   type DisplayCommand,
-  DisplayMediaUploadResultSchema,
   type DisplayState,
   DisplayStateSchema,
   type DraftCommand,
@@ -172,22 +171,6 @@ export async function activateMatch(
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Match activation failed.");
   return MatchActivationResultSchema.parse(body);
-}
-
-export async function uploadDisplayMedia(
-  file: File,
-  token: string,
-): Promise<string> {
-  const form = new FormData();
-  form.set("media", file);
-  const response = await fetch("/api/v1/display-media", {
-    method: "POST",
-    headers: token ? { authorization: `Bearer ${token}` } : {},
-    body: form,
-  });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "Media upload failed.");
-  return DisplayMediaUploadResultSchema.parse(body).mediaUrl;
 }
 
 export async function fetchHeroes(): Promise<Hero[]> {

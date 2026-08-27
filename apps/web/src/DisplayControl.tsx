@@ -14,7 +14,6 @@ import {
   sendDisplayCommand,
   subscribeToDisplay,
   subscribeToDraft,
-  uploadDisplayMedia,
 } from "./api";
 import "./display-control.css";
 import { MatchPicker } from "./MatchPicker";
@@ -27,7 +26,6 @@ const surfaces = [
   "ticker",
   "result",
 ] as const;
-type BreakSurface = keyof DisplaySettings["backgrounds"];
 type WithoutRevision<T> = T extends unknown
   ? Omit<T, "expectedRevision">
   : never;
@@ -263,7 +261,12 @@ function FramePreview({
       role="img"
       aria-label="Native HUD frame preview"
     >
-      <div className="preview-top-scoreboard">Centered scoreboard</div>
+      <div className="preview-top-scoreboard">
+        <span>Blue</span>
+        <i>Timer</i>
+        <span>Red</span>
+        <b aria-hidden="true" />
+      </div>
       {(["blue", "red"] as const).map((side) => (
         <div
           className={`preview-native-frame side-${side}`}
@@ -279,56 +282,11 @@ function FramePreview({
   );
 }
 
-function MediaField({
-  label,
-  value,
-  token,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  token: string;
-  onChange: (url: string) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <label className="media-field">
-      {label}
-      <span>{value ? "Local image ready" : "Theme fallback"}</span>
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        disabled={busy}
-        onChange={async (event) => {
-          const file = event.target.files?.[0];
-          if (!file) return;
-          setBusy(true);
-          try {
-            onChange(await uploadDisplayMedia(file, token));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-      {value && (
-        <button type="button" onClick={() => onChange("")}>
-          Clear
-        </button>
-      )}
-    </label>
-  );
-}
-
 export function DisplayControlPage() {
   const control = useDisplayControl();
   const { draft, display, working, setWorking } = control;
   if (!draft || !display || !working)
     return <div className="loading-screen">Loading display console…</div>;
-  const updateBackground = (surface: BreakSurface, url: string) => {
-    const next = structuredClone(working);
-    next.backgrounds[surface] = url;
-    setWorking(next);
-  };
   const updateFrame = (side: Side, frame: NativeHudFrame) => {
     const next = structuredClone(working);
     next.scoreboard.frames[side] = frame;
@@ -719,8 +677,8 @@ export function DisplayControlPage() {
         <section className="display-panel">
           <header>
             <div>
-              <small>Local-only assets</small>
-              <h2>Event identity and backgrounds</h2>
+              <small>Broadcast metadata</small>
+              <h2>Event settings</h2>
             </div>
           </header>
           <div className="metadata-grid event-fields">
@@ -748,41 +706,6 @@ export function DisplayControlPage() {
                 }
               />
             </label>
-          </div>
-          <div className="media-grid">
-            <MediaField
-              label="Event logo"
-              value={working.event.logoUrl}
-              token={control.token}
-              onChange={(url) =>
-                setWorking({
-                  ...working,
-                  event: { ...working.event, logoUrl: url },
-                })
-              }
-            />
-            <MediaField
-              label="Default background"
-              value={working.event.defaultBackgroundUrl}
-              token={control.token}
-              onChange={(url) =>
-                setWorking({
-                  ...working,
-                  event: { ...working.event, defaultBackgroundUrl: url },
-                })
-              }
-            />
-            {(
-              ["match", "schedule", "countdown", "result"] as BreakSurface[]
-            ).map((surface) => (
-              <MediaField
-                key={surface}
-                label={`${surface} override`}
-                value={working.backgrounds[surface]}
-                token={control.token}
-                onChange={(url) => updateBackground(surface, url)}
-              />
-            ))}
           </div>
         </section>
       </section>

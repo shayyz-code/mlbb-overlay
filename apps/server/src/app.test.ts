@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { createApp } from "./app";
 import { assetFixture } from "./asset-fixture";
 import { DetectorCoordinator } from "./detector";
-import { DisplayMediaStore } from "./display-media";
 import { DisplayStore } from "./display-store";
 import { DraftStore } from "./store";
 import { TeamLogoStore } from "./team-logos";
@@ -25,7 +24,6 @@ async function setup(controlToken?: string) {
   const displayStore = new DisplayStore(directory);
   await displayStore.initialize();
   const teamLogos = new TeamLogoStore(join(directory, "team-logos"));
-  const displayMedia = new DisplayMediaStore(join(directory, "display-media"));
   return {
     store,
     displayStore,
@@ -33,7 +31,6 @@ async function setup(controlToken?: string) {
       store,
       displayStore,
       teamLogos,
-      displayMedia,
       ...(controlToken ? { controlToken } : {}),
     }),
   };
@@ -291,21 +288,5 @@ describe("draft API", () => {
     expect(await response.json()).toMatchObject({
       error: "The uploaded file does not match its image type.",
     });
-  });
-
-  test("uploads display backgrounds outside the public web root", async () => {
-    const { app, displayStore } = await setup();
-    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0]);
-    const form = new FormData();
-    form.set("media", new File([png], "background.png", { type: "image/png" }));
-    const response = await app.request("/api/v1/display-media", {
-      method: "POST",
-      body: form,
-    });
-    expect(response.status).toBe(200);
-    const result = (await response.json()) as { mediaUrl: string };
-    expect(result.mediaUrl).toStartWith("/api/v1/media/displays/");
-    expect((await app.request(result.mediaUrl)).status).toBe(200);
-    displayStore.close();
   });
 });

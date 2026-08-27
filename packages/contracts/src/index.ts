@@ -423,15 +423,6 @@ export const TeamLogoUploadResultSchema = z.object({
 });
 export type TeamLogoUploadResult = z.infer<typeof TeamLogoUploadResultSchema>;
 
-export const DisplayMediaUploadResultSchema = z.object({
-  mediaUrl: z.string().startsWith("/api/v1/media/displays/"),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
-});
-export type DisplayMediaUploadResult = z.infer<
-  typeof DisplayMediaUploadResultSchema
->;
-
 export const DraftPhaseSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,
@@ -600,13 +591,6 @@ const TimezoneSchema = z
     }
   }, "Event timezone must be a valid IANA timezone.");
 
-const DisplayBackgroundsSchema = z.object({
-  match: z.string(),
-  schedule: z.string(),
-  countdown: z.string(),
-  result: z.string(),
-});
-
 export const NativeHudFrameSchema = z
   .object({
     x: z.number().int().min(0).max(1919),
@@ -635,8 +619,6 @@ export const DisplaySettingsSchema = z.object({
   event: z.object({
     name: z.string().min(1).max(80),
     timezone: TimezoneSchema,
-    logoUrl: z.string(),
-    defaultBackgroundUrl: z.string(),
   }),
   scoreboard: z.object({
     preset: z.enum(["tournament", "compact"]),
@@ -681,7 +663,6 @@ export const DisplaySettingsSchema = z.object({
     activeIndex: z.number().int().nonnegative(),
     speedSeconds: z.number().min(5).max(120),
   }),
-  backgrounds: DisplayBackgroundsSchema,
   cueRevision: z.number().int().nonnegative(),
 });
 export type DisplaySettings = z.infer<typeof DisplaySettingsSchema>;
@@ -917,8 +898,6 @@ export function createDefaultDisplayState(now = new Date()): DisplayState {
     event: {
       name: "MLBB Tournament",
       timezone: "Asia/Yangon",
-      logoUrl: "",
-      defaultBackgroundUrl: "",
     },
     scoreboard: {
       preset: "tournament",
@@ -951,7 +930,6 @@ export function createDefaultDisplayState(now = new Date()): DisplayState {
       activeIndex: 0,
       speedSeconds: 24,
     },
-    backgrounds: { match: "", schedule: "", countdown: "", result: "" },
     cueRevision: 0,
   });
 }

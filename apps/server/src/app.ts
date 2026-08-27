@@ -4,6 +4,7 @@ import {
   DetectorCalibrationSaveSchema,
   DetectorFrameRequestSchema,
   DetectorModeCommandSchema,
+  DisplayCommandSchema,
   DraftCommandSchema,
   SideSchema,
 } from "@shayyz/contracts";
@@ -20,9 +21,12 @@ import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
 import type { DetectorCalibrationService } from "./calibration";
 import type { TeamLogoStore } from "./team-logos";
+import type { DisplayMediaStore } from "./display-media";
+import type { DisplayStore } from "./display-store";
 
 export interface AppOptions {
   store: DraftStore;
+  displayStore?: DisplayStore;
   controlToken?: string;
   webRoot?: string;
   broadcast?: (event: EventEnvelope) => void;
@@ -31,6 +35,7 @@ export interface AppOptions {
   detectorLifecycle?: DetectorLifecycle;
   detectorCalibration?: DetectorCalibrationService;
   teamLogos?: TeamLogoStore;
+  displayMedia?: DisplayMediaStore;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -69,6 +74,11 @@ export function createApp(options: AppOptions): Hono {
     }),
   );
   app.get("/api/v1/draft", (context) => context.json(options.store.state));
+  app.get("/api/v1/display", (context) =>
+    options.displayStore
+      ? context.json(options.displayStore.state)
+      : context.json({ error: "Display storage is unavailable." }, 503),
+  );
   const heroIds = heroes.map((hero) => hero.id);
   app.get("/api/v1/heroes", (context) =>
     context.json(options.assetPack?.heroes(heroes) ?? heroes),
@@ -245,6 +255,54 @@ export function createApp(options: AppOptions): Hono {
       context.req.param("filename"),
     );
     return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
+  app.post("/api/v1/display-media", requireControlToken, async (context) => {
+    if (!options.displayMedia)
+      return context.json(
+        { error: "Display media storage is unavailable." },
+        503,
+      );
+    try {
+      const media = (await context.req.raw.formData()).get("media");
+      if (!(media instanceof File))
+        return context.json({ error: "A media file is required." }, 400);
+      return context.json(await options.displayMedia.save(media));
+    } catch (error) {
+      return context.json(
+        {
+          error:
+            error instanceof Error ? error.message : "Media upload failed.",
+        },
+        400,
+      );
+    }
+  });
+  app.get("/api/v1/media/displays/:filename", async (context) => {
+    const asset = await options.displayMedia?.resolve(
+      context.req.param("filename"),
+    );
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
+
+  app.post("/api/v1/display/commands", requireControlToken, async (context) => {
+    if (!options.displayStore)
+      return context.json({ error: "Display storage is unavailable." }, 503);
+    try {
+      const command = DisplayCommandSchema.parse(await context.req.json());
+      const state = options.displayStore.dispatch(command);
+      emit("display-updated", state);
+      return context.json(state);
+    } catch (error) {
+      if (error instanceof RevisionConflictError)
+        return context.json(
+          { error: error.message, currentRevision: error.currentRevision },
+          409,
+        );
+      return context.json(
+        { error: error instanceof Error ? error.message : "Invalid command." },
+        400,
+      );
+    }
   });
 
   app.post("/api/v1/draft/commands", requireControlToken, async (context) => {

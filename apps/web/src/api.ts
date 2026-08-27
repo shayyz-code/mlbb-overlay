@@ -5,12 +5,16 @@ import {
   DetectorCalibrationResultSchema,
   DetectorFrameSchema,
   DetectorStatusSchema,
+  DisplayMediaUploadResultSchema,
+  DisplayStateSchema,
   EventEnvelopeSchema,
   HeroSchema,
   TeamLogoUploadResultSchema,
   type AssetPackStatus,
   type DraftCommand,
   type DraftState,
+  type DisplayCommand,
+  type DisplayState,
   type DetectorMode,
   type DetectorCalibrationSave,
   type DetectorProposal,
@@ -128,6 +132,45 @@ export async function fetchDraft(): Promise<DraftState> {
   return DraftStateSchema.parse(await response.json());
 }
 
+export async function fetchDisplay(): Promise<DisplayState> {
+  const response = await fetch("/api/v1/display");
+  if (!response.ok) throw new Error("Unable to load display state.");
+  return DisplayStateSchema.parse(await response.json());
+}
+
+export async function sendDisplayCommand(
+  command: DisplayCommand,
+  token: string,
+): Promise<DisplayState> {
+  const response = await fetch("/api/v1/display/commands", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(command),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Display command failed.");
+  return DisplayStateSchema.parse(body);
+}
+
+export async function uploadDisplayMedia(
+  file: File,
+  token: string,
+): Promise<string> {
+  const form = new FormData();
+  form.set("media", file);
+  const response = await fetch("/api/v1/display-media", {
+    method: "POST",
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Media upload failed.");
+  return DisplayMediaUploadResultSchema.parse(body).mediaUrl;
+}
+
 export async function fetchHeroes(): Promise<Hero[]> {
   const response = await fetch("/api/v1/heroes");
   if (!response.ok) throw new Error("Unable to load hero catalog.");
@@ -204,6 +247,44 @@ export function subscribeToDraft(
     });
   };
 
+  connect();
+  return () => {
+    stopped = true;
+    if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    socket?.close();
+  };
+}
+
+export function subscribeToDisplay(
+  onState: (state: DisplayState) => void,
+  onStatus: (connected: boolean) => void,
+): () => void {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  let stopped = false;
+  let socket: WebSocket | undefined;
+  let reconnectTimer: number | undefined;
+  const connect = () => {
+    socket = new WebSocket(
+      `${protocol}//${window.location.host}/api/v1/events`,
+    );
+    socket.addEventListener("open", () => onStatus(true));
+    socket.addEventListener("message", (event) => {
+      const envelope = EventEnvelopeSchema.safeParse(
+        JSON.parse(String(event.data)),
+      );
+      if (
+        !envelope.success ||
+        !["display-snapshot", "display-updated"].includes(envelope.data.type)
+      )
+        return;
+      const state = DisplayStateSchema.safeParse(envelope.data.data);
+      if (state.success) onState(state.data);
+    });
+    socket.addEventListener("close", () => {
+      onStatus(false);
+      if (!stopped) reconnectTimer = window.setTimeout(connect, 1500);
+    });
+  };
   connect();
   return () => {
     stopped = true;

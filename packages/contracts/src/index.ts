@@ -423,6 +423,15 @@ export const TeamLogoUploadResultSchema = z.object({
 });
 export type TeamLogoUploadResult = z.infer<typeof TeamLogoUploadResultSchema>;
 
+export const DisplayMediaUploadResultSchema = z.object({
+  mediaUrl: z.string().startsWith("/api/v1/media/displays/"),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+});
+export type DisplayMediaUploadResult = z.infer<
+  typeof DisplayMediaUploadResultSchema
+>;
+
 export const DraftPhaseSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,
@@ -477,6 +486,174 @@ export const ScoreboardSettingsSchema = z
   })
   .default({ scores: { blue: 0, red: 0 } });
 export type ScoreboardSettings = z.infer<typeof ScoreboardSettingsSchema>;
+
+export const PlayerRoleSchema = z.enum([
+  "exp",
+  "jungle",
+  "mid",
+  "gold",
+  "roam",
+]);
+export type PlayerRole = z.infer<typeof PlayerRoleSchema>;
+
+export const StarterSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(40),
+  role: PlayerRoleSchema,
+  heroId: z.string().regex(/^[a-z0-9-]*$/),
+});
+export type Starter = z.infer<typeof StarterSchema>;
+
+export const RosterPlayerSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(40),
+});
+export type RosterPlayer = z.infer<typeof RosterPlayerSchema>;
+
+export const TeamRosterSchema = z
+  .array(RosterPlayerSchema)
+  .min(5)
+  .max(10)
+  .superRefine((roster, context) => {
+    if (new Set(roster.map((player) => player.id)).size !== roster.length)
+      context.addIssue({
+        code: "custom",
+        message: "Roster player IDs must be unique.",
+      });
+  });
+export type TeamRoster = z.infer<typeof TeamRosterSchema>;
+
+export const MatchLineupSchema = z
+  .array(StarterSchema)
+  .length(5)
+  .superRefine((lineup, context) => {
+    if (new Set(lineup.map((player) => player.id)).size !== lineup.length)
+      context.addIssue({
+        code: "custom",
+        message: "Starter IDs must be unique.",
+      });
+    if (new Set(lineup.map((player) => player.role)).size !== lineup.length)
+      context.addIssue({
+        code: "custom",
+        message: "Starter roles must be unique.",
+      });
+  });
+export type MatchLineup = z.infer<typeof MatchLineupSchema>;
+
+export const ScheduledMatchSchema = z.object({
+  id: z.string().min(1).max(80),
+  scheduledAt: z.string().datetime().nullable(),
+  stage: z.string().max(60),
+  round: z.string().max(60),
+  bestOf: z.number().int().min(1).max(9),
+  blue: TeamSchema,
+  red: TeamSchema,
+  scores: z.object({
+    blue: z.number().int().min(0).max(9),
+    red: z.number().int().min(0).max(9),
+  }),
+  status: z.enum(["scheduled", "live", "complete"]),
+});
+export type ScheduledMatch = z.infer<typeof ScheduledMatchSchema>;
+
+const TimezoneSchema = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: value });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Event timezone must be a valid IANA timezone.");
+
+const DisplayBackgroundsSchema = z.object({
+  match: z.string(),
+  schedule: z.string(),
+  countdown: z.string(),
+  result: z.string(),
+});
+
+export const DisplaySettingsSchema = z.object({
+  event: z.object({
+    name: z.string().min(1).max(80),
+    timezone: TimezoneSchema,
+    logoUrl: z.string(),
+    defaultBackgroundUrl: z.string(),
+  }),
+  scoreboard: z.object({
+    preset: z.enum(["tournament", "compact"]),
+    gameNumber: z.number().int().min(1).max(9),
+    bestOf: z.number().int().min(1).max(9),
+    stage: z.string().max(60),
+    round: z.string().max(60),
+  }),
+  lineups: z.object({
+    blue: MatchLineupSchema,
+    red: MatchLineupSchema,
+  }),
+  rosters: z.object({
+    blue: TeamRosterSchema,
+    red: TeamRosterSchema,
+  }),
+  schedule: z.array(ScheduledMatchSchema).max(32),
+  activeMatchId: z.string().nullable(),
+  countdown: z.object({
+    durationSeconds: z.number().int().min(0).max(604800),
+    remainingSeconds: z.number().int().min(0).max(604800),
+    running: z.boolean(),
+    startedAt: z.number().int().nonnegative().nullable(),
+  }),
+  ticker: z.object({
+    enabled: z.boolean(),
+    messages: z.array(z.string().min(1).max(240)).max(20),
+    activeIndex: z.number().int().nonnegative(),
+    speedSeconds: z.number().min(5).max(120),
+  }),
+  backgrounds: DisplayBackgroundsSchema,
+  cueRevision: z.number().int().nonnegative(),
+});
+export type DisplaySettings = z.infer<typeof DisplaySettingsSchema>;
+
+export const DisplayStateSchema = DisplaySettingsSchema.extend({
+  revision: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime(),
+}).superRefine((state, context) => {
+  if (
+    state.activeMatchId !== null &&
+    !state.schedule.some((match) => match.id === state.activeMatchId)
+  )
+    context.addIssue({
+      code: "custom",
+      path: ["activeMatchId"],
+      message: "The active match must exist in the schedule.",
+    });
+  for (const side of ["blue", "red"] as const) {
+    const rosterIds = new Set(state.rosters[side].map((player) => player.id));
+    if (state.lineups[side].some((starter) => !rosterIds.has(starter.id)))
+      context.addIssue({
+        code: "custom",
+        path: ["lineups", side],
+        message: "Every starter must belong to the team roster.",
+      });
+  }
+});
+export type DisplayState = z.infer<typeof DisplayStateSchema>;
+
+export const DisplayCommandSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("set-display"),
+    expectedRevision: z.number().int().nonnegative(),
+    display: DisplaySettingsSchema,
+  }),
+  z.object({
+    type: z.literal("cue"),
+    expectedRevision: z.number().int().nonnegative(),
+  }),
+]);
+export type DisplayCommand = z.infer<typeof DisplayCommandSchema>;
 
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),
@@ -538,6 +715,8 @@ export const EventEnvelopeSchema = z.object({
   type: z.enum([
     "draft-snapshot",
     "draft-updated",
+    "display-snapshot",
+    "display-updated",
     "detector-proposal",
     "system-status",
   ]),
@@ -600,6 +779,55 @@ export function createDefaultDraftState(now = new Date()): DraftState {
     presentation: { voiceEnabled: false },
     scoreboard: { scores: { blue: 0, red: 0 } },
   };
+}
+
+const defaultLineup = (side: Side): MatchLineup =>
+  (["exp", "jungle", "mid", "gold", "roam"] as const).map((role, index) => ({
+    id: `${side}-${role}`,
+    name: `Player ${index + 1}`,
+    role,
+    heroId: "",
+  })) as MatchLineup;
+
+export function createDefaultDisplayState(now = new Date()): DisplayState {
+  return DisplayStateSchema.parse({
+    revision: 0,
+    updatedAt: now.toISOString(),
+    event: {
+      name: "MLBB Tournament",
+      timezone: "Asia/Yangon",
+      logoUrl: "",
+      defaultBackgroundUrl: "",
+    },
+    scoreboard: {
+      preset: "tournament",
+      gameNumber: 1,
+      bestOf: 3,
+      stage: "Group Stage",
+      round: "Round 1",
+    },
+    lineups: { blue: defaultLineup("blue"), red: defaultLineup("red") },
+    rosters: {
+      blue: defaultLineup("blue").map(({ id, name }) => ({ id, name })),
+      red: defaultLineup("red").map(({ id, name }) => ({ id, name })),
+    },
+    schedule: [],
+    activeMatchId: null,
+    countdown: {
+      durationSeconds: 600,
+      remainingSeconds: 600,
+      running: false,
+      startedAt: null,
+    },
+    ticker: {
+      enabled: false,
+      messages: ["Welcome to the tournament"],
+      activeIndex: 0,
+      speedSeconds: 24,
+    },
+    backgrounds: { match: "", schedule: "", countdown: "", result: "" },
+    cueRevision: 0,
+  });
 }
 
 export function selectedHeroIds(state: DraftState): Set<string> {

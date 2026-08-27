@@ -7,6 +7,8 @@ import { assetFixture } from "./asset-fixture";
 import { DetectorCoordinator } from "./detector";
 import { DraftStore } from "./store";
 import { TeamLogoStore } from "./team-logos";
+import { DisplayMediaStore } from "./display-media";
+import { DisplayStore } from "./display-store";
 
 const directories: string[] = [];
 afterEach(async () =>
@@ -20,12 +22,18 @@ async function setup(controlToken?: string) {
   directories.push(directory);
   const store = new DraftStore(directory);
   await store.initialize();
+  const displayStore = new DisplayStore(directory);
+  await displayStore.initialize();
   const teamLogos = new TeamLogoStore(join(directory, "team-logos"));
+  const displayMedia = new DisplayMediaStore(join(directory, "display-media"));
   return {
     store,
+    displayStore,
     app: createApp({
       store,
+      displayStore,
       teamLogos,
+      displayMedia,
       ...(controlToken ? { controlToken } : {}),
     }),
   };
@@ -36,10 +44,46 @@ describe("draft API", () => {
     const { app } = await setup();
     expect((await app.request("/api/v1/system/status")).status).toBe(200);
     expect((await app.request("/api/v1/draft")).status).toBe(200);
+    expect((await app.request("/api/v1/display")).status).toBe(200);
 
     const heroes = await (await app.request("/api/v1/heroes")).json();
     expect(heroes.length).toBeGreaterThan(100);
     expect(heroes[0].portraitUrl).toBeUndefined();
+  });
+
+  test("persists and broadcasts protected display commands", async () => {
+    const { app, displayStore } = await setup("secret-token");
+    const state = displayStore.state;
+    const { revision: _, updatedAt: __, ...display } = state;
+    display.event.name = "Yangon Invitational";
+    const body = JSON.stringify({
+      type: "set-display",
+      expectedRevision: 0,
+      display,
+    });
+    expect(
+      (
+        await app.request("/api/v1/display/commands", {
+          method: "POST",
+          body,
+          headers: { "content-type": "application/json" },
+        })
+      ).status,
+    ).toBe(401);
+    const response = await app.request("/api/v1/display/commands", {
+      method: "POST",
+      body,
+      headers: {
+        authorization: "Bearer secret-token",
+        "content-type": "application/json",
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      revision: 1,
+      event: { name: "Yangon Invitational" },
+    });
+    displayStore.close();
   });
 
   test("protects mutations when a LAN token is configured", async () => {
@@ -198,5 +242,21 @@ describe("draft API", () => {
     expect(await response.json()).toMatchObject({
       error: "The uploaded file does not match its image type.",
     });
+  });
+
+  test("uploads display backgrounds outside the public web root", async () => {
+    const { app, displayStore } = await setup();
+    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+    const form = new FormData();
+    form.set("media", new File([png], "background.png", { type: "image/png" }));
+    const response = await app.request("/api/v1/display-media", {
+      method: "POST",
+      body: form,
+    });
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { mediaUrl: string };
+    expect(result.mediaUrl).toStartWith("/api/v1/media/displays/");
+    expect((await app.request(result.mediaUrl)).status).toBe(200);
+    displayStore.close();
   });
 });

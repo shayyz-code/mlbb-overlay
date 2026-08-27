@@ -510,6 +510,37 @@ export const RosterPlayerSchema = z.object({
 });
 export type RosterPlayer = z.infer<typeof RosterPlayerSchema>;
 
+export const ManagedStarterSchema = RosterPlayerSchema.extend({
+  role: PlayerRoleSchema,
+});
+export type ManagedStarter = z.infer<typeof ManagedStarterSchema>;
+
+export const ManagedSubstituteSchema = RosterPlayerSchema.extend({
+  role: PlayerRoleSchema.nullable(),
+});
+export type ManagedSubstitute = z.infer<typeof ManagedSubstituteSchema>;
+
+export const ManagedTeamSchema = TeamSchema.extend({
+  id: z.string().min(1).max(80),
+  starters: z.array(ManagedStarterSchema).length(5),
+  substitutes: z.array(ManagedSubstituteSchema).max(5),
+}).superRefine((team, context) => {
+  const players = [...team.starters, ...team.substitutes];
+  if (new Set(players.map((player) => player.id)).size !== players.length)
+    context.addIssue({
+      code: "custom",
+      path: ["starters"],
+      message: "Player IDs must be unique within a managed team.",
+    });
+  if (new Set(team.starters.map((player) => player.role)).size !== 5)
+    context.addIssue({
+      code: "custom",
+      path: ["starters"],
+      message: "Every starter role must be assigned exactly once.",
+    });
+});
+export type ManagedTeam = z.infer<typeof ManagedTeamSchema>;
+
 export const TeamRosterSchema = z
   .array(RosterPlayerSchema)
   .min(5)
@@ -618,6 +649,16 @@ export const DisplaySettingsSchema = z.object({
       red: NativeHudFrameSchema,
     }),
   }),
+  teams: z
+    .array(ManagedTeamSchema)
+    .max(64)
+    .superRefine((teams, context) => {
+      if (new Set(teams.map((team) => team.id)).size !== teams.length)
+        context.addIssue({
+          code: "custom",
+          message: "Managed team IDs must be unique.",
+        });
+    }),
   lineups: z.object({
     blue: MatchLineupSchema,
     red: MatchLineupSchema,
@@ -817,6 +858,19 @@ const defaultLineup = (side: Side): MatchLineup =>
     heroId: "",
   })) as MatchLineup;
 
+const defaultManagedTeam = (side: Side): ManagedTeam => ({
+  id: `${side}-team`,
+  name: side === "blue" ? "Blue Team" : "Red Team",
+  shortName: side === "blue" ? "BLUE" : "RED",
+  logoUrl: "",
+  starters: defaultLineup(side).map(({ id, name, role }) => ({
+    id,
+    name,
+    role,
+  })),
+  substitutes: [],
+});
+
 export function createDefaultDisplayState(now = new Date()): DisplayState {
   return DisplayStateSchema.parse({
     revision: 0,
@@ -838,6 +892,7 @@ export function createDefaultDisplayState(now = new Date()): DisplayState {
         red: { x: 1792, y: 360, width: 128, height: 430, rowGap: 4 },
       },
     },
+    teams: [defaultManagedTeam("blue"), defaultManagedTeam("red")],
     lineups: { blue: defaultLineup("blue"), red: defaultLineup("red") },
     rosters: {
       blue: defaultLineup("blue").map(({ id, name }) => ({ id, name })),

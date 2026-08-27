@@ -30,11 +30,12 @@ import {
 } from "./api";
 import { CalibrationWizard } from "./CalibrationWizard";
 import { CompactDraftOverlay } from "./CompactDraftOverlay";
-import { operatorPhaseLabel } from "./draft-turn";
-import { HeroMedia } from "./HeroMedia";
-import { newestAddedHeroId } from "./voice";
 import { DisplayControlPage } from "./DisplayControl";
 import { DisplayOverlay, type DisplaySurface } from "./DisplayOverlays";
+import { operatorPhaseLabel } from "./draft-turn";
+import { HeroMedia } from "./HeroMedia";
+import { TeamControlPage } from "./TeamControl";
+import { newestAddedHeroId } from "./voice";
 
 type WithoutRevision<T> = T extends unknown
   ? Omit<T, "expectedRevision">
@@ -671,6 +672,7 @@ export function App() {
   )?.[1] as DisplaySurface | undefined;
   if (surface) return <DisplayOverlay surface={surface} />;
   if (path.startsWith("/overlay")) return <OverlayPage />;
+  if (path.startsWith("/control/teams")) return <TeamControlPage />;
   if (
     path.startsWith("/control/displays") ||
     path.startsWith("/control/scoreboard")

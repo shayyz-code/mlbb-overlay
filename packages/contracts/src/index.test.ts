@@ -2,17 +2,17 @@ import { describe, expect, test } from "bun:test";
 import {
   AssetPackManifestSchema,
   applySelection,
-  createDefaultDraftState,
   createDefaultDisplayState,
+  createDefaultDraftState,
   currentPhase,
   DetectorProfileSchema,
+  DisplayStateSchema,
   DraftCommandSchema,
   type DraftPhase,
   DraftReferenceMapSchema,
   IdlePosterJobsSchema,
   STANDARD_TEN_BAN_FORMAT,
   selectedHeroIds,
-  DisplayStateSchema,
 } from "./index";
 
 const tournamentPhases: DraftPhase[] = [
@@ -121,6 +121,18 @@ describe("display contracts", () => {
       blue: { x: 0, y: 360, width: 142, height: 430, rowGap: 4 },
       red: { x: 1792, y: 360, width: 128, height: 430, rowGap: 4 },
     });
+  });
+
+  test("creates a reusable team directory with unique starter roles", () => {
+    const state = createDefaultDisplayState();
+    expect(state.teams).toHaveLength(2);
+    expect(state.teams[0]?.starters.map((player) => player.role)).toEqual([
+      "exp",
+      "jungle",
+      "mid",
+      "gold",
+      "roam",
+    ]);
   });
 
   test("rejects duplicate lineup roles", () => {

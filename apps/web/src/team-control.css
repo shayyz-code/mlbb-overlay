@@ -1,0 +1,116 @@
+.team-control-main {
+  min-width: 0;
+}
+.team-directory-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(0, 1fr);
+  gap: 16px;
+}
+.team-directory-list {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+.team-directory-list button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 55px minmax(0, 1fr);
+  gap: 10px;
+  text-align: left;
+}
+.team-directory-list button.active {
+  border-color: var(--display-cyan);
+  background: rgba(37, 185, 255, 0.1);
+}
+.team-directory-list span {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-directory-editor {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.team-directory-editor h2 {
+  margin: 24px 0 10px;
+}
+.team-identity-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 130px;
+  gap: 10px;
+}
+.team-directory-editor label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.team-directory-editor input,
+.team-directory-editor select {
+  width: 100%;
+  min-width: 0;
+}
+.team-logo-upload {
+  position: relative;
+  place-content: end center;
+  min-height: 62px;
+  padding: 11px;
+  border: 1px dashed var(--line);
+  cursor: pointer;
+}
+.team-logo-upload input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.managed-player-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.managed-player-list label {
+  grid-template-columns: 70px minmax(0, 1fr);
+  align-items: center;
+}
+.managed-player-list label span {
+  color: var(--display-cyan);
+}
+.substitute-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.managed-player-list.substitutes > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  gap: 7px;
+}
+.delete-team {
+  margin-top: 28px;
+}
+@media (max-width: 800px) {
+  .team-directory-layout,
+  .team-identity-fields,
+  .managed-player-list {
+    grid-template-columns: 1fr;
+  }
+  .team-directory-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .team-directory-list {
+    grid-template-columns: 1fr;
+  }
+  .managed-player-list.substitutes > div {
+    grid-template-columns: 1fr;
+  }
+}

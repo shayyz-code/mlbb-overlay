@@ -1,12 +1,15 @@
+import { Database } from "bun:sqlite";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { Database } from "bun:sqlite";
 import {
   createDefaultDisplayState,
-  DisplayCommandSchema,
-  DisplayStateSchema,
   type DisplayCommand,
+  DisplayCommandSchema,
   type DisplayState,
+  DisplayStateSchema,
+  type DraftState,
+  type ManagedTeam,
+  type Side,
 } from "@shayyz/contracts";
 import { RevisionConflictError } from "./store";
 
@@ -19,7 +22,7 @@ export class DisplayStore {
     this.filePath = join(runtimeDirectory, "overlay.sqlite");
   }
 
-  async initialize(): Promise<void> {
+  async initialize(seedTeams?: DraftState["teams"]): Promise<void> {
     await mkdir(dirname(this.filePath), { recursive: true });
     this.#database = new Database(this.filePath, { create: true });
     this.#database.exec("PRAGMA journal_mode = WAL");
@@ -41,11 +44,14 @@ export class DisplayStore {
         const scoreboard = document.scoreboard as
           | Record<string, unknown>
           | undefined;
-        const migrated = scoreboard?.frames === undefined;
-        if (scoreboard && migrated)
+        const migratedFrames = scoreboard?.frames === undefined;
+        if (scoreboard && migratedFrames)
           scoreboard.frames = createDefaultDisplayState().scoreboard.frames;
+        const migratedTeams = document.teams === undefined;
+        if (migratedTeams)
+          document.teams = migrateManagedTeams(document, seedTeams);
         this.#state = DisplayStateSchema.parse(document);
-        if (migrated) this.persist();
+        if (migratedFrames || migratedTeams) this.persist();
         return;
       } catch {
         this.#database.exec("DELETE FROM display_state WHERE id = 1");
@@ -95,4 +101,44 @@ export class DisplayStore {
         .run(document, this.#state.updatedAt);
     })();
   }
+}
+
+function migrateManagedTeams(
+  document: Record<string, unknown>,
+  seedTeams?: DraftState["teams"],
+): ManagedTeam[] {
+  const defaults = createDefaultDisplayState();
+  const lineups = document.lineups as
+    | Record<
+        Side,
+        Array<{
+          id: string;
+          name: string;
+          role: ManagedTeam["starters"][number]["role"];
+        }>
+      >
+    | undefined;
+  const rosters = document.rosters as
+    | Record<Side, Array<{ id: string; name: string }>>
+    | undefined;
+  return (["blue", "red"] as const).map((side) => {
+    const fallback = defaults.teams.find((team) => team.id === `${side}-team`);
+    if (!fallback) throw new Error("Default managed team is missing.");
+    const starters =
+      lineups?.[side]?.map(({ id, name, role }) => ({
+        id,
+        name,
+        role,
+      })) ?? fallback.starters;
+    const starterIds = new Set(starters.map((player) => player.id));
+    return {
+      ...fallback,
+      ...(seedTeams?.[side] ?? {}),
+      starters,
+      substitutes: (rosters?.[side] ?? [])
+        .filter((player) => !starterIds.has(player.id))
+        .slice(0, 5)
+        .map((player) => ({ ...player, role: null })),
+    };
+  });
 }

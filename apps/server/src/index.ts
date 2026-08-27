@@ -43,7 +43,7 @@ const controlToken = isLoopback
 const store = new DraftStore(runtimeDirectory);
 await store.initialize();
 const displayStore = new DisplayStore(runtimeDirectory);
-await displayStore.initialize();
+await displayStore.initialize(store.state.teams);
 const teamLogos = new TeamLogoStore(join(runtimeDirectory, "team-logos"));
 const displayMedia = new DisplayMediaStore(
   join(runtimeDirectory, "display-media"),

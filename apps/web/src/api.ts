@@ -1,27 +1,26 @@
 import {
-  AssetPackStatusSchema,
-  DraftStateSchema,
-  DetectorProposalSchema,
-  DetectorCalibrationResultSchema,
-  DetectorFrameSchema,
-  DetectorStatusSchema,
-  DisplayMediaUploadResultSchema,
-  DisplayStateSchema,
-  EventEnvelopeSchema,
-  HeroSchema,
-  TeamLogoUploadResultSchema,
   type AssetPackStatus,
+  AssetPackStatusSchema,
+  DetectorCalibrationResultSchema,
+  type DetectorCalibrationSave,
+  DetectorFrameSchema,
+  type DetectorMode,
+  type DetectorProposal,
+  DetectorProposalSchema,
+  type DetectorStatus,
+  DetectorStatusSchema,
+  type DisplayCommand,
+  DisplayMediaUploadResultSchema,
+  type DisplayState,
+  DisplayStateSchema,
   type DraftCommand,
   type DraftState,
-  type DisplayCommand,
-  type DisplayState,
-  type DetectorMode,
-  type DetectorCalibrationSave,
-  type DetectorProposal,
-  type DetectorStatus,
+  DraftStateSchema,
+  EventEnvelopeSchema,
   type Hero,
-  type Side,
+  HeroSchema,
   type TeamLogoUploadResult,
+  TeamLogoUploadResultSchema,
 } from "@shayyz/contracts";
 
 const HeroesSchema = HeroSchema.array();
@@ -195,17 +194,20 @@ export async function sendCommand(
 }
 
 export async function uploadTeamLogo(
-  side: Side,
+  teamId: string,
   file: File,
   token: string,
 ): Promise<TeamLogoUploadResult> {
   const form = new FormData();
   form.set("logo", file);
-  const response = await fetch(`/api/v1/team-logos/${side}`, {
-    method: "POST",
-    headers: token ? { authorization: `Bearer ${token}` } : {},
-    body: form,
-  });
+  const response = await fetch(
+    `/api/v1/team-logos/${encodeURIComponent(teamId)}`,
+    {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+      body: form,
+    },
+  );
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Logo upload failed.");
   return TeamLogoUploadResultSchema.parse(body);

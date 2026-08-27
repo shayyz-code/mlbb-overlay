@@ -1,8 +1,8 @@
+import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Database } from "bun:sqlite";
 import { createDefaultDisplayState } from "@shayyz/contracts";
 import { DisplayStore } from "./display-store";
 import { RevisionConflictError } from "./store";
@@ -36,6 +36,7 @@ describe("DisplayStore", () => {
       display: {
         event: next.event,
         scoreboard: next.scoreboard,
+        teams: next.teams,
         lineups: next.lineups,
         rosters: next.rosters,
         schedule: next.schedule,
@@ -88,6 +89,34 @@ describe("DisplayStore", () => {
       height: 430,
       rowGap: 4,
     });
+    migrated.close();
+  });
+
+  test("migrates current teams and roster roles into the team directory", async () => {
+    const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
+    directories.push(runtime);
+    const store = await createStore(runtime);
+    const legacy = store.state as unknown as Record<string, unknown>;
+    delete legacy.teams;
+    store.close();
+    const database = new Database(join(runtime, "overlay.sqlite"));
+    database
+      .query("UPDATE display_state SET document = ?1 WHERE id = 1")
+      .run(JSON.stringify(legacy));
+    database.close();
+
+    const migrated = new DisplayStore(runtime);
+    await migrated.initialize({
+      blue: { name: "Ravens", shortName: "RVN", logoUrl: "/blue.png" },
+      red: { name: "Titans", shortName: "TTN", logoUrl: "/red.png" },
+    });
+    expect(migrated.state.teams.map((team) => team.name)).toEqual([
+      "Ravens",
+      "Titans",
+    ]);
+    expect(
+      migrated.state.teams[0]?.starters.map((player) => player.role),
+    ).toEqual(["exp", "jungle", "mid", "gold", "roam"]);
     migrated.close();
   });
 });

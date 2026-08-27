@@ -6,23 +6,22 @@ import {
   DetectorModeCommandSchema,
   DisplayCommandSchema,
   DraftCommandSchema,
-  SideSchema,
 } from "@shayyz/contracts";
-import { serveStatic } from "hono/bun";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import {
   emptyAssetStatus,
   type HeroMediaKind,
   type LocalAssetPack,
 } from "./assets";
-import { heroes } from "./heroes";
-import { RevisionConflictError, type DraftStore } from "./store";
+import type { DetectorCalibrationService } from "./calibration";
 import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
-import type { DetectorCalibrationService } from "./calibration";
-import type { TeamLogoStore } from "./team-logos";
 import type { DisplayMediaStore } from "./display-media";
 import type { DisplayStore } from "./display-store";
+import { heroes } from "./heroes";
+import { type DraftStore, RevisionConflictError } from "./store";
+import type { TeamLogoStore } from "./team-logos";
 
 export interface AppOptions {
   store: DraftStore;
@@ -236,7 +235,8 @@ export function createApp(options: AppOptions): Hono {
     if (!options.teamLogos)
       return context.json({ error: "Team logo storage is unavailable." }, 503);
     try {
-      SideSchema.parse(context.req.param("side"));
+      if (!/^[a-zA-Z0-9-]{1,80}$/.test(context.req.param("side")))
+        throw new Error("Team ID is invalid.");
       const logo = (await context.req.raw.formData()).get("logo");
       if (!(logo instanceof File))
         return context.json({ error: "A logo file is required." }, 400);

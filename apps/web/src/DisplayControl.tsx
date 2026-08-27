@@ -4,11 +4,9 @@ import type {
   DraftCommand,
   DraftState,
   NativeHudFrame,
-  ScheduledMatch,
   Side,
-  Team,
 } from "@shayyz/contracts";
-import { useEffect, useState, type CSSProperties } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import {
   fetchDisplay,
   fetchDraft,
@@ -326,246 +324,6 @@ function FramePreview({
   );
 }
 
-function ScheduleEditor({
-  state,
-  draft,
-  update,
-}: {
-  state: DisplaySettings;
-  draft: DraftState;
-  update: (next: DisplaySettings) => void;
-}) {
-  const change = (index: number, patch: Partial<ScheduledMatch>) => {
-    const next = structuredClone(state);
-    next.schedule[index] = {
-      ...next.schedule[index],
-      ...patch,
-    } as ScheduledMatch;
-    update(next);
-  };
-  const changeTeam = (index: number, side: Side, patch: Partial<Team>) => {
-    const match = state.schedule[index];
-    if (!match) return;
-    change(index, { [side]: { ...match[side], ...patch } });
-  };
-  const changeScore = (index: number, side: Side, score: number) => {
-    const match = state.schedule[index];
-    if (!match) return;
-    change(index, {
-      scores: { ...match.scores, [side]: Math.max(0, Math.min(9, score)) },
-    });
-  };
-  const add = () => {
-    const next = structuredClone(state);
-    const match: ScheduledMatch = {
-      id: crypto.randomUUID(),
-      scheduledAt: null,
-      stage: state.scoreboard.stage,
-      round: `Round ${next.schedule.length + 1}`,
-      bestOf: state.scoreboard.bestOf,
-      blue: structuredClone(draft.teams.blue),
-      red: structuredClone(draft.teams.red),
-      scores: { blue: 0, red: 0 },
-      status: "scheduled",
-    };
-    next.schedule.push(match);
-    next.activeMatchId ??= match.id;
-    update(next);
-  };
-  const move = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= state.schedule.length) return;
-    const next = structuredClone(state);
-    const current = next.schedule[index];
-    const replacement = next.schedule[target];
-    if (!current || !replacement) return;
-    [next.schedule[index], next.schedule[target]] = [replacement, current];
-    update(next);
-  };
-  return (
-    <section className="display-panel schedule-editor">
-      <header>
-        <div>
-          <small>Up to four on screen</small>
-          <h2>Schedule</h2>
-        </div>
-        <button
-          type="button"
-          disabled={state.schedule.length >= 32}
-          onClick={add}
-        >
-          Add current match
-        </button>
-      </header>
-      <div className="schedule-editor-list">
-        {state.schedule.map((match, index) => (
-          <article key={match.id}>
-            <label className="active-match">
-              <input
-                type="radio"
-                checked={state.activeMatchId === match.id}
-                onChange={() => update({ ...state, activeMatchId: match.id })}
-              />
-              Live
-            </label>
-            <label>
-              Stage
-              <input
-                value={match.stage}
-                onChange={(event) =>
-                  change(index, { stage: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Round
-              <input
-                value={match.round}
-                onChange={(event) =>
-                  change(index, { round: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Time
-              <input
-                type="datetime-local"
-                value={match.scheduledAt?.slice(0, 16) ?? ""}
-                onChange={(event) =>
-                  change(index, {
-                    scheduledAt: event.target.value
-                      ? new Date(event.target.value).toISOString()
-                      : null,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={match.status}
-                onChange={(event) =>
-                  change(index, {
-                    status: event.target.value as ScheduledMatch["status"],
-                  })
-                }
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="live">Live</option>
-                <option value="complete">Complete</option>
-              </select>
-            </label>
-            <label>
-              Best of
-              <input
-                type="number"
-                min="1"
-                max="9"
-                value={match.bestOf}
-                onChange={(event) =>
-                  change(index, { bestOf: Number(event.target.value) })
-                }
-              />
-            </label>
-            <label className="schedule-team-field side-blue">
-              Blue team
-              <input
-                value={match.blue.name}
-                onChange={(event) =>
-                  changeTeam(index, "blue", { name: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Blue tag
-              <input
-                maxLength={8}
-                value={match.blue.shortName}
-                onChange={(event) =>
-                  changeTeam(index, "blue", {
-                    shortName: event.target.value.toUpperCase(),
-                  })
-                }
-              />
-            </label>
-            <label className="schedule-team-field side-red">
-              Red team
-              <input
-                value={match.red.name}
-                onChange={(event) =>
-                  changeTeam(index, "red", { name: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Red tag
-              <input
-                maxLength={8}
-                value={match.red.shortName}
-                onChange={(event) =>
-                  changeTeam(index, "red", {
-                    shortName: event.target.value.toUpperCase(),
-                  })
-                }
-              />
-            </label>
-            <label>
-              Blue score
-              <input
-                type="number"
-                min="0"
-                max="9"
-                value={match.scores.blue}
-                onChange={(event) =>
-                  changeScore(index, "blue", Number(event.target.value))
-                }
-              />
-            </label>
-            <label>
-              Red score
-              <input
-                type="number"
-                min="0"
-                max="9"
-                value={match.scores.red}
-                onChange={(event) =>
-                  changeScore(index, "red", Number(event.target.value))
-                }
-              />
-            </label>
-            <div className="schedule-order">
-              <button type="button" onClick={() => move(index, -1)}>
-                ↑
-              </button>
-              <button type="button" onClick={() => move(index, 1)}>
-                ↓
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={() => {
-                  const next = structuredClone(state);
-                  next.schedule.splice(index, 1);
-                  if (next.activeMatchId === match.id)
-                    next.activeMatchId = next.schedule[0]?.id ?? null;
-                  update(next);
-                }}
-              >
-                Remove
-              </button>
-            </div>
-          </article>
-        ))}
-        {!state.schedule.length && (
-          <p className="control-empty">
-            Add the current teams to start the schedule.
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function MediaField({
   label,
   value,
@@ -644,6 +402,8 @@ export function DisplayControlPage() {
           <a className="active" href="/control/displays">
             Display console
           </a>
+          <a href="/control/teams">Team control</a>
+          <a href="/control/matches">Match control</a>
         </nav>
         <div className="surface-links">
           {surfaces.map((surface) => (
@@ -845,7 +605,17 @@ export function DisplayControlPage() {
           </div>
         </section>
 
-        <ScheduleEditor state={working} draft={draft} update={setWorking} />
+        <section className="display-panel">
+          <header>
+            <div>
+              <small>Reusable planned fixtures</small>
+              <h2>Matches</h2>
+            </div>
+            <a className="calibration-link" href="/control/matches">
+              Open match control
+            </a>
+          </header>
+        </section>
 
         <section className="display-panel utility-grid">
           <div>

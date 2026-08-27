@@ -577,8 +577,8 @@ export const ScheduledMatchSchema = z.object({
   stage: z.string().max(60),
   round: z.string().max(60),
   bestOf: z.number().int().min(1).max(9),
-  blue: TeamSchema,
-  red: TeamSchema,
+  blueTeamId: z.string().min(1).max(80),
+  redTeamId: z.string().min(1).max(80),
   scores: z.object({
     blue: z.number().int().min(0).max(9),
     red: z.number().int().min(0).max(9),
@@ -708,6 +708,21 @@ export const DisplayStateSchema = DisplaySettingsSchema.extend({
         message: "Every starter must belong to the team roster.",
       });
   }
+  const teamIds = new Set(state.teams.map((team) => team.id));
+  state.schedule.forEach((match, index) => {
+    if (!teamIds.has(match.blueTeamId) || !teamIds.has(match.redTeamId))
+      context.addIssue({
+        code: "custom",
+        path: ["schedule", index],
+        message: "Every scheduled match team must exist in the team directory.",
+      });
+    if (match.blueTeamId === match.redTeamId)
+      context.addIssue({
+        code: "custom",
+        path: ["schedule", index, "redTeamId"],
+        message: "A team cannot play against itself.",
+      });
+  });
 });
 export type DisplayState = z.infer<typeof DisplayStateSchema>;
 

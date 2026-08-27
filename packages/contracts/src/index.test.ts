@@ -149,6 +149,22 @@ describe("display contracts", () => {
     expect(DisplayStateSchema.safeParse(state).success).toBe(false);
   });
 
+  test("requires scheduled matches to reference two managed teams", () => {
+    const state = createDefaultDisplayState();
+    state.schedule.push({
+      id: "match-1",
+      scheduledAt: null,
+      stage: "Finals",
+      round: "Grand Final",
+      bestOf: 7,
+      blueTeamId: state.teams[0]?.id ?? "",
+      redTeamId: state.teams[0]?.id ?? "",
+      scores: { blue: 0, red: 0 },
+      status: "scheduled",
+    });
+    expect(DisplayStateSchema.safeParse(state).success).toBe(false);
+  });
+
   test("rejects native HUD frames outside the OBS canvas", () => {
     const state = createDefaultDisplayState();
     state.scoreboard.frames.red.x = 1900;

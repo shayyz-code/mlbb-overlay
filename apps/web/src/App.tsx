@@ -27,13 +27,14 @@ import {
   setDetectorMode,
   setDetectorRunning,
   subscribeToDraft,
-  uploadTeamLogo,
 } from "./api";
 import { CalibrationWizard } from "./CalibrationWizard";
 import { CompactDraftOverlay } from "./CompactDraftOverlay";
 import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
 import { newestAddedHeroId } from "./voice";
+import { DisplayControlPage } from "./DisplayControl";
+import { DisplayOverlay, type DisplaySurface } from "./DisplayOverlays";
 
 type WithoutRevision<T> = T extends unknown
   ? Omit<T, "expectedRevision">
@@ -271,154 +272,6 @@ function TeamEditor({
   );
 }
 
-function TeamLogo({ side, state }: { side: Side; state: DraftState }) {
-  const team = state.teams[side];
-  return (
-    <div className={`scoreboard-logo scoreboard-logo-${side}`}>
-      <span>{initials(team.shortName)}</span>
-      {team.logoUrl && (
-        <img
-          src={team.logoUrl}
-          alt=""
-          onError={(event) => {
-            event.currentTarget.hidden = true;
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function ScoreboardTeamEditor({
-  state,
-  side,
-  token,
-  dispatch,
-}: {
-  state: DraftState;
-  side: Side;
-  token: string;
-  dispatch: (command: DraftCommandInput) => Promise<void>;
-}) {
-  const team = state.teams[side];
-  const score = state.scoreboard.scores[side];
-  const [name, setName] = useState(team.name);
-  const [shortName, setShortName] = useState(team.shortName);
-  const [uploadError, setUploadError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  useEffect(() => {
-    setName(team.name);
-    setShortName(team.shortName);
-  }, [team.name, team.shortName]);
-
-  const saveTeam = () => {
-    const nextName = name.trim();
-    const nextShortName = shortName.trim();
-    if (!nextName || !nextShortName) return;
-    if (nextName === team.name && nextShortName === team.shortName) return;
-    void dispatch({
-      type: "set-team",
-      side,
-      team: { ...team, name: nextName, shortName: nextShortName },
-    });
-  };
-  const setScore = (nextScore: number) =>
-    dispatch({
-      type: "set-scoreboard-score",
-      side,
-      score: Math.min(99, Math.max(0, nextScore)),
-    });
-  const selectLogo = async (file?: File) => {
-    if (!file) return;
-    setUploading(true);
-    setUploadError("");
-    try {
-      const result = await uploadTeamLogo(side, file, token);
-      await dispatch({
-        type: "set-team",
-        side,
-        team: { ...team, logoUrl: result.logoUrl },
-      });
-    } catch (reason) {
-      setUploadError(
-        reason instanceof Error ? reason.message : "Logo upload failed.",
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <section className={`scoreboard-team-card team-${side}`}>
-      <header>
-        <TeamLogo side={side} state={state} />
-        <div>
-          <small>{side} side</small>
-          <strong>{team.shortName}</strong>
-        </div>
-      </header>
-      <div className="scoreboard-team-fields">
-        <label>
-          Team name
-          <input
-            value={name}
-            maxLength={60}
-            onChange={(event) => setName(event.target.value)}
-            onBlur={saveTeam}
-          />
-        </label>
-        <label>
-          Tag
-          <input
-            value={shortName}
-            maxLength={8}
-            onChange={(event) => setShortName(event.target.value.toUpperCase())}
-            onBlur={saveTeam}
-          />
-        </label>
-      </div>
-      <label className="logo-upload">
-        <span>{uploading ? "Uploading…" : "Upload local logo"}</span>
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          disabled={uploading}
-          onChange={(event) => void selectLogo(event.target.files?.[0])}
-        />
-      </label>
-      {uploadError && <p className="scoreboard-card-error">{uploadError}</p>}
-      <div className="score-editor">
-        <button
-          type="button"
-          aria-label={`Decrease ${team.name} score`}
-          disabled={score === 0}
-          onClick={() => void setScore(score - 1)}
-        >
-          −
-        </button>
-        <label>
-          Series score
-          <input
-            type="number"
-            min="0"
-            max="99"
-            value={score}
-            onChange={(event) => void setScore(Number(event.target.value))}
-          />
-        </label>
-        <button
-          type="button"
-          aria-label={`Increase ${team.name} score`}
-          disabled={score === 99}
-          onClick={() => void setScore(score + 1)}
-        >
-          +
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function DetectorPanel({ heroes, token }: { heroes: Hero[]; token: string }) {
   const [status, setStatus] = useState<DetectorStatus>();
   const [error, setError] = useState("");
@@ -601,7 +454,7 @@ function ControlPage() {
           <a className="active" href="/control/draft">
             Draft control
           </a>
-          <a href="/control/scoreboard">Scoreboard control</a>
+          <a href="/control/displays">Display console</a>
           <a href="/overlay/draft" target="_blank" rel="noreferrer">
             Open draft view
           </a>
@@ -791,142 +644,6 @@ function ControlPage() {
   );
 }
 
-function ScoreboardControlPage() {
-  const { state, connected, error, token, saveToken, dispatch } =
-    useDraft(false);
-  if (!state)
-    return <div className="loading-screen">Loading scoreboard system…</div>;
-
-  return (
-    <main className="control-shell scoreboard-control-shell">
-      <aside className="control-sidebar">
-        <div className="brand-lockup">
-          <span className="brand-rune">S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <nav>
-          <a href="/control/draft">Draft control</a>
-          <a className="active" href="/control/scoreboard">
-            Scoreboard control
-          </a>
-          <a href="/overlay/scoreboard" target="_blank" rel="noreferrer">
-            Open scoreboard view
-          </a>
-        </nav>
-        <div className="system-card">
-          <span className={`status-light ${connected ? "online" : ""}`} />
-          <div>
-            <strong>{connected ? "Live sync" : "Reconnecting"}</strong>
-            <small>Revision {state.revision}</small>
-            <small>Manual scoreboard control</small>
-          </div>
-        </div>
-        <label className="token-field">
-          LAN control token
-          <input
-            type="password"
-            value={token}
-            placeholder="Only required on LAN"
-            onChange={(event) => saveToken(event.target.value)}
-          />
-        </label>
-        <p className="legal-note">
-          Team logos stay in local runtime storage and are not committed.
-        </p>
-      </aside>
-
-      <section className="control-main scoreboard-control-main">
-        <header className="control-header">
-          <div>
-            <small>Live operations</small>
-            <h1>Scoreboard Control</h1>
-          </div>
-          <div className="header-actions">
-            <button
-              type="button"
-              onClick={() => void dispatch({ type: "undo" })}
-            >
-              Undo
-            </button>
-            <button
-              type="button"
-              onClick={() => void dispatch({ type: "swap-sides" })}
-            >
-              Swap sides
-            </button>
-            <button
-              type="button"
-              className="danger"
-              onClick={() => void dispatch({ type: "reset-scoreboard" })}
-            >
-              Reset scores
-            </button>
-          </div>
-        </header>
-        {error && <div className="error-banner">{error}</div>}
-        <p className="scoreboard-instruction">
-          Changes update the browser source immediately. OBS visibility remains
-          fully manual.
-        </p>
-        <div className="scoreboard-team-grid">
-          <ScoreboardTeamEditor
-            state={state}
-            side="blue"
-            token={token}
-            dispatch={dispatch}
-          />
-          <ScoreboardTeamEditor
-            state={state}
-            side="red"
-            token={token}
-            dispatch={dispatch}
-          />
-        </div>
-        <section className="scoreboard-obs-card">
-          <div>
-            <small>Browser source</small>
-            <strong>/overlay/scoreboard</strong>
-            <span>1920 × 1080 · transparent background</span>
-          </div>
-          <a href="/overlay/scoreboard" target="_blank" rel="noreferrer">
-            Open local preview
-          </a>
-        </section>
-      </section>
-    </main>
-  );
-}
-
-function ScoreboardOverlayPage() {
-  const { state } = useDraft(false);
-  if (!state) return null;
-  return (
-    <main className="scoreboard-canvas" aria-label="Match scoreboard">
-      <div className="scoreboard-top-rail" />
-      <TeamLogo side="blue" state={state} />
-      <div className="scoreboard-name scoreboard-name-blue">
-        <span>{state.teams.blue.name}</span>
-      </div>
-      <div className="scoreboard-score scoreboard-score-blue">
-        {state.scoreboard.scores.blue}
-      </div>
-      <div className="scoreboard-center">
-        <strong>VS</strong>
-      </div>
-      <div className="scoreboard-score scoreboard-score-red">
-        {state.scoreboard.scores.red}
-      </div>
-      <div className="scoreboard-name scoreboard-name-red">
-        <span>{state.teams.red.name}</span>
-      </div>
-      <TeamLogo side="red" state={state} />
-    </main>
-  );
-}
-
 function OverlayPage() {
   const { state, heroes, connected, draftEvent } = useDraft();
   const [, rerender] = useState(0);
@@ -949,8 +666,15 @@ function OverlayPage() {
 
 export function App() {
   const path = window.location.pathname;
-  if (path.startsWith("/overlay/scoreboard")) return <ScoreboardOverlayPage />;
+  const surface = path.match(
+    /^\/overlay\/(scoreboard|match|schedule|countdown|ticker|result)/,
+  )?.[1] as DisplaySurface | undefined;
+  if (surface) return <DisplayOverlay surface={surface} />;
   if (path.startsWith("/overlay")) return <OverlayPage />;
-  if (path.startsWith("/control/scoreboard")) return <ScoreboardControlPage />;
+  if (
+    path.startsWith("/control/displays") ||
+    path.startsWith("/control/scoreboard")
+  )
+    return <DisplayControlPage />;
   return <ControlPage />;
 }

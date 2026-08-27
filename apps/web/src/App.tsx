@@ -34,6 +34,7 @@ import { DisplayControlPage } from "./DisplayControl";
 import { DisplayOverlay, type DisplaySurface } from "./DisplayOverlays";
 import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
+import { MatchControlPage } from "./MatchControl";
 import { TeamControlPage } from "./TeamControl";
 import { newestAddedHeroId } from "./voice";
 
@@ -456,6 +457,8 @@ function ControlPage() {
             Draft control
           </a>
           <a href="/control/displays">Display console</a>
+          <a href="/control/teams">Team control</a>
+          <a href="/control/matches">Match control</a>
           <a href="/overlay/draft" target="_blank" rel="noreferrer">
             Open draft view
           </a>
@@ -672,6 +675,7 @@ export function App() {
   )?.[1] as DisplaySurface | undefined;
   if (surface) return <DisplayOverlay surface={surface} />;
   if (path.startsWith("/overlay")) return <OverlayPage />;
+  if (path.startsWith("/control/matches")) return <MatchControlPage />;
   if (path.startsWith("/control/teams")) return <TeamControlPage />;
   if (
     path.startsWith("/control/displays") ||

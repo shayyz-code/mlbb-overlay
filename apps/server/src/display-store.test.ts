@@ -119,4 +119,42 @@ describe("DisplayStore", () => {
     ).toEqual(["exp", "jungle", "mid", "gold", "roam"]);
     migrated.close();
   });
+
+  test("migrates embedded schedule teams to managed team references", async () => {
+    const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
+    directories.push(runtime);
+    const store = await createStore(runtime);
+    const legacy = store.state as unknown as Record<string, unknown>;
+    legacy.schedule = [
+      {
+        id: "legacy-match",
+        scheduledAt: null,
+        stage: "Finals",
+        round: "Grand Final",
+        bestOf: 7,
+        blue: { name: "Ravens", shortName: "RVN", logoUrl: "" },
+        red: { name: "Titans", shortName: "TTN", logoUrl: "" },
+        scores: { blue: 2, red: 1 },
+        status: "live",
+      },
+    ];
+    legacy.activeMatchId = "legacy-match";
+    store.close();
+    const database = new Database(join(runtime, "overlay.sqlite"));
+    database
+      .query("UPDATE display_state SET document = ?1 WHERE id = 1")
+      .run(JSON.stringify(legacy));
+    database.close();
+
+    const migrated = await createStore(runtime);
+    const match = migrated.state.schedule[0];
+    expect(
+      migrated.state.teams.find((team) => team.id === match?.blueTeamId)?.name,
+    ).toBe("Ravens");
+    expect(
+      migrated.state.teams.find((team) => team.id === match?.redTeamId)?.name,
+    ).toBe("Titans");
+    expect(match?.scores).toEqual({ blue: 2, red: 1 });
+    migrated.close();
+  });
 });

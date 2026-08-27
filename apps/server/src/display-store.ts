@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
@@ -9,7 +10,9 @@ import {
   DisplayStateSchema,
   type DraftState,
   type ManagedTeam,
+  type ScheduledMatch,
   type Side,
+  type Team,
 } from "@shayyz/contracts";
 import { RevisionConflictError } from "./store";
 
@@ -50,8 +53,14 @@ export class DisplayStore {
         const migratedTeams = document.teams === undefined;
         if (migratedTeams)
           document.teams = migrateManagedTeams(document, seedTeams);
+        const schedule = document.schedule as Array<Record<string, unknown>>;
+        const migratedMatches = schedule.some(
+          (match) => match.blueTeamId === undefined,
+        );
+        if (migratedMatches)
+          document.schedule = migrateLegacySchedule(document);
         this.#state = DisplayStateSchema.parse(document);
-        if (migratedFrames || migratedTeams) this.persist();
+        if (migratedFrames || migratedTeams || migratedMatches) this.persist();
         return;
       } catch {
         this.#database.exec("DELETE FROM display_state WHERE id = 1");
@@ -101,6 +110,45 @@ export class DisplayStore {
         .run(document, this.#state.updatedAt);
     })();
   }
+}
+
+function migrateLegacySchedule(
+  document: Record<string, unknown>,
+): ScheduledMatch[] {
+  const teams = document.teams as ManagedTeam[];
+  const schedule = document.schedule as Array<
+    Omit<ScheduledMatch, "blueTeamId" | "redTeamId"> & {
+      blue: Team;
+      red: Team;
+    }
+  >;
+  const teamId = (legacy: Team, side: Side) => {
+    const existing = teams.find(
+      (team) =>
+        team.name === legacy.name && team.shortName === legacy.shortName,
+    );
+    if (existing) return existing.id;
+    const template = createDefaultDisplayState().teams.find(
+      (team) => team.id === `${side}-team`,
+    );
+    if (!template) throw new Error("Default managed team is missing.");
+    const id = randomUUID();
+    teams.push({
+      ...template,
+      ...legacy,
+      id,
+      starters: template.starters.map((player) => ({
+        ...player,
+        id: randomUUID(),
+      })),
+    });
+    return id;
+  };
+  return schedule.map(({ blue, red, ...match }) => ({
+    ...match,
+    blueTeamId: teamId(blue, "blue"),
+    redTeamId: teamId(red, "red"),
+  }));
 }
 
 function migrateManagedTeams(

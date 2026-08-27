@@ -7,11 +7,11 @@ import type {
   Team,
 } from "@shayyz/contracts";
 import {
+  type CSSProperties,
+  type ReactNode,
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
-  type ReactNode,
 } from "react";
 import {
   fetchDisplay,
@@ -154,24 +154,28 @@ function TournamentScoreboard({
   );
 }
 
-function activeMatch(draft: DraftState, display: DisplayState): ScheduledMatch {
+type ResolvedMatch = ScheduledMatch & { blue: Team; red: Team };
+
+function activeMatch(draft: DraftState, display: DisplayState): ResolvedMatch {
   const selected = display.schedule.find(
     (match) => match.id === display.activeMatchId,
   );
+  const blue = display.teams.find((team) => team.id === selected?.blueTeamId);
+  const red = display.teams.find((team) => team.id === selected?.redTeamId);
   return {
     id: selected?.id ?? "current-match",
     scheduledAt: selected?.scheduledAt ?? null,
     stage: selected?.stage || display.scoreboard.stage,
     round: selected?.round || display.scoreboard.round,
     bestOf: selected?.bestOf ?? display.scoreboard.bestOf,
-    blue: selected?.blue ?? draft.teams.blue,
-    red: selected?.red ?? draft.teams.red,
+    blue: blue ?? draft.teams.blue,
+    red: red ?? draft.teams.red,
     scores:
       selected?.status === "complete"
         ? selected.scores
         : draft.scoreboard.scores,
     status: selected?.status ?? "live",
-  };
+  } as ScheduledMatch & { blue: Team; red: Team };
 }
 
 function Background({
@@ -255,36 +259,47 @@ function ScheduleOverlay({ display }: { display: DisplayState }) {
       </header>
       <div className="schedule-list">
         {matches.length ? (
-          matches.map((match) => (
-            <article
-              className={match.id === display.activeMatchId ? "is-active" : ""}
-              key={match.id}
-            >
-              <time>
-                {match.scheduledAt
-                  ? new Intl.DateTimeFormat("en", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: display.event.timezone,
-                    }).format(new Date(match.scheduledAt))
-                  : "TBD"}
-              </time>
-              <span>
-                <Logo team={match.blue} side="blue" />
-                <strong>{match.blue.shortName}</strong>
-              </span>
-              <b>
-                {match.status === "complete"
-                  ? `${match.scores.blue} — ${match.scores.red}`
-                  : "VS"}
-              </b>
-              <span>
-                <strong>{match.red.shortName}</strong>
-                <Logo team={match.red} side="red" />
-              </span>
-              <small>{match.round}</small>
-            </article>
-          ))
+          matches.map((match) => {
+            const blue = display.teams.find(
+              (team) => team.id === match.blueTeamId,
+            );
+            const red = display.teams.find(
+              (team) => team.id === match.redTeamId,
+            );
+            if (!blue || !red) return null;
+            return (
+              <article
+                className={
+                  match.id === display.activeMatchId ? "is-active" : ""
+                }
+                key={match.id}
+              >
+                <time>
+                  {match.scheduledAt
+                    ? new Intl.DateTimeFormat("en", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        timeZone: display.event.timezone,
+                      }).format(new Date(match.scheduledAt))
+                    : "TBD"}
+                </time>
+                <span>
+                  <Logo team={blue} side="blue" />
+                  <strong>{blue.shortName}</strong>
+                </span>
+                <b>
+                  {match.status === "complete"
+                    ? `${match.scores.blue} — ${match.scores.red}`
+                    : "VS"}
+                </b>
+                <span>
+                  <strong>{red.shortName}</strong>
+                  <Logo team={red} side="red" />
+                </span>
+                <small>{match.round}</small>
+              </article>
+            );
+          })
         ) : (
           <div className="display-empty">Schedule will be announced soon</div>
         )}

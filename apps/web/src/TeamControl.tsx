@@ -100,6 +100,7 @@ export function TeamControlPage() {
           <a className="active" href="/control/teams">
             Team control
           </a>
+          <a href="/control/matches">Match control</a>
         </nav>
         <div className="system-card">
           <span className={`status-light ${connected ? "online" : ""}`} />

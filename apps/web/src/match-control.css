@@ -1,0 +1,65 @@
+.match-control-main,
+.managed-match-list,
+.managed-match-list article {
+  min-width: 0;
+}
+.managed-match-list {
+  display: grid;
+  gap: 12px;
+}
+.managed-match-list article {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.managed-match-list article.active {
+  border-color: var(--display-cyan);
+}
+.match-row-heading,
+.match-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-row-heading {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.match-row-heading span {
+  color: var(--display-cyan);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+.managed-match-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.managed-match-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.managed-match-fields input,
+.managed-match-fields select {
+  width: 100%;
+  min-width: 0;
+}
+.match-row-actions {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+@media (max-width: 800px) {
+  .managed-match-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .managed-match-fields {
+    grid-template-columns: 1fr;
+  }
+}

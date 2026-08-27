@@ -576,6 +576,30 @@ const DisplayBackgroundsSchema = z.object({
   result: z.string(),
 });
 
+export const NativeHudFrameSchema = z
+  .object({
+    x: z.number().int().min(0).max(1919),
+    y: z.number().int().min(0).max(1079),
+    width: z.number().int().min(40).max(500),
+    height: z.number().int().min(100).max(900),
+    rowGap: z.number().int().min(0).max(12),
+  })
+  .superRefine((frame, context) => {
+    if (frame.x + frame.width > 1920)
+      context.addIssue({
+        code: "custom",
+        path: ["width"],
+        message: "Frame width must stay inside the 1920px canvas.",
+      });
+    if (frame.y + frame.height > 1080)
+      context.addIssue({
+        code: "custom",
+        path: ["height"],
+        message: "Frame height must stay inside the 1080px canvas.",
+      });
+  });
+export type NativeHudFrame = z.infer<typeof NativeHudFrameSchema>;
+
 export const DisplaySettingsSchema = z.object({
   event: z.object({
     name: z.string().min(1).max(80),
@@ -589,6 +613,10 @@ export const DisplaySettingsSchema = z.object({
     bestOf: z.number().int().min(1).max(9),
     stage: z.string().max(60),
     round: z.string().max(60),
+    frames: z.object({
+      blue: NativeHudFrameSchema,
+      red: NativeHudFrameSchema,
+    }),
   }),
   lineups: z.object({
     blue: MatchLineupSchema,
@@ -805,6 +833,10 @@ export function createDefaultDisplayState(now = new Date()): DisplayState {
       bestOf: 3,
       stage: "Group Stage",
       round: "Round 1",
+      frames: {
+        blue: { x: 0, y: 360, width: 142, height: 430, rowGap: 4 },
+        red: { x: 1792, y: 360, width: 128, height: 430, rowGap: 4 },
+      },
     },
     lineups: { blue: defaultLineup("blue"), red: defaultLineup("red") },
     rosters: {

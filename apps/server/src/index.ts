@@ -26,6 +26,8 @@ import { DetectorCoordinator } from "./detector";
 import { DetectorLifecycle, validateObsUrl } from "./detector-lifecycle";
 import { heroes } from "./heroes";
 import { TeamLogoStore } from "./team-logos";
+import { DisplayMediaStore } from "./display-media";
+import { DisplayStore } from "./display-store";
 
 const host = process.env.SHAYYZ_HOST ?? "127.0.0.1";
 const port = Number(process.env.SHAYYZ_PORT ?? 3000);
@@ -40,7 +42,12 @@ const controlToken = isLoopback
   : process.env.SHAYYZ_CONTROL_TOKEN || crypto.randomUUID().replaceAll("-", "");
 const store = new DraftStore(runtimeDirectory);
 await store.initialize();
+const displayStore = new DisplayStore(runtimeDirectory);
+await displayStore.initialize();
 const teamLogos = new TeamLogoStore(join(runtimeDirectory, "team-logos"));
+const displayMedia = new DisplayMediaStore(
+  join(runtimeDirectory, "display-media"),
+);
 const configuredAssetManifest = process.env.SHAYYZ_ASSET_PACK;
 const assetManifest = configuredAssetManifest
   ? resolve(configuredAssetManifest)
@@ -139,12 +146,14 @@ const clients = new Set<WSContext>();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 const application = createApp({
   store,
+  displayStore,
   ...(controlToken ? { controlToken } : {}),
   ...(assetPack ? { assetPack } : {}),
   detector,
   detectorLifecycle,
   detectorCalibration,
   teamLogos,
+  displayMedia,
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);
@@ -164,6 +173,14 @@ app.get(
           type: "draft-snapshot",
           emittedAt: new Date().toISOString(),
           data: store.state,
+        } satisfies EventEnvelope),
+      );
+      ws.send(
+        JSON.stringify({
+          sequence: 2,
+          type: "display-snapshot",
+          emittedAt: new Date().toISOString(),
+          data: displayStore.state,
         } satisfies EventEnvelope),
       );
     },

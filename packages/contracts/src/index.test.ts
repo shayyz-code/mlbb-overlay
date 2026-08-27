@@ -3,6 +3,7 @@ import {
   AssetPackManifestSchema,
   applySelection,
   createDefaultDraftState,
+  createDefaultDisplayState,
   currentPhase,
   DetectorProfileSchema,
   DraftCommandSchema,
@@ -11,6 +12,7 @@ import {
   IdlePosterJobsSchema,
   STANDARD_TEN_BAN_FORMAT,
   selectedHeroIds,
+  DisplayStateSchema,
 } from "./index";
 
 const tournamentPhases: DraftPhase[] = [
@@ -99,6 +101,36 @@ describe("standard draft contract", () => {
         score: 100,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("display contracts", () => {
+  test("creates five unique role starters for each side", () => {
+    const state = createDefaultDisplayState(
+      new Date("2026-08-27T00:00:00.000Z"),
+    );
+    for (const side of ["blue", "red"] as const) {
+      expect(state.lineups[side]).toHaveLength(5);
+      expect(state.rosters[side]).toHaveLength(5);
+      expect(
+        new Set(state.lineups[side].map((player) => player.role)).size,
+      ).toBe(5);
+    }
+    expect(state.scoreboard.preset).toBe("tournament");
+  });
+
+  test("rejects duplicate lineup roles", () => {
+    const state = createDefaultDisplayState();
+    const secondStarter = state.lineups.blue[1];
+    if (!secondStarter) throw new Error("Default lineup is incomplete.");
+    secondStarter.role = "exp";
+    expect(DisplayStateSchema.safeParse(state).success).toBe(false);
+  });
+
+  test("rejects invalid event timezones", () => {
+    const state = createDefaultDisplayState();
+    state.event.timezone = "Moon/Sea-of-Tranquility";
+    expect(DisplayStateSchema.safeParse(state).success).toBe(false);
   });
 });
 

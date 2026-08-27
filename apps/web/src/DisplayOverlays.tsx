@@ -70,24 +70,17 @@ function Logo({ team, side }: { team: Team; side: Side }) {
   );
 }
 
-function EventMark({ display }: { display: DisplayState }) {
-  return display.event.logoUrl ? (
-    <img className="event-mark" src={display.event.logoUrl} alt="" />
-  ) : (
-    <strong className="event-monogram">{initials(display.event.name)}</strong>
-  );
-}
-
 function CompactScoreboard({ draft }: { draft: DraftState }) {
   return (
     <div className="display-compact-scoreboard">
       <Logo team={draft.teams.blue} side="blue" />
       <span className="compact-team blue">{draft.teams.blue.name}</span>
       <b className="compact-score blue">{draft.scoreboard.scores.blue}</b>
-      <span className="compact-vs">VS</span>
+      <span className="compact-timer-gap" aria-hidden="true" />
       <b className="compact-score red">{draft.scoreboard.scores.red}</b>
       <span className="compact-team red">{draft.teams.red.name}</span>
       <Logo team={draft.teams.red} side="red" />
+      <span className="compact-right-extension" aria-hidden="true" />
     </div>
   );
 }
@@ -178,27 +171,6 @@ function activeMatch(draft: DraftState, display: DisplayState): ResolvedMatch {
   } as ScheduledMatch & { blue: Team; red: Team };
 }
 
-function Background({
-  display,
-  surface,
-}: {
-  display: DisplayState;
-  surface: Exclude<DisplaySurface, "scoreboard" | "ticker">;
-}) {
-  const source =
-    display.backgrounds[surface] || display.event.defaultBackgroundUrl;
-  return (
-    <div
-      className="break-background"
-      style={
-        source
-          ? ({ "--break-image": `url(${source})` } as CSSProperties)
-          : undefined
-      }
-    />
-  );
-}
-
 function MatchOverlay({
   draft,
   display,
@@ -216,11 +188,6 @@ function MatchOverlay({
     : "UP NEXT";
   return (
     <section className="break-surface match-surface">
-      <Background display={display} surface="match" />
-      <div className="break-event">
-        <EventMark display={display} />
-        <strong>{display.event.name}</strong>
-      </div>
       <div className="match-heading">
         <small>{match.stage}</small>
         <strong>{match.round}</strong>
@@ -248,11 +215,6 @@ function ScheduleOverlay({ display }: { display: DisplayState }) {
   const matches = display.schedule.slice(0, 4);
   return (
     <section className="break-surface schedule-surface">
-      <Background display={display} surface="schedule" />
-      <div className="break-event">
-        <EventMark display={display} />
-        <strong>{display.event.name}</strong>
-      </div>
       <header className="schedule-heading">
         <small>Match programme</small>
         <strong>Schedule</strong>
@@ -324,11 +286,6 @@ function CountdownOverlay({ display }: { display: DisplayState }) {
   const seconds = remaining % 60;
   return (
     <section className="break-surface countdown-surface">
-      <Background display={display} surface="countdown" />
-      <div className="break-event">
-        <EventMark display={display} />
-        <strong>{display.event.name}</strong>
-      </div>
       <div className="countdown-card">
         <small>Broadcast begins in</small>
         <strong>
@@ -358,11 +315,6 @@ function ResultOverlay({
         : match.red;
   return (
     <section className="break-surface result-surface">
-      <Background display={display} surface="result" />
-      <div className="break-event">
-        <EventMark display={display} />
-        <strong>{display.event.name}</strong>
-      </div>
       <div className="result-heading">
         <small>
           {match.stage} · {match.round}
@@ -408,7 +360,6 @@ function TickerOverlay({ display }: { display: DisplayState }) {
     (display.ticker.activeIndex + offset) % display.ticker.messages.length;
   return (
     <div className="ticker-surface">
-      <EventMark display={display} />
       <strong>LIVE UPDATE</strong>
       <span key={`${display.cueRevision}-${index}`}>
         {display.ticker.messages[index]}

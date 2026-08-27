@@ -43,7 +43,6 @@ describe("DisplayStore", () => {
         activeMatchId: next.activeMatchId,
         countdown: next.countdown,
         ticker: next.ticker,
-        backgrounds: next.backgrounds,
         cueRevision: next.cueRevision,
       },
     });
@@ -89,6 +88,32 @@ describe("DisplayStore", () => {
       height: 430,
       rowGap: 4,
     });
+    migrated.close();
+  });
+
+  test("removes obsolete event media settings from saved displays", async () => {
+    const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
+    directories.push(runtime);
+    const store = await createStore(runtime);
+    const legacy = store.state as unknown as Record<string, unknown>;
+    legacy.backgrounds = { match: "/match.png" };
+    Object.assign(legacy.event as object, {
+      logoUrl: "/event.png",
+      defaultBackgroundUrl: "/background.png",
+    });
+    store.close();
+    const database = new Database(join(runtime, "overlay.sqlite"));
+    database
+      .query("UPDATE display_state SET document = ?1 WHERE id = 1")
+      .run(JSON.stringify(legacy));
+    database.close();
+
+    const migrated = await createStore(runtime);
+    expect(migrated.state.event).toEqual({
+      name: "MLBB Tournament",
+      timezone: "Asia/Yangon",
+    });
+    expect("backgrounds" in migrated.state).toBe(false);
     migrated.close();
   });
 

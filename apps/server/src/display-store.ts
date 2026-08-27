@@ -44,6 +44,16 @@ export class DisplayStore {
     if (saved) {
       try {
         const document = JSON.parse(saved.document) as Record<string, unknown>;
+        const event = document.event as Record<string, unknown> | undefined;
+        const migratedPresentation =
+          document.backgrounds !== undefined ||
+          event?.logoUrl !== undefined ||
+          event?.defaultBackgroundUrl !== undefined;
+        delete document.backgrounds;
+        if (event) {
+          delete event.logoUrl;
+          delete event.defaultBackgroundUrl;
+        }
         const scoreboard = document.scoreboard as
           | Record<string, unknown>
           | undefined;
@@ -60,7 +70,13 @@ export class DisplayStore {
         if (migratedMatches)
           document.schedule = migrateLegacySchedule(document);
         this.#state = DisplayStateSchema.parse(document);
-        if (migratedFrames || migratedTeams || migratedMatches) this.persist();
+        if (
+          migratedPresentation ||
+          migratedFrames ||
+          migratedTeams ||
+          migratedMatches
+        )
+          this.persist();
         return;
       } catch {
         this.#database.exec("DELETE FROM display_state WHERE id = 1");

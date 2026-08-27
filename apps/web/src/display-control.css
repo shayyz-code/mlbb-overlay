@@ -175,19 +175,40 @@ button.primary {
   position: absolute;
   top: 4.72%;
   left: 21.67%;
-  width: 56.67%;
+  width: 78.33%;
   height: 11.11%;
   display: grid;
+  grid-template-columns: 30.19% 11.97% 30.85% 26.99%;
   place-items: center;
-  clip-path: polygon(2% 0, 98% 0, 100% 50%, 98% 100%, 2% 100%, 0 50%);
   color: var(--muted);
-  background: rgba(12, 18, 30, 0.96);
-  border-block: 1px solid rgba(255, 255, 255, 0.2);
   font:
     700 clamp(0.55rem, 1vw, 0.85rem) "Arial Narrow",
     sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+.preview-top-scoreboard > * {
+  width: 100%;
+  height: 54%;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 18, 30, 0.96);
+  border-block: 1px solid rgba(255, 255, 255, 0.2);
+}
+.preview-top-scoreboard > i {
+  height: 100%;
+  color: rgba(159, 178, 214, 0.58);
+  background: transparent;
+  border: 1px dashed rgba(159, 178, 214, 0.32);
+  font-style: normal;
+  font-size: 0.52rem;
+}
+.preview-top-scoreboard > span:first-child {
+  border-left: 2px solid var(--display-cyan);
+}
+.preview-top-scoreboard > span:nth-child(3),
+.preview-top-scoreboard > b {
+  background: linear-gradient(90deg, rgba(37, 51, 135, 0.96), #101a50);
 }
 .preview-native-frame {
   position: absolute;
@@ -335,39 +356,6 @@ textarea:focus {
 .event-fields {
   grid-template-columns: 2fr 1fr;
 }
-.media-grid {
-  padding: 0 19px 19px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.media-field {
-  position: relative;
-  min-height: 86px;
-  padding: 14px;
-  border: 1px dashed rgba(159, 178, 214, 0.3);
-  background: #090d16;
-  cursor: pointer;
-}
-.media-field span {
-  color: var(--text);
-  font-size: 0.75rem;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.media-field input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.media-field button {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 5px 8px;
-  font-size: 0.58rem;
-}
-
 @media (max-width: 1250px) {
   .display-team-control {
     grid-template-columns: 55px minmax(0, 1fr);
@@ -389,8 +377,7 @@ textarea:focus {
 @media (max-width: 800px) {
   .live-team-grid,
   .frame-geometry-grid,
-  .utility-grid,
-  .media-grid {
+  .utility-grid {
     grid-template-columns: 1fr;
   }
   .utility-grid > div + div {
@@ -399,5 +386,15 @@ textarea:focus {
   }
   .metadata-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .surface-links {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .metadata-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,33 +1,32 @@
-import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   currentPhase,
-  selectedHeroIds,
   type DetectorProfile,
   type EventEnvelope,
+  selectedHeroIds,
 } from "@shayyz/contracts";
 import {
+  type DetectorModelBundle,
   DetectorProfileStore,
-  OnnxSlotClassifier,
-  ObsDraftRecognitionLoop,
-  ObsScreenshotSource,
   isAutomaticProfileReady,
   loadDetectorModelBundle,
-  type DetectorModelBundle,
+  ObsDraftRecognitionLoop,
+  ObsScreenshotSource,
+  OnnxSlotClassifier,
 } from "@shayyz/detector";
-import { createBunWebSocket } from "hono/bun";
 import { Hono } from "hono";
+import { createBunWebSocket } from "hono/bun";
 import type { WSContext } from "hono/ws";
 import { createApp } from "./app";
 import { LocalAssetPack } from "./assets";
 import { DetectorCalibrationService } from "./calibration";
-import { DraftStore } from "./store";
 import { DetectorCoordinator } from "./detector";
 import { DetectorLifecycle, validateObsUrl } from "./detector-lifecycle";
-import { heroes } from "./heroes";
-import { TeamLogoStore } from "./team-logos";
-import { DisplayMediaStore } from "./display-media";
 import { DisplayStore } from "./display-store";
+import { heroes } from "./heroes";
+import { DraftStore } from "./store";
+import { TeamLogoStore } from "./team-logos";
 
 const host = process.env.SHAYYZ_HOST ?? "127.0.0.1";
 const port = Number(process.env.SHAYYZ_PORT ?? 3000);
@@ -45,9 +44,6 @@ await store.initialize();
 const displayStore = new DisplayStore(runtimeDirectory);
 await displayStore.initialize(store.state.teams);
 const teamLogos = new TeamLogoStore(join(runtimeDirectory, "team-logos"));
-const displayMedia = new DisplayMediaStore(
-  join(runtimeDirectory, "display-media"),
-);
 const configuredAssetManifest = process.env.SHAYYZ_ASSET_PACK;
 const assetManifest = configuredAssetManifest
   ? resolve(configuredAssetManifest)
@@ -153,7 +149,6 @@ const application = createApp({
   detectorLifecycle,
   detectorCalibration,
   teamLogos,
-  displayMedia,
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);

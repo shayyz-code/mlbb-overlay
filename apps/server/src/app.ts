@@ -19,7 +19,6 @@ import {
 import type { DetectorCalibrationService } from "./calibration";
 import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
-import type { DisplayMediaStore } from "./display-media";
 import type { DisplayStore } from "./display-store";
 import { heroes } from "./heroes";
 import { type DraftStore, RevisionConflictError } from "./store";
@@ -36,7 +35,6 @@ export interface AppOptions {
   detectorLifecycle?: DetectorLifecycle;
   detectorCalibration?: DetectorCalibrationService;
   teamLogos?: TeamLogoStore;
-  displayMedia?: DisplayMediaStore;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -258,34 +256,6 @@ export function createApp(options: AppOptions): Hono {
     );
     return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
   });
-  app.post("/api/v1/display-media", requireControlToken, async (context) => {
-    if (!options.displayMedia)
-      return context.json(
-        { error: "Display media storage is unavailable." },
-        503,
-      );
-    try {
-      const media = (await context.req.raw.formData()).get("media");
-      if (!(media instanceof File))
-        return context.json({ error: "A media file is required." }, 400);
-      return context.json(await options.displayMedia.save(media));
-    } catch (error) {
-      return context.json(
-        {
-          error:
-            error instanceof Error ? error.message : "Media upload failed.",
-        },
-        400,
-      );
-    }
-  });
-  app.get("/api/v1/media/displays/:filename", async (context) => {
-    const asset = await options.displayMedia?.resolve(
-      context.req.param("filename"),
-    );
-    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
-  });
-
   app.post("/api/v1/display/commands", requireControlToken, async (context) => {
     if (!options.displayStore)
       return context.json({ error: "Display storage is unavailable." }, 503);

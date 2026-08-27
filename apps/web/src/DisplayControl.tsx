@@ -1,0 +1,1110 @@
+import type {
+  DisplaySettings,
+  DisplayState,
+  DraftCommand,
+  DraftState,
+  Hero,
+  ScheduledMatch,
+  Side,
+  Team,
+} from "@shayyz/contracts";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchDisplay,
+  fetchDraft,
+  fetchHeroes,
+  sendCommand,
+  sendDisplayCommand,
+  subscribeToDisplay,
+  subscribeToDraft,
+  uploadDisplayMedia,
+  uploadTeamLogo,
+} from "./api";
+import "./display-control.css";
+
+const surfaces = [
+  "scoreboard",
+  "match",
+  "schedule",
+  "countdown",
+  "ticker",
+  "result",
+] as const;
+type BreakSurface = keyof DisplaySettings["backgrounds"];
+type WithoutRevision<T> = T extends unknown
+  ? Omit<T, "expectedRevision">
+  : never;
+type DraftCommandInput = WithoutRevision<DraftCommand>;
+
+function settings(state: DisplayState): DisplaySettings {
+  const { revision: _, updatedAt: __, ...value } = state;
+  return value;
+}
+
+function useDisplayControl() {
+  const [draft, setDraft] = useState<DraftState>();
+  const [display, setDisplay] = useState<DisplayState>();
+  const [working, setWorking] = useState<DisplaySettings>();
+  const [heroes, setHeroes] = useState<Hero[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState("");
+  const [token, setToken] = useState(
+    () => sessionStorage.getItem("shayyz-control-token") ?? "",
+  );
+
+  useEffect(() => {
+    void Promise.all([fetchDraft(), fetchDisplay(), fetchHeroes()]).then(
+      ([draftState, displayState, catalog]) => {
+        setDraft(draftState);
+        setDisplay(displayState);
+        setWorking(settings(displayState));
+        setHeroes(catalog);
+      },
+    );
+    const stopDraft = subscribeToDraft(setDraft, setConnected);
+    const stopDisplay = subscribeToDisplay((state) => {
+      setDisplay(state);
+      setWorking(settings(state));
+    }, setConnected);
+    return () => {
+      stopDraft();
+      stopDisplay();
+    };
+  }, []);
+
+  const persist = async (next: DisplaySettings) => {
+    if (!display) return;
+    setError("");
+    try {
+      const state = await sendDisplayCommand(
+        {
+          type: "set-display",
+          expectedRevision: display.revision,
+          display: next,
+        },
+        token,
+      );
+      setDisplay(state);
+      setWorking(settings(state));
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Display update failed.",
+      );
+      const state = await fetchDisplay();
+      setDisplay(state);
+      setWorking(settings(state));
+    }
+  };
+
+  const cue = async () => {
+    if (!display) return;
+    try {
+      setDisplay(
+        await sendDisplayCommand(
+          { type: "cue", expectedRevision: display.revision },
+          token,
+        ),
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Cue failed.");
+    }
+  };
+
+  const draftCommand = async (command: DraftCommandInput) => {
+    if (!draft) return;
+    try {
+      setDraft(
+        await sendCommand(
+          { ...command, expectedRevision: draft.revision } as DraftCommand,
+          token,
+        ),
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Live score update failed.",
+      );
+      setDraft(await fetchDraft());
+    }
+  };
+
+  const saveToken = (value: string) => {
+    setToken(value);
+    sessionStorage.setItem("shayyz-control-token", value);
+  };
+  return {
+    draft,
+    display,
+    working,
+    setWorking,
+    heroes,
+    connected,
+    error,
+    token,
+    saveToken,
+    persist,
+    cue,
+    draftCommand,
+  };
+}
+
+function TeamLiveControl({
+  side,
+  draft,
+  token,
+  command,
+}: {
+  side: Side;
+  draft: DraftState;
+  token: string;
+  command: (command: DraftCommandInput) => Promise<void>;
+}) {
+  const team = draft.teams[side];
+  const score = draft.scoreboard.scores[side];
+  const [name, setName] = useState(team.name);
+  const [shortName, setShortName] = useState(team.shortName);
+  useEffect(() => {
+    setName(team.name);
+    setShortName(team.shortName);
+  }, [team.name, team.shortName]);
+  const saveTeam = () => {
+    if (name.trim() && shortName.trim())
+      void command({
+        type: "set-team",
+        side,
+        team: {
+          ...team,
+          name: name.trim(),
+          shortName: shortName.trim().toUpperCase(),
+        },
+      });
+  };
+  const logo = async (file?: File) => {
+    if (!file) return;
+    const uploaded = await uploadTeamLogo(side, file, token);
+    await command({
+      type: "set-team",
+      side,
+      team: { ...team, logoUrl: uploaded.logoUrl },
+    });
+  };
+  return (
+    <article className={`display-team-control side-${side}`}>
+      <span className="display-team-side">{side}</span>
+      <label>
+        Team name
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={saveTeam}
+        />
+      </label>
+      <label>
+        Tag
+        <input
+          maxLength={8}
+          value={shortName}
+          onChange={(event) => setShortName(event.target.value)}
+          onBlur={saveTeam}
+        />
+      </label>
+      <label className="display-file">
+        Logo
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(event) => void logo(event.target.files?.[0])}
+        />
+      </label>
+      <div className="live-score">
+        <button
+          type="button"
+          disabled={score === 0}
+          onClick={() =>
+            void command({
+              type: "set-scoreboard-score",
+              side,
+              score: score - 1,
+            })
+          }
+        >
+          −
+        </button>
+        <strong>{score}</strong>
+        <button
+          type="button"
+          onClick={() =>
+            void command({
+              type: "set-scoreboard-score",
+              side,
+              score: score + 1,
+            })
+          }
+        >
+          +
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function LineupEditor({
+  side,
+  state,
+  heroes,
+  draft,
+  update,
+}: {
+  side: Side;
+  state: DisplaySettings;
+  heroes: Hero[];
+  draft: DraftState;
+  update: (next: DisplaySettings) => void;
+}) {
+  const selected = new Set(
+    draft.selections[side].picks.flatMap((pick) => (pick ? [pick.heroId] : [])),
+  );
+  const options = heroes.filter((hero) => selected.has(hero.id));
+  const roster = state.rosters[side];
+  return (
+    <section className={`lineup-editor side-${side}`}>
+      <header>
+        <small>{side} side</small>
+        <strong>Starting five</strong>
+      </header>
+      {state.lineups[side].map((player, index) => (
+        <div className="lineup-row" key={player.role}>
+          <span>{player.role}</span>
+          <select
+            value={player.id}
+            onChange={(event) => {
+              const next = structuredClone(state);
+              const starter = next.lineups[side][index];
+              const selectedPlayer = next.rosters[side].find(
+                (candidate) => candidate.id === event.target.value,
+              );
+              if (starter && selectedPlayer) {
+                starter.id = selectedPlayer.id;
+                starter.name = selectedPlayer.name;
+              }
+              update(next);
+            }}
+          >
+            {roster.map((candidate) => (
+              <option
+                key={candidate.id}
+                value={candidate.id}
+                disabled={state.lineups[side].some(
+                  (starter) =>
+                    starter.role !== player.role && starter.id === candidate.id,
+                )}
+              >
+                {candidate.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={player.heroId}
+            onChange={(event) => {
+              const next = structuredClone(state);
+              const starter = next.lineups[side][index];
+              if (starter) starter.heroId = event.target.value;
+              update(next);
+            }}
+          >
+            <option value="">Unassigned hero</option>
+            {options.map((hero) => (
+              <option key={hero.id} value={hero.id}>
+                {hero.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+      <div className="roster-heading">
+        <small>Reusable roster · {roster.length}/10</small>
+        <button
+          type="button"
+          disabled={roster.length >= 10}
+          onClick={() => {
+            const next = structuredClone(state);
+            next.rosters[side].push({
+              id: crypto.randomUUID(),
+              name: `Substitute ${roster.length - 4}`,
+            });
+            update(next);
+          }}
+        >
+          Add player
+        </button>
+      </div>
+      <div className="roster-list">
+        {roster.map((player, index) => {
+          const isStarter = state.lineups[side].some(
+            (starter) => starter.id === player.id,
+          );
+          return (
+            <div className="roster-entry" key={player.id}>
+              <input
+                value={player.name}
+                maxLength={40}
+                onChange={(event) => {
+                  const next = structuredClone(state);
+                  const member = next.rosters[side][index];
+                  if (member) member.name = event.target.value;
+                  for (const starter of next.lineups[side])
+                    if (starter.id === player.id)
+                      starter.name = event.target.value;
+                  update(next);
+                }}
+              />
+              <button
+                type="button"
+                disabled={isStarter || roster.length <= 5}
+                onClick={() => {
+                  const next = structuredClone(state);
+                  next.rosters[side].splice(index, 1);
+                  update(next);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ScheduleEditor({
+  state,
+  draft,
+  update,
+}: {
+  state: DisplaySettings;
+  draft: DraftState;
+  update: (next: DisplaySettings) => void;
+}) {
+  const change = (index: number, patch: Partial<ScheduledMatch>) => {
+    const next = structuredClone(state);
+    next.schedule[index] = {
+      ...next.schedule[index],
+      ...patch,
+    } as ScheduledMatch;
+    update(next);
+  };
+  const changeTeam = (index: number, side: Side, patch: Partial<Team>) => {
+    const match = state.schedule[index];
+    if (!match) return;
+    change(index, { [side]: { ...match[side], ...patch } });
+  };
+  const changeScore = (index: number, side: Side, score: number) => {
+    const match = state.schedule[index];
+    if (!match) return;
+    change(index, {
+      scores: { ...match.scores, [side]: Math.max(0, Math.min(9, score)) },
+    });
+  };
+  const add = () => {
+    const next = structuredClone(state);
+    const match: ScheduledMatch = {
+      id: crypto.randomUUID(),
+      scheduledAt: null,
+      stage: state.scoreboard.stage,
+      round: `Round ${next.schedule.length + 1}`,
+      bestOf: state.scoreboard.bestOf,
+      blue: structuredClone(draft.teams.blue),
+      red: structuredClone(draft.teams.red),
+      scores: { blue: 0, red: 0 },
+      status: "scheduled",
+    };
+    next.schedule.push(match);
+    next.activeMatchId ??= match.id;
+    update(next);
+  };
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= state.schedule.length) return;
+    const next = structuredClone(state);
+    const current = next.schedule[index];
+    const replacement = next.schedule[target];
+    if (!current || !replacement) return;
+    [next.schedule[index], next.schedule[target]] = [replacement, current];
+    update(next);
+  };
+  return (
+    <section className="display-panel schedule-editor">
+      <header>
+        <div>
+          <small>Up to four on screen</small>
+          <h2>Schedule</h2>
+        </div>
+        <button
+          type="button"
+          disabled={state.schedule.length >= 32}
+          onClick={add}
+        >
+          Add current match
+        </button>
+      </header>
+      <div className="schedule-editor-list">
+        {state.schedule.map((match, index) => (
+          <article key={match.id}>
+            <label className="active-match">
+              <input
+                type="radio"
+                checked={state.activeMatchId === match.id}
+                onChange={() => update({ ...state, activeMatchId: match.id })}
+              />
+              Live
+            </label>
+            <label>
+              Stage
+              <input
+                value={match.stage}
+                onChange={(event) =>
+                  change(index, { stage: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Round
+              <input
+                value={match.round}
+                onChange={(event) =>
+                  change(index, { round: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Time
+              <input
+                type="datetime-local"
+                value={match.scheduledAt?.slice(0, 16) ?? ""}
+                onChange={(event) =>
+                  change(index, {
+                    scheduledAt: event.target.value
+                      ? new Date(event.target.value).toISOString()
+                      : null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Status
+              <select
+                value={match.status}
+                onChange={(event) =>
+                  change(index, {
+                    status: event.target.value as ScheduledMatch["status"],
+                  })
+                }
+              >
+                <option value="scheduled">Scheduled</option>
+                <option value="live">Live</option>
+                <option value="complete">Complete</option>
+              </select>
+            </label>
+            <label>
+              Best of
+              <input
+                type="number"
+                min="1"
+                max="9"
+                value={match.bestOf}
+                onChange={(event) =>
+                  change(index, { bestOf: Number(event.target.value) })
+                }
+              />
+            </label>
+            <label className="schedule-team-field side-blue">
+              Blue team
+              <input
+                value={match.blue.name}
+                onChange={(event) =>
+                  changeTeam(index, "blue", { name: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Blue tag
+              <input
+                maxLength={8}
+                value={match.blue.shortName}
+                onChange={(event) =>
+                  changeTeam(index, "blue", {
+                    shortName: event.target.value.toUpperCase(),
+                  })
+                }
+              />
+            </label>
+            <label className="schedule-team-field side-red">
+              Red team
+              <input
+                value={match.red.name}
+                onChange={(event) =>
+                  changeTeam(index, "red", { name: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Red tag
+              <input
+                maxLength={8}
+                value={match.red.shortName}
+                onChange={(event) =>
+                  changeTeam(index, "red", {
+                    shortName: event.target.value.toUpperCase(),
+                  })
+                }
+              />
+            </label>
+            <label>
+              Blue score
+              <input
+                type="number"
+                min="0"
+                max="9"
+                value={match.scores.blue}
+                onChange={(event) =>
+                  changeScore(index, "blue", Number(event.target.value))
+                }
+              />
+            </label>
+            <label>
+              Red score
+              <input
+                type="number"
+                min="0"
+                max="9"
+                value={match.scores.red}
+                onChange={(event) =>
+                  changeScore(index, "red", Number(event.target.value))
+                }
+              />
+            </label>
+            <div className="schedule-order">
+              <button type="button" onClick={() => move(index, -1)}>
+                ↑
+              </button>
+              <button type="button" onClick={() => move(index, 1)}>
+                ↓
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => {
+                  const next = structuredClone(state);
+                  next.schedule.splice(index, 1);
+                  if (next.activeMatchId === match.id)
+                    next.activeMatchId = next.schedule[0]?.id ?? null;
+                  update(next);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </article>
+        ))}
+        {!state.schedule.length && (
+          <p className="control-empty">
+            Add the current teams to start the schedule.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MediaField({
+  label,
+  value,
+  token,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  token: string;
+  onChange: (url: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <label className="media-field">
+      {label}
+      <span>{value ? "Local image ready" : "Theme fallback"}</span>
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        disabled={busy}
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          setBusy(true);
+          try {
+            onChange(await uploadDisplayMedia(file, token));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      {value && (
+        <button type="button" onClick={() => onChange("")}>
+          Clear
+        </button>
+      )}
+    </label>
+  );
+}
+
+export function DisplayControlPage() {
+  const control = useDisplayControl();
+  const { draft, display, working, setWorking, heroes } = control;
+  const pickedCount = useMemo(
+    () =>
+      draft
+        ? (["blue", "red"] as const).reduce(
+            (sum, side) =>
+              sum + draft.selections[side].picks.filter(Boolean).length,
+            0,
+          )
+        : 0,
+    [draft],
+  );
+  if (!draft || !display || !working)
+    return <div className="loading-screen">Loading display console…</div>;
+  const updateBackground = (surface: BreakSurface, url: string) => {
+    const next = structuredClone(working);
+    next.backgrounds[surface] = url;
+    setWorking(next);
+  };
+  const effectiveRemaining =
+    working.countdown.running && working.countdown.startedAt !== null
+      ? Math.max(
+          0,
+          working.countdown.remainingSeconds -
+            Math.floor((Date.now() - working.countdown.startedAt) / 1000),
+        )
+      : working.countdown.remainingSeconds;
+  return (
+    <main className="control-shell display-control-shell">
+      <aside className="control-sidebar">
+        <div className="brand-lockup">
+          <span className="brand-rune">S</span>
+          <div>
+            <strong>SHAYYZ</strong>
+            <small>MLBB OVERLAY</small>
+          </div>
+        </div>
+        <nav>
+          <a href="/control/draft">Draft control</a>
+          <a className="active" href="/control/displays">
+            Display console
+          </a>
+        </nav>
+        <div className="surface-links">
+          {surfaces.map((surface) => (
+            <a
+              key={surface}
+              href={`/overlay/${surface}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {surface}
+            </a>
+          ))}
+        </div>
+        <div className="system-card">
+          <span
+            className={`status-light ${control.connected ? "online" : ""}`}
+          />
+          <div>
+            <strong>{control.connected ? "Live sync" : "Reconnecting"}</strong>
+            <small>Display revision {display.revision}</small>
+            <small>{pickedCount}/10 heroes drafted</small>
+          </div>
+        </div>
+        <label className="token-field">
+          LAN control token
+          <input
+            type="password"
+            value={control.token}
+            placeholder="Only required on LAN"
+            onChange={(event) => control.saveToken(event.target.value)}
+          />
+        </label>
+      </aside>
+      <section className="control-main display-control-main">
+        <header className="control-header">
+          <div>
+            <small>Broadcast operations</small>
+            <h1>Display Console</h1>
+          </div>
+          <div className="header-actions">
+            <button type="button" onClick={() => void control.cue()}>
+              Replay entrance
+            </button>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void control.persist(working)}
+            >
+              Save all changes
+            </button>
+          </div>
+        </header>
+        {control.error && <div className="error-banner">{control.error}</div>}
+        <p className="scoreboard-instruction">
+          Every browser source stays at a stable URL. OBS scene visibility
+          remains fully manual.
+        </p>
+
+        <section className="display-panel">
+          <header>
+            <div>
+              <small>Transparent gameplay HUD</small>
+              <h2>Live scoreboard</h2>
+            </div>
+            <label>
+              Layout
+              <select
+                value={working.scoreboard.preset}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    scoreboard: {
+                      ...working.scoreboard,
+                      preset: event.target.value as "tournament" | "compact",
+                    },
+                  })
+                }
+              >
+                <option value="tournament">Tournament HUD</option>
+                <option value="compact">Compact fallback</option>
+              </select>
+            </label>
+          </header>
+          <div className="live-team-grid">
+            <TeamLiveControl
+              side="blue"
+              draft={draft}
+              token={control.token}
+              command={control.draftCommand}
+            />
+            <TeamLiveControl
+              side="red"
+              draft={draft}
+              token={control.token}
+              command={control.draftCommand}
+            />
+          </div>
+          <div className="metadata-grid">
+            <label>
+              Stage
+              <input
+                value={working.scoreboard.stage}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    scoreboard: {
+                      ...working.scoreboard,
+                      stage: event.target.value,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Round
+              <input
+                value={working.scoreboard.round}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    scoreboard: {
+                      ...working.scoreboard,
+                      round: event.target.value,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Game
+              <input
+                type="number"
+                min="1"
+                max="9"
+                value={working.scoreboard.gameNumber}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    scoreboard: {
+                      ...working.scoreboard,
+                      gameNumber: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Best of
+              <input
+                type="number"
+                min="1"
+                max="9"
+                value={working.scoreboard.bestOf}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    scoreboard: {
+                      ...working.scoreboard,
+                      bestOf: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="display-panel">
+          <header>
+            <div>
+              <small>Role-based hero assignment</small>
+              <h2>Player rails</h2>
+            </div>
+            <span className="readiness">
+              {working.lineups.blue.filter((player) => player.heroId).length +
+                working.lineups.red.filter((player) => player.heroId).length}
+              /10 assigned
+            </span>
+          </header>
+          <div className="lineup-grid">
+            <LineupEditor
+              side="blue"
+              state={working}
+              heroes={heroes}
+              draft={draft}
+              update={setWorking}
+            />
+            <LineupEditor
+              side="red"
+              state={working}
+              heroes={heroes}
+              draft={draft}
+              update={setWorking}
+            />
+          </div>
+        </section>
+
+        <ScheduleEditor state={working} draft={draft} update={setWorking} />
+
+        <section className="display-panel utility-grid">
+          <div>
+            <small>Broadcast begins in</small>
+            <h2>Countdown</h2>
+            <label>
+              Duration in minutes
+              <input
+                type="number"
+                min="0"
+                max="10080"
+                value={Math.ceil(working.countdown.durationSeconds / 60)}
+                onChange={(event) => {
+                  const seconds = Number(event.target.value) * 60;
+                  setWorking({
+                    ...working,
+                    countdown: {
+                      durationSeconds: seconds,
+                      remainingSeconds: seconds,
+                      running: false,
+                      startedAt: null,
+                    },
+                  });
+                }}
+              />
+            </label>
+            <div className="countdown-actions">
+              <strong>
+                {Math.floor(effectiveRemaining / 60)}:
+                {String(effectiveRemaining % 60).padStart(2, "0")}
+              </strong>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = {
+                    ...working,
+                    countdown: working.countdown.running
+                      ? {
+                          ...working.countdown,
+                          remainingSeconds: effectiveRemaining,
+                          running: false,
+                          startedAt: null,
+                        }
+                      : {
+                          ...working.countdown,
+                          remainingSeconds: effectiveRemaining,
+                          running: true,
+                          startedAt: Date.now(),
+                        },
+                  };
+                  setWorking(next);
+                  void control.persist(next);
+                }}
+              >
+                {working.countdown.running ? "Pause" : "Start"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = {
+                    ...working,
+                    countdown: {
+                      ...working.countdown,
+                      remainingSeconds: working.countdown.durationSeconds,
+                      running: false,
+                      startedAt: null,
+                    },
+                  };
+                  setWorking(next);
+                  void control.persist(next);
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+          <div>
+            <small>Transparent lower third</small>
+            <h2>Ticker</h2>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={working.ticker.enabled}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    ticker: {
+                      ...working.ticker,
+                      enabled: event.target.checked,
+                    },
+                  })
+                }
+              />
+              Show ticker
+            </label>
+            <label>
+              Messages, one per line
+              <textarea
+                rows={5}
+                value={working.ticker.messages.join("\n")}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    ticker: {
+                      ...working.ticker,
+                      messages: event.target.value
+                        .split("\n")
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .slice(0, 20),
+                      activeIndex: 0,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Change every {working.ticker.speedSeconds}s
+              <input
+                type="range"
+                min="5"
+                max="120"
+                value={working.ticker.speedSeconds}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    ticker: {
+                      ...working.ticker,
+                      speedSeconds: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="display-panel">
+          <header>
+            <div>
+              <small>Local-only assets</small>
+              <h2>Event identity and backgrounds</h2>
+            </div>
+          </header>
+          <div className="metadata-grid event-fields">
+            <label>
+              Event name
+              <input
+                value={working.event.name}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    event: { ...working.event, name: event.target.value },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Timezone
+              <input
+                value={working.event.timezone}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    event: { ...working.event, timezone: event.target.value },
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className="media-grid">
+            <MediaField
+              label="Event logo"
+              value={working.event.logoUrl}
+              token={control.token}
+              onChange={(url) =>
+                setWorking({
+                  ...working,
+                  event: { ...working.event, logoUrl: url },
+                })
+              }
+            />
+            <MediaField
+              label="Default background"
+              value={working.event.defaultBackgroundUrl}
+              token={control.token}
+              onChange={(url) =>
+                setWorking({
+                  ...working,
+                  event: { ...working.event, defaultBackgroundUrl: url },
+                })
+              }
+            />
+            {(
+              ["match", "schedule", "countdown", "result"] as BreakSurface[]
+            ).map((surface) => (
+              <MediaField
+                key={surface}
+                label={`${surface} override`}
+                value={working.backgrounds[surface]}
+                token={control.token}
+                onChange={(url) => updateBackground(surface, url)}
+              />
+            ))}
+          </div>
+        </section>
+      </section>
+    </main>
+  );
+}

@@ -34,8 +34,19 @@ export class DraftStore {
     await mkdir(dirname(this.filePath), { recursive: true });
     try {
       const saved = JSON.parse(await readFile(this.filePath, "utf8"));
+      const migratedTimer = saved.timer?.durationSeconds !== 50;
+      if (migratedTimer)
+        saved.timer = {
+          ...saved.timer,
+          durationSeconds: 50,
+          remainingSeconds: Math.min(50, saved.timer?.remainingSeconds ?? 50),
+        };
       this.#state = DraftStateSchema.parse(saved);
-      if (saved.presentation === undefined || saved.scoreboard === undefined)
+      if (
+        migratedTimer ||
+        saved.presentation === undefined ||
+        saved.scoreboard === undefined
+      )
         await this.persist();
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -59,6 +70,13 @@ export class DraftStore {
     if (command.type === "undo") {
       const previous = this.#past.pop();
       if (!previous) return this.state;
+      if (previous.phaseIndex !== this.#state.phaseIndex)
+        previous.timer = {
+          durationSeconds: 50,
+          remainingSeconds: 50,
+          running: false,
+          startedAt: null,
+        };
       this.#state = this.withRevision(previous);
       await this.persist();
       return this.state;
@@ -114,19 +132,9 @@ export class DraftStore {
         this.#state = this.withRevision(next);
         break;
       }
-      case "set-timer": {
-        const next = this.state;
-        next.timer = {
-          durationSeconds: command.durationSeconds,
-          remainingSeconds: command.durationSeconds,
-          running: false,
-          startedAt: null,
-        };
-        this.#state = this.withRevision(next);
-        break;
-      }
       case "start-timer": {
         const next = this.state;
+        next.timer.remainingSeconds = 50;
         next.timer.running = true;
         next.timer.startedAt = Date.now();
         this.#state = this.withRevision(next);

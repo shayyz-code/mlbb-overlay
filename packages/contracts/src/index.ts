@@ -461,7 +461,7 @@ const SideSelectionsSchema = z.object({
 });
 
 export const DraftTimerSchema = z.object({
-  durationSeconds: z.number().int().min(5).max(300),
+  durationSeconds: z.literal(50),
   remainingSeconds: z.number().int().min(0).max(300),
   running: z.boolean(),
   startedAt: z.number().int().nonnegative().nullable(),
@@ -797,10 +797,6 @@ export const DraftCommandSchema = z.discriminatedUnion("type", [
     side: SideSchema,
     team: TeamSchema,
   }),
-  CommandBaseSchema.extend({
-    type: z.literal("set-timer"),
-    durationSeconds: z.number().int().min(5).max(300),
-  }),
   CommandBaseSchema.extend({ type: z.literal("start-timer") }),
   CommandBaseSchema.extend({ type: z.literal("pause-timer") }),
   CommandBaseSchema.extend({
@@ -883,8 +879,8 @@ export function createDefaultDraftState(now = new Date()): DraftState {
       red: { bans: emptySlots(), picks: emptySlots() },
     },
     timer: {
-      durationSeconds: 60,
-      remainingSeconds: 60,
+      durationSeconds: 50,
+      remainingSeconds: 50,
       running: false,
       startedAt: null,
     },
@@ -1002,11 +998,19 @@ export function applySelection(
   next.updatedAt = now.toISOString();
   next.status =
     next.phaseIndex >= next.format.phases.length ? "complete" : "drafting";
-  next.timer = {
-    ...next.timer,
-    remainingSeconds: next.timer.durationSeconds,
-    running: false,
-    startedAt: null,
-  };
+  next.timer =
+    next.status === "complete"
+      ? {
+          durationSeconds: 50,
+          remainingSeconds: 0,
+          running: false,
+          startedAt: null,
+        }
+      : {
+          durationSeconds: 50,
+          remainingSeconds: 50,
+          running: true,
+          startedAt: now.getTime(),
+        };
   return DraftStateSchema.parse(next);
 }

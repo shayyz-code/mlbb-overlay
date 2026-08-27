@@ -72,6 +72,12 @@ describe("standard draft contract", () => {
     expect(state.status).toBe("complete");
     expect(currentPhase(state)).toBeNull();
     expect(selectedHeroIds(state)).toHaveLength(20);
+    expect(state.timer).toEqual({
+      durationSeconds: 50,
+      remainingSeconds: 0,
+      running: false,
+      startedAt: null,
+    });
   });
 
   test("rejects duplicate heroes", () => {
@@ -82,6 +88,28 @@ describe("standard draft contract", () => {
     expect(() =>
       applySelection(state, { heroId: "miya", source: "manual" }),
     ).toThrow("already selected");
+  });
+
+  test("starts the next turn at 50 seconds after a hero selection", () => {
+    const state = createDefaultDraftState();
+    const selectedAt = new Date("2026-08-27T00:00:00.000Z");
+    expect(state.timer).toEqual({
+      durationSeconds: 50,
+      remainingSeconds: 50,
+      running: false,
+      startedAt: null,
+    });
+    const selected = applySelection(
+      state,
+      { heroId: "miya", source: "manual" },
+      selectedAt,
+    );
+    expect(selected.timer).toEqual({
+      durationSeconds: 50,
+      remainingSeconds: 50,
+      running: true,
+      startedAt: selectedAt.getTime(),
+    });
   });
 
   test("keeps hero voice playback off by default", () => {

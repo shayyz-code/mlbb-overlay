@@ -527,28 +527,18 @@ function ControlPage() {
             <strong>{effectiveTimer(state)}s</strong>
             <button
               type="button"
-              onClick={() =>
-                dispatch({
-                  type: state.timer.running ? "pause-timer" : "start-timer",
-                })
-              }
+              disabled={!state.timer.running}
+              onClick={() => dispatch({ type: "pause-timer" })}
             >
-              {state.timer.running ? "Pause" : "Start"}
+              Pause
             </button>
-            <select
-              value={state.timer.durationSeconds}
-              onChange={(event) =>
-                dispatch({
-                  type: "set-timer",
-                  durationSeconds: Number(event.target.value),
-                })
-              }
+            <button
+              type="button"
+              disabled={state.status === "complete"}
+              onClick={() => dispatch({ type: "start-timer" })}
             >
-              <option value="30">30 sec</option>
-              <option value="45">45 sec</option>
-              <option value="60">60 sec</option>
-              <option value="90">90 sec</option>
-            </select>
+              Restart 50
+            </button>
           </div>
         </div>
 

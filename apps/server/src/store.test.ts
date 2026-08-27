@@ -63,10 +63,22 @@ describe("DraftStore", () => {
     >;
     delete legacy.presentation;
     delete legacy.scoreboard;
+    if (legacy.timer) {
+      const legacyTimer = legacy.timer as {
+        durationSeconds: number;
+        remainingSeconds: number;
+      };
+      legacyTimer.durationSeconds = 60;
+      legacy.timer.remainingSeconds = 60;
+    }
     await writeFile(store.filePath, JSON.stringify(legacy));
     await store.initialize();
     expect(store.state.presentation.voiceEnabled).toBe(false);
     expect(store.state.scoreboard.scores).toEqual({ blue: 0, red: 0 });
+    expect(store.state.timer).toMatchObject({
+      durationSeconds: 50,
+      remainingSeconds: 50,
+    });
     expect(
       JSON.parse(await readFile(store.filePath, "utf8")).presentation,
     ).toEqual({ voiceEnabled: false });
@@ -78,6 +90,28 @@ describe("DraftStore", () => {
     });
     await store.dispatch({ type: "reset", expectedRevision: 1 });
     expect(store.state.presentation.voiceEnabled).toBe(true);
+  });
+
+  test("restarts the timer after a selection and safely stops it on undo", async () => {
+    const store = await createStore();
+    await store.dispatch({
+      expectedRevision: 0,
+      type: "select-hero",
+      heroId: "miya",
+      source: "manual",
+    });
+    expect(store.state.timer).toMatchObject({
+      durationSeconds: 50,
+      remainingSeconds: 50,
+      running: true,
+    });
+    await store.dispatch({ expectedRevision: 1, type: "undo" });
+    expect(store.state.timer).toEqual({
+      durationSeconds: 50,
+      remainingSeconds: 50,
+      running: false,
+      startedAt: null,
+    });
   });
 
   test("updates, swaps, resets, and undoes scoreboard scores", async () => {

@@ -739,6 +739,23 @@ export const DisplayCommandSchema = z.discriminatedUnion("type", [
 ]);
 export type DisplayCommand = z.infer<typeof DisplayCommandSchema>;
 
+export const ActivateMatchCommandSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("activate-match"),
+    matchId: z.string().min(1).max(80),
+    expectedDraftRevision: z.number().int().nonnegative(),
+    expectedDisplayRevision: z.number().int().nonnegative(),
+  }),
+  z.object({
+    type: z.literal("activate-quick-match"),
+    blueTeamId: z.string().min(1).max(80),
+    redTeamId: z.string().min(1).max(80),
+    expectedDraftRevision: z.number().int().nonnegative(),
+    expectedDisplayRevision: z.number().int().nonnegative(),
+  }),
+]);
+export type ActivateMatchCommand = z.infer<typeof ActivateMatchCommandSchema>;
+
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.string().datetime(),
@@ -771,6 +788,11 @@ export const DraftCommandSchema = z.discriminatedUnion("type", [
   CommandBaseSchema.extend({ type: z.literal("reset") }),
   CommandBaseSchema.extend({ type: z.literal("swap-sides") }),
   CommandBaseSchema.extend({
+    type: z.literal("activate-match"),
+    blue: TeamSchema,
+    red: TeamSchema,
+  }),
+  CommandBaseSchema.extend({
     type: z.literal("set-team"),
     side: SideSchema,
     team: TeamSchema,
@@ -793,6 +815,12 @@ export const DraftCommandSchema = z.discriminatedUnion("type", [
   }),
 ]);
 export type DraftCommand = z.infer<typeof DraftCommandSchema>;
+
+export const MatchActivationResultSchema = z.object({
+  draft: DraftStateSchema,
+  display: DisplayStateSchema,
+});
+export type MatchActivationResult = z.infer<typeof MatchActivationResultSchema>;
 
 export const EventEnvelopeSchema = z.object({
   sequence: z.number().int().positive(),

@@ -1,4 +1,5 @@
 import {
+  type ActivateMatchCommand,
   type AssetPackStatus,
   AssetPackStatusSchema,
   DetectorCalibrationResultSchema,
@@ -19,6 +20,8 @@ import {
   EventEnvelopeSchema,
   type Hero,
   HeroSchema,
+  type MatchActivationResult,
+  MatchActivationResultSchema,
   type TeamLogoUploadResult,
   TeamLogoUploadResultSchema,
 } from "@shayyz/contracts";
@@ -152,6 +155,23 @@ export async function sendDisplayCommand(
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Display command failed.");
   return DisplayStateSchema.parse(body);
+}
+
+export async function activateMatch(
+  command: ActivateMatchCommand,
+  token: string,
+): Promise<MatchActivationResult> {
+  const response = await fetch("/api/v1/matches/activate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(command),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Match activation failed.");
+  return MatchActivationResultSchema.parse(body);
 }
 
 export async function uploadDisplayMedia(

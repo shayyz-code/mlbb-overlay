@@ -3,6 +3,7 @@ import {
   currentPhase,
   type DetectorMode,
   type DetectorStatus,
+  type DisplayState,
   type DraftCommand,
   type DraftSelection,
   type DraftState,
@@ -20,12 +21,14 @@ import {
 import {
   fetchAssetStatus,
   fetchDetectorStatus,
+  fetchDisplay,
   fetchDraft,
   fetchHeroes,
   reviewDetectorProposal,
   sendCommand,
   setDetectorMode,
   setDetectorRunning,
+  subscribeToDisplay,
   subscribeToDraft,
 } from "./api";
 import { CalibrationWizard } from "./CalibrationWizard";
@@ -35,6 +38,7 @@ import { DisplayOverlay, type DisplaySurface } from "./DisplayOverlays";
 import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
 import { MatchControlPage } from "./MatchControl";
+import { MatchPicker } from "./MatchPicker";
 import { TeamControlPage } from "./TeamControl";
 import { newestAddedHeroId } from "./voice";
 
@@ -124,6 +128,7 @@ function useDraft(loadCatalog = true) {
     token,
     saveToken,
     dispatch,
+    replaceState: setState,
   };
 }
 
@@ -227,50 +232,6 @@ function TeamDraft({
         ))}
       </div>
     </section>
-  );
-}
-
-function TeamEditor({
-  state,
-  side,
-  dispatch,
-}: {
-  state: DraftState;
-  side: Side;
-  dispatch: (command: DraftCommandInput) => void;
-}) {
-  const team = state.teams[side];
-  const [name, setName] = useState(team.name);
-  const [shortName, setShortName] = useState(team.shortName);
-  useEffect(() => {
-    setName(team.name);
-    setShortName(team.shortName);
-  }, [team]);
-
-  const save = () =>
-    dispatch({ type: "set-team", side, team: { ...team, name, shortName } });
-  return (
-    <div className={`team-editor team-${side}`}>
-      <span className="team-dot" />
-      <label>
-        Team name
-        <input
-          value={name}
-          maxLength={60}
-          onChange={(event) => setName(event.target.value)}
-          onBlur={save}
-        />
-      </label>
-      <label>
-        Tag
-        <input
-          value={shortName}
-          maxLength={8}
-          onChange={(event) => setShortName(event.target.value.toUpperCase())}
-          onBlur={save}
-        />
-      </label>
-    </div>
   );
 }
 
@@ -429,7 +390,9 @@ function ControlPage() {
     token,
     saveToken,
     dispatch,
+    replaceState,
   } = useDraft();
+  const [display, setDisplay] = useState<DisplayState>();
   const [query, setQuery] = useState("");
   const used = useMemo(
     () => (state ? selectedHeroIds(state) : new Set<string>()),
@@ -439,7 +402,12 @@ function ControlPage() {
     hero.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
 
-  if (!state)
+  useEffect(() => {
+    void fetchDisplay().then(setDisplay);
+    return subscribeToDisplay(setDisplay, () => undefined);
+  }, []);
+
+  if (!state || !display)
     return <div className="loading-screen">Loading broadcast system…</div>;
   const phase = currentPhase(state);
   return (
@@ -532,11 +500,15 @@ function ControlPage() {
         </header>
 
         {error && <div className="error-banner">{error}</div>}
-        <div className="team-editors">
-          <TeamEditor state={state} side="blue" dispatch={dispatch} />
-          <TeamEditor state={state} side="red" dispatch={dispatch} />
-        </div>
-
+        <MatchPicker
+          draft={state}
+          display={display}
+          token={token}
+          onActivated={(nextDraft, nextDisplay) => {
+            replaceState(nextDraft);
+            setDisplay(nextDisplay);
+          }}
+        />
         <div className="phase-strip">
           <div>
             <small>Current phase</small>

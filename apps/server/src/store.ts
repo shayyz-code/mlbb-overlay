@@ -1,12 +1,12 @@
 import { mkdir, readFile, rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
-  DraftCommandSchema,
-  DraftStateSchema,
   applySelection,
   createDefaultDraftState,
   type DraftCommand,
+  DraftCommandSchema,
   type DraftState,
+  DraftStateSchema,
 } from "@shayyz/contracts";
 
 export class RevisionConflictError extends Error {
@@ -98,6 +98,14 @@ export class DraftStore {
           next.scoreboard.scores.blue,
         ];
         this.#state = this.withRevision(next);
+        break;
+      }
+      case "activate-match": {
+        const reset = createDefaultDraftState();
+        reset.teams = { blue: command.blue, red: command.red };
+        reset.presentation = structuredClone(this.#state.presentation);
+        reset.revision = this.#state.revision;
+        this.#state = this.withRevision(reset);
         break;
       }
       case "set-team": {

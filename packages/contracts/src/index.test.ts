@@ -117,6 +117,10 @@ describe("display contracts", () => {
       ).toBe(5);
     }
     expect(state.scoreboard.preset).toBe("tournament");
+    expect(state.scoreboard.frames).toEqual({
+      blue: { x: 0, y: 360, width: 142, height: 430, rowGap: 4 },
+      red: { x: 1792, y: 360, width: 128, height: 430, rowGap: 4 },
+    });
   });
 
   test("rejects duplicate lineup roles", () => {
@@ -130,6 +134,12 @@ describe("display contracts", () => {
   test("rejects invalid event timezones", () => {
     const state = createDefaultDisplayState();
     state.event.timezone = "Moon/Sea-of-Tranquility";
+    expect(DisplayStateSchema.safeParse(state).success).toBe(false);
+  });
+
+  test("rejects native HUD frames outside the OBS canvas", () => {
+    const state = createDefaultDisplayState();
+    state.scoreboard.frames.red.x = 1900;
     expect(DisplayStateSchema.safeParse(state).success).toBe(false);
   });
 });

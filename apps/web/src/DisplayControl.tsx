@@ -3,16 +3,15 @@ import type {
   DisplayState,
   DraftCommand,
   DraftState,
-  Hero,
+  NativeHudFrame,
   ScheduledMatch,
   Side,
   Team,
 } from "@shayyz/contracts";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   fetchDisplay,
   fetchDraft,
-  fetchHeroes,
   sendCommand,
   sendDisplayCommand,
   subscribeToDisplay,
@@ -45,7 +44,6 @@ function useDisplayControl() {
   const [draft, setDraft] = useState<DraftState>();
   const [display, setDisplay] = useState<DisplayState>();
   const [working, setWorking] = useState<DisplaySettings>();
-  const [heroes, setHeroes] = useState<Hero[]>([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState("");
   const [token, setToken] = useState(
@@ -53,12 +51,11 @@ function useDisplayControl() {
   );
 
   useEffect(() => {
-    void Promise.all([fetchDraft(), fetchDisplay(), fetchHeroes()]).then(
-      ([draftState, displayState, catalog]) => {
+    void Promise.all([fetchDraft(), fetchDisplay()]).then(
+      ([draftState, displayState]) => {
         setDraft(draftState);
         setDisplay(displayState);
         setWorking(settings(displayState));
-        setHeroes(catalog);
       },
     );
     const stopDraft = subscribeToDraft(setDraft, setConnected);
@@ -136,7 +133,6 @@ function useDisplayControl() {
     display,
     working,
     setWorking,
-    heroes,
     connected,
     error,
     token,
@@ -247,132 +243,86 @@ function TeamLiveControl({
   );
 }
 
-function LineupEditor({
+const frameFields = ["x", "y", "width", "height", "rowGap"] as const;
+
+function FrameGeometryEditor({
   side,
-  state,
-  heroes,
-  draft,
+  frame,
   update,
 }: {
   side: Side;
-  state: DisplaySettings;
-  heroes: Hero[];
-  draft: DraftState;
-  update: (next: DisplaySettings) => void;
+  frame: NativeHudFrame;
+  update: (frame: NativeHudFrame) => void;
 }) {
-  const selected = new Set(
-    draft.selections[side].picks.flatMap((pick) => (pick ? [pick.heroId] : [])),
-  );
-  const options = heroes.filter((hero) => selected.has(hero.id));
-  const roster = state.rosters[side];
   return (
-    <section className={`lineup-editor side-${side}`}>
-      <header>
-        <small>{side} side</small>
-        <strong>Starting five</strong>
-      </header>
-      {state.lineups[side].map((player, index) => (
-        <div className="lineup-row" key={player.role}>
-          <span>{player.role}</span>
-          <select
-            value={player.id}
-            onChange={(event) => {
-              const next = structuredClone(state);
-              const starter = next.lineups[side][index];
-              const selectedPlayer = next.rosters[side].find(
-                (candidate) => candidate.id === event.target.value,
-              );
-              if (starter && selectedPlayer) {
-                starter.id = selectedPlayer.id;
-                starter.name = selectedPlayer.name;
-              }
-              update(next);
-            }}
-          >
-            {roster.map((candidate) => (
-              <option
-                key={candidate.id}
-                value={candidate.id}
-                disabled={state.lineups[side].some(
-                  (starter) =>
-                    starter.role !== player.role && starter.id === candidate.id,
-                )}
-              >
-                {candidate.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={player.heroId}
-            onChange={(event) => {
-              const next = structuredClone(state);
-              const starter = next.lineups[side][index];
-              if (starter) starter.heroId = event.target.value;
-              update(next);
-            }}
-          >
-            <option value="">Unassigned hero</option>
-            {options.map((hero) => (
-              <option key={hero.id} value={hero.id}>
-                {hero.name}
-              </option>
-            ))}
-          </select>
+    <fieldset className={`frame-geometry side-${side}`}>
+      <legend>{side} native HUD column</legend>
+      {frameFields.map((field) => (
+        <label key={`${side}-${field}`}>
+          {field === "rowGap" ? "Row gap" : field}
+          <input
+            type="number"
+            min={
+              field === "rowGap" || field === "x" || field === "y"
+                ? 0
+                : field === "height"
+                  ? 100
+                  : 40
+            }
+            max={
+              field === "x"
+                ? 1919
+                : field === "y"
+                  ? 1079
+                  : field === "width"
+                    ? 500
+                    : field === "height"
+                      ? 900
+                      : 12
+            }
+            value={frame[field]}
+            onChange={(event) =>
+              update({ ...frame, [field]: Number(event.target.value) })
+            }
+          />
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+function FramePreview({
+  frames,
+}: {
+  frames: DisplaySettings["scoreboard"]["frames"];
+}) {
+  const frameStyle = (frame: NativeHudFrame) =>
+    ({
+      left: `${(frame.x / 1920) * 100}%`,
+      top: `${(frame.y / 1080) * 100}%`,
+      width: `${(frame.width / 1920) * 100}%`,
+      height: `${(frame.height / 1080) * 100}%`,
+      "--preview-row-gap": `${(frame.rowGap / 1080) * 100}%`,
+    }) as CSSProperties;
+  return (
+    <div
+      className="native-frame-preview"
+      role="img"
+      aria-label="Native HUD frame preview"
+    >
+      <div className="preview-top-scoreboard">Centered scoreboard</div>
+      {(["blue", "red"] as const).map((side) => (
+        <div
+          className={`preview-native-frame side-${side}`}
+          style={frameStyle(frames[side])}
+          key={side}
+        >
+          {Array.from({ length: 5 }, (_, index) => (
+            <span key={`${side}-preview-${index}`} />
+          ))}
         </div>
       ))}
-      <div className="roster-heading">
-        <small>Reusable roster · {roster.length}/10</small>
-        <button
-          type="button"
-          disabled={roster.length >= 10}
-          onClick={() => {
-            const next = structuredClone(state);
-            next.rosters[side].push({
-              id: crypto.randomUUID(),
-              name: `Substitute ${roster.length - 4}`,
-            });
-            update(next);
-          }}
-        >
-          Add player
-        </button>
-      </div>
-      <div className="roster-list">
-        {roster.map((player, index) => {
-          const isStarter = state.lineups[side].some(
-            (starter) => starter.id === player.id,
-          );
-          return (
-            <div className="roster-entry" key={player.id}>
-              <input
-                value={player.name}
-                maxLength={40}
-                onChange={(event) => {
-                  const next = structuredClone(state);
-                  const member = next.rosters[side][index];
-                  if (member) member.name = event.target.value;
-                  for (const starter of next.lineups[side])
-                    if (starter.id === player.id)
-                      starter.name = event.target.value;
-                  update(next);
-                }}
-              />
-              <button
-                type="button"
-                disabled={isStarter || roster.length <= 5}
-                onClick={() => {
-                  const next = structuredClone(state);
-                  next.rosters[side].splice(index, 1);
-                  update(next);
-                }}
-              >
-                Remove
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -658,23 +608,17 @@ function MediaField({
 
 export function DisplayControlPage() {
   const control = useDisplayControl();
-  const { draft, display, working, setWorking, heroes } = control;
-  const pickedCount = useMemo(
-    () =>
-      draft
-        ? (["blue", "red"] as const).reduce(
-            (sum, side) =>
-              sum + draft.selections[side].picks.filter(Boolean).length,
-            0,
-          )
-        : 0,
-    [draft],
-  );
+  const { draft, display, working, setWorking } = control;
   if (!draft || !display || !working)
     return <div className="loading-screen">Loading display console…</div>;
   const updateBackground = (surface: BreakSurface, url: string) => {
     const next = structuredClone(working);
     next.backgrounds[surface] = url;
+    setWorking(next);
+  };
+  const updateFrame = (side: Side, frame: NativeHudFrame) => {
+    const next = structuredClone(working);
+    next.scoreboard.frames[side] = frame;
     setWorking(next);
   };
   const effectiveRemaining =
@@ -720,7 +664,7 @@ export function DisplayControlPage() {
           <div>
             <strong>{control.connected ? "Live sync" : "Reconnecting"}</strong>
             <small>Display revision {display.revision}</small>
-            <small>{pickedCount}/10 heroes drafted</small>
+            <small>Native HUD framing</small>
           </div>
         </div>
         <label className="token-field">
@@ -778,8 +722,8 @@ export function DisplayControlPage() {
                   })
                 }
               >
-                <option value="tournament">Tournament HUD</option>
-                <option value="compact">Compact fallback</option>
+                <option value="tournament">Gameplay frame</option>
+                <option value="compact">Top scoreboard only</option>
               </select>
             </label>
           </header>
@@ -867,32 +811,36 @@ export function DisplayControlPage() {
           </div>
         </section>
 
-        <section className="display-panel">
+        <section className="display-panel native-frame-panel">
           <header>
             <div>
-              <small>Role-based hero assignment</small>
-              <h2>Player rails</h2>
+              <small>Transparent native spectator alignment</small>
+              <h2>Hero column wrappers</h2>
             </div>
-            <span className="readiness">
-              {working.lineups.blue.filter((player) => player.heroId).length +
-                working.lineups.red.filter((player) => player.heroId).length}
-              /10 assigned
-            </span>
+            <a
+              className="calibration-link"
+              href="/overlay/scoreboard?calibrate=1"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open calibration view
+            </a>
           </header>
-          <div className="lineup-grid">
-            <LineupEditor
+          <p className="frame-help">
+            These frames surround the player information already rendered by
+            MLBB. They never draw replacement portraits, names, or statistics.
+          </p>
+          <FramePreview frames={working.scoreboard.frames} />
+          <div className="frame-geometry-grid">
+            <FrameGeometryEditor
               side="blue"
-              state={working}
-              heroes={heroes}
-              draft={draft}
-              update={setWorking}
+              frame={working.scoreboard.frames.blue}
+              update={(frame) => updateFrame("blue", frame)}
             />
-            <LineupEditor
+            <FrameGeometryEditor
               side="red"
-              state={working}
-              heroes={heroes}
-              draft={draft}
-              update={setWorking}
+              frame={working.scoreboard.frames.red}
+              update={(frame) => updateFrame("red", frame)}
             />
           </div>
         </section>

@@ -37,7 +37,15 @@ export class DisplayStore {
       .get();
     if (saved) {
       try {
-        this.#state = DisplayStateSchema.parse(JSON.parse(saved.document));
+        const document = JSON.parse(saved.document) as Record<string, unknown>;
+        const scoreboard = document.scoreboard as
+          | Record<string, unknown>
+          | undefined;
+        const migrated = scoreboard?.frames === undefined;
+        if (scoreboard && migrated)
+          scoreboard.frames = createDefaultDisplayState().scoreboard.frames;
+        this.#state = DisplayStateSchema.parse(document);
+        if (migrated) this.persist();
         return;
       } catch {
         this.#database.exec("DELETE FROM display_state WHERE id = 1");

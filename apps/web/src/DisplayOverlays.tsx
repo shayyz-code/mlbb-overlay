@@ -1,8 +1,7 @@
 import type {
   DisplayState,
   DraftState,
-  Hero,
-  MatchLineup,
+  NativeHudFrame,
   ScheduledMatch,
   Side,
   Team,
@@ -17,11 +16,9 @@ import {
 import {
   fetchDisplay,
   fetchDraft,
-  fetchHeroes,
   subscribeToDisplay,
   subscribeToDraft,
 } from "./api";
-import { HeroMedia } from "./HeroMedia";
 import "./display-overlays.css";
 
 export type DisplaySurface =
@@ -44,14 +41,12 @@ function initials(value: string) {
 function useBroadcastState() {
   const [draft, setDraft] = useState<DraftState>();
   const [display, setDisplay] = useState<DisplayState>();
-  const [heroes, setHeroes] = useState<Hero[]>([]);
   const [, tick] = useState(0);
   useEffect(() => {
-    void Promise.all([fetchDraft(), fetchDisplay(), fetchHeroes()]).then(
-      ([draftState, displayState, catalog]) => {
+    void Promise.all([fetchDraft(), fetchDisplay()]).then(
+      ([draftState, displayState]) => {
         setDraft(draftState);
         setDisplay(displayState);
-        setHeroes(catalog);
       },
     );
     const unsubscribeDraft = subscribeToDraft(setDraft, () => undefined);
@@ -63,7 +58,7 @@ function useBroadcastState() {
       window.clearInterval(timer);
     };
   }, []);
-  return { draft, display, heroes };
+  return { draft, display };
 }
 
 function Logo({ team, side }: { team: Team; side: Side }) {
@@ -97,32 +92,38 @@ function CompactScoreboard({ draft }: { draft: DraftState }) {
   );
 }
 
-function RosterRail({
+function NativeHudWrapper({
   side,
-  lineup,
-  heroes,
+  frame,
+  calibrating,
 }: {
   side: Side;
-  lineup: MatchLineup;
-  heroes: Map<string, Hero>;
+  frame: NativeHudFrame;
+  calibrating: boolean;
 }) {
+  const style = {
+    left: frame.x,
+    top: frame.y,
+    width: frame.width,
+    height: frame.height,
+    "--native-row-gap": `${frame.rowGap}px`,
+  } as CSSProperties;
   return (
-    <aside className={`hud-roster side-${side}`}>
-      {lineup.map((player) => {
-        const hero = heroes.get(player.heroId);
-        return (
-          <div className="hud-player" key={player.id}>
-            <div className="hud-hero">
-              <HeroMedia
-                hero={hero}
-                fallback={hero ? initials(hero.name) : "+"}
-              />
-            </div>
-            <span>{player.role}</span>
-            <strong>{player.name}</strong>
-          </div>
-        );
-      })}
+    <aside
+      className={`native-hud-wrapper side-${side} ${calibrating ? "is-calibrating" : ""}`}
+      style={style}
+      aria-hidden="true"
+    >
+      {Array.from({ length: 5 }, (_, index) => (
+        <span key={`${side}-native-row-${index}`}>
+          {calibrating && <b>{index + 1}</b>}
+        </span>
+      ))}
+      {calibrating && (
+        <output>
+          {frame.x}, {frame.y} · {frame.width} × {frame.height}
+        </output>
+      )}
     </aside>
   );
 }
@@ -130,42 +131,25 @@ function RosterRail({
 function TournamentScoreboard({
   draft,
   display,
-  heroes,
+  calibrating,
 }: {
   draft: DraftState;
   display: DisplayState;
-  heroes: Hero[];
+  calibrating: boolean;
 }) {
-  const catalog = new Map(heroes.map((hero) => [hero.id, hero]));
   return (
     <>
-      <header className="hud-topbar">
-        <div className="hud-event">
-          <EventMark display={display} />
-          <span>
-            <small>{display.scoreboard.stage}</small>
-            <strong>{display.scoreboard.round}</strong>
-          </span>
-        </div>
-        <div className="hud-team side-blue">
-          <strong>{draft.teams.blue.name}</strong>
-          <small>BLUE</small>
-          <Logo team={draft.teams.blue} side="blue" />
-        </div>
-        <b className="hud-score side-blue">{draft.scoreboard.scores.blue}</b>
-        <div className="hud-series">
-          <small>Game {display.scoreboard.gameNumber}</small>
-          <strong>BO{display.scoreboard.bestOf}</strong>
-        </div>
-        <b className="hud-score side-red">{draft.scoreboard.scores.red}</b>
-        <div className="hud-team side-red">
-          <Logo team={draft.teams.red} side="red" />
-          <small>RED</small>
-          <strong>{draft.teams.red.name}</strong>
-        </div>
-      </header>
-      <RosterRail side="blue" lineup={display.lineups.blue} heroes={catalog} />
-      <RosterRail side="red" lineup={display.lineups.red} heroes={catalog} />
+      <CompactScoreboard draft={draft} />
+      <NativeHudWrapper
+        side="blue"
+        frame={display.scoreboard.frames.blue}
+        calibrating={calibrating}
+      />
+      <NativeHudWrapper
+        side="red"
+        frame={display.scoreboard.frames.red}
+        calibrating={calibrating}
+      />
     </>
   );
 }
@@ -419,7 +403,7 @@ function TickerOverlay({ display }: { display: DisplayState }) {
 }
 
 export function DisplayOverlay({ surface }: { surface: DisplaySurface }) {
-  const { draft, display, heroes } = useBroadcastState();
+  const { draft, display } = useBroadcastState();
   const cueKey = useMemo(
     () => `${surface}-${display?.cueRevision ?? 0}`,
     [display?.cueRevision, surface],
@@ -431,7 +415,13 @@ export function DisplayOverlay({ surface }: { surface: DisplaySurface }) {
       display.scoreboard.preset === "compact" ? (
         <CompactScoreboard draft={draft} />
       ) : (
-        <TournamentScoreboard draft={draft} display={display} heroes={heroes} />
+        <TournamentScoreboard
+          draft={draft}
+          display={display}
+          calibrating={
+            new URLSearchParams(window.location.search).get("calibrate") === "1"
+          }
+        />
       );
   else if (surface === "match")
     content = <MatchOverlay draft={draft} display={display} />;

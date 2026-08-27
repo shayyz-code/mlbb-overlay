@@ -60,8 +60,7 @@ button.primary {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
-.live-team-grid,
-.lineup-grid {
+.live-team-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
@@ -125,70 +124,101 @@ button.primary {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.readiness {
-  padding: 8px 12px;
-  border: 1px solid rgba(62, 242, 163, 0.3);
-  color: var(--success);
-  font-size: 0.7rem;
+.calibration-link {
+  padding: 9px 12px;
+  border: 1px solid rgba(37, 185, 255, 0.45);
+  color: var(--display-cyan);
+  text-decoration: none;
+  text-transform: uppercase;
+  font:
+    600 0.67rem "Arial Narrow",
+    sans-serif;
+  letter-spacing: 0.1em;
+}
+.frame-help {
+  margin: 0;
+  padding: 14px 19px 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.native-frame-preview {
+  position: relative;
+  margin: 14px 19px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(rgba(37, 185, 255, 0.04), rgba(75, 102, 255, 0.04)),
+    repeating-linear-gradient(45deg, #080c15 0 12px, #0b111c 12px 24px);
+}
+.preview-top-scoreboard {
+  position: absolute;
+  top: 4.72%;
+  left: 21.67%;
+  width: 56.67%;
+  height: 11.11%;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(2% 0, 98% 0, 100% 50%, 98% 100%, 2% 100%, 0 50%);
+  color: var(--muted);
+  background: rgba(12, 18, 30, 0.96);
+  border-block: 1px solid rgba(255, 255, 255, 0.2);
+  font:
+    700 clamp(0.55rem, 1vw, 0.85rem) "Arial Narrow",
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.preview-native-frame {
+  position: absolute;
+  display: grid;
+  grid-template-rows: repeat(5, 1fr);
+  gap: var(--preview-row-gap);
+  border-block: 2px solid var(--display-cyan);
+  border-right: 2px solid var(--display-cyan);
+}
+.preview-native-frame.side-red {
+  border-right: 0;
+  border-left: 2px solid var(--display-blue);
+  border-block-color: var(--display-blue);
+}
+.preview-native-frame span {
+  border-bottom: 1px solid rgba(37, 185, 255, 0.72);
+}
+.preview-native-frame.side-red span {
+  border-color: rgba(75, 102, 255, 0.78);
+}
+.preview-native-frame span:last-child {
+  border-bottom: 0;
+}
+.frame-geometry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border-top: 1px solid var(--line);
+}
+.frame-geometry {
+  min-width: 0;
+  margin: 0;
+  padding: 17px 19px 19px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+  border: 0;
+  background: var(--panel);
+}
+.frame-geometry legend {
+  padding: 0 8px;
+  color: var(--display-cyan);
+  font:
+    700 0.72rem "Arial Narrow",
+    sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
-.lineup-editor {
-  padding: 18px;
-  background: var(--panel);
-}
-.lineup-editor > header {
-  margin-bottom: 12px;
-  display: grid;
-}
-.lineup-editor.side-blue > header small {
-  color: var(--display-cyan);
-}
-.lineup-editor.side-red > header small {
+.frame-geometry.side-red legend {
   color: #8292ff;
-}
-.lineup-row {
-  display: grid;
-  grid-template-columns: 74px 1fr 1fr;
-  gap: 8px;
-  align-items: center;
-  margin-top: 7px;
-}
-.lineup-row > span {
-  height: 39px;
-  display: grid;
-  place-items: center;
-  border-left: 3px solid var(--display-cyan);
-  background: #080c15;
-  color: var(--muted);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-}
-.side-red .lineup-row > span {
-  border-color: var(--display-blue);
-}
-.roster-heading {
-  margin-top: 14px;
-  padding-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--line);
-}
-.roster-heading button,
-.roster-list button {
-  padding: 7px 9px;
-  font-size: 0.6rem;
-}
-.roster-list {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 7px;
-}
-.roster-entry {
-  display: grid;
-  grid-template-columns: 1fr auto;
 }
 .schedule-editor > header button {
   align-self: center;
@@ -331,11 +361,14 @@ textarea:focus {
   .schedule-order {
     grid-column: 3;
   }
+  .frame-geometry {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 800px) {
   .live-team-grid,
-  .lineup-grid,
+  .frame-geometry-grid,
   .utility-grid,
   .media-grid {
     grid-template-columns: 1fr;

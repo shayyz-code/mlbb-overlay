@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { createApp } from "./app";
 import { assetFixture } from "./asset-fixture";
 import { DetectorCoordinator } from "./detector";
-import { DraftStore } from "./store";
-import { TeamLogoStore } from "./team-logos";
 import { DisplayMediaStore } from "./display-media";
 import { DisplayStore } from "./display-store";
+import { DraftStore } from "./store";
+import { TeamLogoStore } from "./team-logos";
 
 const directories: string[] = [];
 afterEach(async () =>
@@ -159,6 +159,55 @@ describe("draft API", () => {
     });
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ currentRevision: 1 });
+  });
+
+  test("activates one managed match and synchronizes its live score", async () => {
+    const { app, store, displayStore } = await setup();
+    const state = displayStore.state;
+    const { revision: _, updatedAt: __, ...display } = state;
+    display.schedule.push({
+      id: "final",
+      scheduledAt: null,
+      stage: "Finals",
+      round: "Grand Final",
+      bestOf: 7,
+      blueTeamId: display.teams[0]?.id ?? "",
+      redTeamId: display.teams[1]?.id ?? "",
+      scores: { blue: 2, red: 1 },
+      status: "scheduled",
+    });
+    displayStore.dispatch({
+      type: "set-display",
+      expectedRevision: 0,
+      display,
+    });
+    const activation = await app.request("/api/v1/matches/activate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "activate-match",
+        matchId: "final",
+        expectedDraftRevision: 0,
+        expectedDisplayRevision: 1,
+      }),
+    });
+    expect(activation.status).toBe(200);
+    expect(store.state.scoreboard.scores).toEqual({ blue: 0, red: 0 });
+    expect(displayStore.state.activeMatchId).toBe("final");
+    expect(displayStore.state.schedule[0]?.status).toBe("live");
+
+    await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "set-scoreboard-score",
+        expectedRevision: 1,
+        side: "blue",
+        score: 1,
+      }),
+    });
+    expect(displayStore.state.schedule[0]?.scores).toEqual({ blue: 1, red: 0 });
+    displayStore.close();
   });
 
   test("serves the web application for nested OBS routes", async () => {

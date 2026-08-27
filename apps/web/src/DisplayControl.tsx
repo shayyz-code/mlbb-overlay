@@ -15,9 +15,9 @@ import {
   subscribeToDisplay,
   subscribeToDraft,
   uploadDisplayMedia,
-  uploadTeamLogo,
 } from "./api";
 import "./display-control.css";
+import { MatchPicker } from "./MatchPicker";
 
 const surfaces = [
   "scoreboard",
@@ -138,77 +138,32 @@ function useDisplayControl() {
     persist,
     cue,
     draftCommand,
+    setDraft,
+    setDisplay,
   };
 }
 
 function TeamLiveControl({
   side,
   draft,
-  token,
   command,
 }: {
   side: Side;
   draft: DraftState;
-  token: string;
   command: (command: DraftCommandInput) => Promise<void>;
 }) {
   const team = draft.teams[side];
   const score = draft.scoreboard.scores[side];
-  const [name, setName] = useState(team.name);
-  const [shortName, setShortName] = useState(team.shortName);
-  useEffect(() => {
-    setName(team.name);
-    setShortName(team.shortName);
-  }, [team.name, team.shortName]);
-  const saveTeam = () => {
-    if (name.trim() && shortName.trim())
-      void command({
-        type: "set-team",
-        side,
-        team: {
-          ...team,
-          name: name.trim(),
-          shortName: shortName.trim().toUpperCase(),
-        },
-      });
-  };
-  const logo = async (file?: File) => {
-    if (!file) return;
-    const uploaded = await uploadTeamLogo(side, file, token);
-    await command({
-      type: "set-team",
-      side,
-      team: { ...team, logoUrl: uploaded.logoUrl },
-    });
-  };
   return (
     <article className={`display-team-control side-${side}`}>
       <span className="display-team-side">{side}</span>
-      <label>
-        Team name
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          onBlur={saveTeam}
-        />
-      </label>
-      <label>
-        Tag
-        <input
-          maxLength={8}
-          value={shortName}
-          onChange={(event) => setShortName(event.target.value)}
-          onBlur={saveTeam}
-        />
-      </label>
-      <label className="display-file">
-        Logo
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(event) => void logo(event.target.files?.[0])}
-        />
-      </label>
+      <div className="display-team-summary">
+        {team.logoUrl && <img src={team.logoUrl} alt="" />}
+        <span>
+          <small>{team.shortName}</small>
+          <strong>{team.name}</strong>
+        </span>
+      </div>
       <div className="live-score">
         <button
           type="button"
@@ -457,6 +412,16 @@ export function DisplayControlPage() {
           </div>
         </header>
         {control.error && <div className="error-banner">{control.error}</div>}
+        <MatchPicker
+          draft={draft}
+          display={display}
+          token={control.token}
+          onActivated={(nextDraft, nextDisplay) => {
+            control.setDraft(nextDraft);
+            control.setDisplay(nextDisplay);
+            setWorking(settings(nextDisplay));
+          }}
+        />
         <p className="scoreboard-instruction">
           Every browser source stays at a stable URL. OBS scene visibility
           remains fully manual.
@@ -491,13 +456,11 @@ export function DisplayControlPage() {
             <TeamLiveControl
               side="blue"
               draft={draft}
-              token={control.token}
               command={control.draftCommand}
             />
             <TeamLiveControl
               side="red"
               draft={draft}
-              token={control.token}
               command={control.draftCommand}
             />
           </div>

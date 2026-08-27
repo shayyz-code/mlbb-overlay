@@ -68,11 +68,31 @@ button.primary {
 }
 .display-team-control {
   display: grid;
-  grid-template-columns: 65px 1fr 100px 140px 190px;
+  grid-template-columns: 65px minmax(0, 1fr) minmax(140px, 190px);
   gap: 10px;
   align-items: end;
   padding: 18px;
   background: var(--panel);
+}
+.display-team-summary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.display-team-summary img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.display-team-summary > span {
+  min-width: 0;
+  display: grid;
+}
+.display-team-summary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .display-team-side {
   align-self: stretch;
@@ -350,10 +370,10 @@ textarea:focus {
 
 @media (max-width: 1250px) {
   .display-team-control {
-    grid-template-columns: 55px 1fr 90px 110px;
+    grid-template-columns: 55px minmax(0, 1fr);
   }
   .live-score {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
   }
   .schedule-editor-list article {
     grid-template-columns: repeat(3, 1fr);

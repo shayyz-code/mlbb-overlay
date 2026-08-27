@@ -91,6 +91,21 @@ export class DisplayStore {
     return this.state;
   }
 
+  syncActiveScores(
+    scores: DisplayState["schedule"][number]["scores"],
+  ): DisplayState {
+    if (!this.#state.activeMatchId) return this.state;
+    const next = this.state;
+    const match = next.schedule.find((item) => item.id === next.activeMatchId);
+    if (!match) return this.state;
+    match.scores = structuredClone(scores);
+    next.revision += 1;
+    next.updatedAt = new Date().toISOString();
+    this.#state = DisplayStateSchema.parse(next);
+    this.persist();
+    return this.state;
+  }
+
   close(): void {
     this.#database?.close();
   }

@@ -208,6 +208,13 @@ select:focus {
   padding: 34px clamp(24px, 4vw, 62px) 60px;
   min-width: 0;
 }
+.control-main > *,
+.control-main label,
+.control-main input,
+.control-main select {
+  min-width: 0;
+  max-width: 100%;
+}
 .control-header {
   display: flex;
   justify-content: space-between;
@@ -253,6 +260,42 @@ button.danger {
   border: 1px solid rgba(255, 64, 93, 0.45);
   background: rgba(255, 64, 93, 0.09);
   color: #ffbdc8;
+}
+.match-picker {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.match-picker label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.match-picker select {
+  width: 100%;
+  min-width: 0;
+}
+.quick-match-fields {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+.match-picker-error {
+  grid-column: 1 / -1;
+  color: #ff9bad;
+  font-size: 0.75rem;
 }
 .team-editors {
   display: grid;
@@ -1070,6 +1113,10 @@ button.danger {
   }
   .team-editor {
     grid-template-columns: auto 1fr 90px;
+  }
+  .match-picker,
+  .quick-match-fields {
+    grid-template-columns: 1fr;
   }
 }
 

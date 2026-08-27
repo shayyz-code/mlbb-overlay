@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { EventEnvelope } from "@shayyz/contracts";
 import {
+  ActivateMatchCommandSchema,
   DetectorCalibrationSaveSchema,
   DetectorFrameRequestSchema,
   DetectorModeCommandSchema,
@@ -305,11 +307,100 @@ export function createApp(options: AppOptions): Hono {
     }
   });
 
+  app.post("/api/v1/matches/activate", requireControlToken, async (context) => {
+    if (!options.displayStore)
+      return context.json({ error: "Display storage is unavailable." }, 503);
+    try {
+      const command = ActivateMatchCommandSchema.parse(
+        await context.req.json(),
+      );
+      const draft = options.store.state;
+      const display = options.displayStore.state;
+      if (
+        command.expectedDraftRevision !== draft.revision ||
+        command.expectedDisplayRevision !== display.revision
+      )
+        return context.json(
+          { error: "Live state changed. Refresh and try again." },
+          409,
+        );
+      const next = structuredClone(display);
+      let match =
+        command.type === "activate-match"
+          ? next.schedule.find((item) => item.id === command.matchId)
+          : undefined;
+      if (command.type === "activate-quick-match") {
+        if (command.blueTeamId === command.redTeamId)
+          throw new Error("Quick Match requires two different teams.");
+        if (next.schedule.length >= 32)
+          throw new Error("The match directory is full.");
+        match = {
+          id: randomUUID(),
+          scheduledAt: null,
+          stage: "Exhibition",
+          round: "Quick Match",
+          bestOf: 3,
+          blueTeamId: command.blueTeamId,
+          redTeamId: command.redTeamId,
+          scores: { blue: 0, red: 0 },
+          status: "live",
+        };
+        next.schedule.push(match);
+      }
+      if (!match) throw new Error("The selected match does not exist.");
+      const blue = next.teams.find((team) => team.id === match.blueTeamId);
+      const red = next.teams.find((team) => team.id === match.redTeamId);
+      if (!blue || !red)
+        throw new Error("The selected match teams are missing.");
+      for (const item of next.schedule)
+        if (item.id !== match.id && item.status === "live")
+          item.status = "scheduled";
+      match.status = "live";
+      match.scores = { blue: 0, red: 0 };
+      next.activeMatchId = match.id;
+      const nextDraft = await options.store.dispatch({
+        type: "activate-match",
+        expectedRevision: draft.revision,
+        blue: {
+          name: blue.name,
+          shortName: blue.shortName,
+          logoUrl: blue.logoUrl,
+        },
+        red: { name: red.name, shortName: red.shortName, logoUrl: red.logoUrl },
+      });
+      const { revision: _, updatedAt: __, ...displaySettings } = next;
+      const nextDisplay = options.displayStore.dispatch({
+        type: "set-display",
+        expectedRevision: display.revision,
+        display: displaySettings,
+      });
+      emit("draft-updated", nextDraft);
+      emit("display-updated", nextDisplay);
+      return context.json({ draft: nextDraft, display: nextDisplay });
+    } catch (error) {
+      return context.json(
+        {
+          error: error instanceof Error ? error.message : "Activation failed.",
+        },
+        400,
+      );
+    }
+  });
+
   app.post("/api/v1/draft/commands", requireControlToken, async (context) => {
     try {
       const command = DraftCommandSchema.parse(await context.req.json());
       const state = await options.store.dispatch(command);
       emit("draft-updated", state);
+      if (
+        options.displayStore &&
+        ["set-scoreboard-score", "reset-scoreboard"].includes(command.type)
+      ) {
+        const display = options.displayStore.syncActiveScores(
+          state.scoreboard.scores,
+        );
+        emit("display-updated", display);
+      }
       return context.json(state);
     } catch (error) {
       if (error instanceof RevisionConflictError) {

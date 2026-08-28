@@ -66,6 +66,38 @@ describe("DisplayStore", () => {
     store.close();
   });
 
+  test("preserves scheduled team references when teams are reordered", async () => {
+    const store = await createStore();
+    const next = store.state;
+    const [blue, red] = next.teams;
+    if (!blue || !red) throw new Error("Default teams are missing.");
+    next.schedule = [
+      {
+        id: "match-1",
+        scheduledAt: null,
+        stage: "Group Stage",
+        round: "Round 1",
+        bestOf: 3,
+        blueTeamId: blue.id,
+        redTeamId: red.id,
+        scores: { blue: 0, red: 0 },
+        status: "scheduled",
+      },
+    ];
+    next.teams.reverse();
+    const { revision: _, updatedAt: __, ...display } = next;
+    const saved = store.dispatch({
+      type: "set-display",
+      expectedRevision: 0,
+      display,
+    });
+    expect(saved.schedule[0]).toMatchObject({
+      blueTeamId: blue.id,
+      redTeamId: red.id,
+    });
+    store.close();
+  });
+
   test("migrates display documents created before native HUD frames", async () => {
     const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
     directories.push(runtime);
@@ -114,6 +146,32 @@ describe("DisplayStore", () => {
       timezone: "Asia/Yangon",
     });
     expect("backgrounds" in migrated.state).toBe(false);
+    migrated.close();
+  });
+
+  test("adds blank photos to existing managed starters", async () => {
+    const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
+    directories.push(runtime);
+    const store = await createStore(runtime);
+    const legacy = store.state as unknown as Record<string, unknown>;
+    const teams = legacy.teams as Array<{
+      starters: Array<Record<string, unknown>>;
+    }>;
+    for (const team of teams)
+      for (const starter of team.starters) delete starter.photoUrl;
+    store.close();
+    const database = new Database(join(runtime, "overlay.sqlite"));
+    database
+      .query("UPDATE display_state SET document = ?1 WHERE id = 1")
+      .run(JSON.stringify(legacy));
+    database.close();
+
+    const migrated = await createStore(runtime);
+    expect(
+      migrated.state.teams.every((team) =>
+        team.starters.every((player) => player.photoUrl === ""),
+      ),
+    ).toBe(true);
     migrated.close();
   });
 

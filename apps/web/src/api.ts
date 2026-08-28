@@ -21,6 +21,8 @@ import {
   HeroSchema,
   type MatchActivationResult,
   MatchActivationResultSchema,
+  type PlayerPhotoUploadResult,
+  PlayerPhotoUploadResultSchema,
   type TeamLogoUploadResult,
   TeamLogoUploadResultSchema,
 } from "@shayyz/contracts";
@@ -214,6 +216,27 @@ export async function uploadTeamLogo(
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Logo upload failed.");
   return TeamLogoUploadResultSchema.parse(body);
+}
+
+export async function uploadPlayerPhoto(
+  teamId: string,
+  playerId: string,
+  file: File,
+  token: string,
+): Promise<PlayerPhotoUploadResult> {
+  const form = new FormData();
+  form.set("photo", file);
+  const response = await fetch(
+    `/api/v1/player-photos/${encodeURIComponent(teamId)}/${encodeURIComponent(playerId)}`,
+    {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+      body: form,
+    },
+  );
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Photo upload failed.");
+  return PlayerPhotoUploadResultSchema.parse(body);
 }
 
 export function subscribeToDraft(

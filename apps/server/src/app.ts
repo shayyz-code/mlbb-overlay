@@ -21,6 +21,7 @@ import type { DetectorCoordinator } from "./detector";
 import type { DetectorLifecycle } from "./detector-lifecycle";
 import type { DisplayStore } from "./display-store";
 import { heroes } from "./heroes";
+import type { PlayerPhotoStore } from "./player-photos";
 import { type DraftStore, RevisionConflictError } from "./store";
 import type { TeamLogoStore } from "./team-logos";
 
@@ -35,6 +36,7 @@ export interface AppOptions {
   detectorLifecycle?: DetectorLifecycle;
   detectorCalibration?: DetectorCalibrationService;
   teamLogos?: TeamLogoStore;
+  playerPhotos?: PlayerPhotoStore;
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -252,6 +254,48 @@ export function createApp(options: AppOptions): Hono {
   });
   app.get("/api/v1/media/team-logos/:filename", async (context) => {
     const asset = await options.teamLogos?.resolve(
+      context.req.param("filename"),
+    );
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
+  app.post(
+    "/api/v1/player-photos/:teamId/:playerId",
+    requireControlToken,
+    async (context) => {
+      if (!options.playerPhotos || !options.displayStore)
+        return context.json(
+          { error: "Player photo storage is unavailable." },
+          503,
+        );
+      const team = options.displayStore.state.teams.find(
+        (item) => item.id === context.req.param("teamId"),
+      );
+      if (
+        !team?.starters.some(
+          (player) => player.id === context.req.param("playerId"),
+        )
+      )
+        return context.json({ error: "The starter does not exist." }, 404);
+      try {
+        const photo = (await context.req.raw.formData()).get("photo");
+        if (!(photo instanceof File))
+          return context.json({ error: "A player photo is required." }, 400);
+        return context.json(await options.playerPhotos.save(photo));
+      } catch (error) {
+        return context.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Player photo upload failed.",
+          },
+          400,
+        );
+      }
+    },
+  );
+  app.get("/api/v1/media/player-photos/:filename", async (context) => {
+    const asset = await options.playerPhotos?.resolve(
       context.req.param("filename"),
     );
     return asset ? mediaResponse(context.req.raw, asset) : context.notFound();

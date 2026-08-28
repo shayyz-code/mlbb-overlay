@@ -423,6 +423,15 @@ export const TeamLogoUploadResultSchema = z.object({
 });
 export type TeamLogoUploadResult = z.infer<typeof TeamLogoUploadResultSchema>;
 
+export const PlayerPhotoUploadResultSchema = z.object({
+  photoUrl: z.string().startsWith("/api/v1/media/player-photos/"),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+});
+export type PlayerPhotoUploadResult = z.infer<
+  typeof PlayerPhotoUploadResultSchema
+>;
+
 export const DraftPhaseSchema = z.object({
   side: SideSchema,
   kind: SelectionKindSchema,
@@ -503,6 +512,12 @@ export type RosterPlayer = z.infer<typeof RosterPlayerSchema>;
 
 export const ManagedStarterSchema = RosterPlayerSchema.extend({
   role: PlayerRoleSchema,
+  photoUrl: z
+    .union([
+      z.literal(""),
+      z.string().startsWith("/api/v1/media/player-photos/"),
+    ])
+    .default(""),
 });
 export type ManagedStarter = z.infer<typeof ManagedStarterSchema>;
 
@@ -887,6 +902,7 @@ const defaultManagedTeam = (side: Side): ManagedTeam => ({
     id,
     name,
     role,
+    photoUrl: "",
   })),
   substitutes: [],
 });

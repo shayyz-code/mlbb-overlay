@@ -3,32 +3,36 @@ import { mkdir, rename, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { TeamLogoUploadResult } from "@shayyz/contracts";
 
-const MAX_LOGO_BYTES = 5 * 1024 * 1024;
-const LOGO_FILENAME = /^[a-f0-9]{64}\.(png|jpg|webp)$/;
-const LOGO_TYPES = {
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const IMAGE_FILENAME = /^[a-f0-9]{64}\.(png|jpg|webp)$/;
+const IMAGE_TYPES = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
 } as const;
 
-type LogoMimeType = keyof typeof LOGO_TYPES;
+type ImageMimeType = keyof typeof IMAGE_TYPES;
 
-export class TeamLogoStore {
-  constructor(readonly directory: string) {}
+export class LocalImageStore {
+  constructor(
+    readonly directory: string,
+    private readonly mediaPath: string,
+    private readonly label: string,
+  ) {}
 
-  async save(file: File): Promise<TeamLogoUploadResult> {
-    if (!(file.type in LOGO_TYPES))
-      throw new Error("Team logos must be PNG, JPEG, or WebP images.");
-    if (file.size === 0 || file.size > MAX_LOGO_BYTES)
-      throw new Error("Team logos must be between 1 byte and 5 MB.");
+  protected async saveImage(file: File) {
+    if (!(file.type in IMAGE_TYPES))
+      throw new Error(`${this.label} must be PNG, JPEG, or WebP images.`);
+    if (file.size === 0 || file.size > MAX_IMAGE_BYTES)
+      throw new Error(`${this.label} must be between 1 byte and 5 MB.`);
 
-    const mimeType = file.type as LogoMimeType;
+    const mimeType = file.type as ImageMimeType;
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (!hasExpectedSignature(bytes, mimeType))
       throw new Error("The uploaded file does not match its image type.");
 
     const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const filename = `${sha256}.${LOGO_TYPES[mimeType]}`;
+    const filename = `${sha256}.${IMAGE_TYPES[mimeType]}`;
     await mkdir(this.directory, { recursive: true });
     const temporaryPath = join(
       this.directory,
@@ -42,7 +46,7 @@ export class TeamLogoStore {
     }
 
     return {
-      logoUrl: `/api/v1/media/team-logos/${filename}`,
+      mediaUrl: `${this.mediaPath}/${filename}`,
       sha256,
       mimeType,
     };
@@ -50,8 +54,8 @@ export class TeamLogoStore {
 
   async resolve(
     filename: string,
-  ): Promise<{ absolutePath: string; mimeType: LogoMimeType } | null> {
-    const match = filename.match(LOGO_FILENAME);
+  ): Promise<{ absolutePath: string; mimeType: ImageMimeType } | null> {
+    const match = filename.match(IMAGE_FILENAME);
     if (!match) return null;
     const absolutePath = join(this.directory, filename);
     try {
@@ -69,7 +73,18 @@ export class TeamLogoStore {
   }
 }
 
-function hasExpectedSignature(bytes: Uint8Array, mimeType: LogoMimeType) {
+export class TeamLogoStore extends LocalImageStore {
+  constructor(directory: string) {
+    super(directory, "/api/v1/media/team-logos", "Team logos");
+  }
+
+  async save(file: File): Promise<TeamLogoUploadResult> {
+    const { mediaUrl: logoUrl, ...result } = await this.saveImage(file);
+    return { logoUrl, ...result };
+  }
+}
+
+function hasExpectedSignature(bytes: Uint8Array, mimeType: ImageMimeType) {
   if (mimeType === "image/png")
     return [137, 80, 78, 71, 13, 10, 26, 10].every(
       (byte, index) => bytes[index] === byte,

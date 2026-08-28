@@ -1,32 +1,29 @@
 import type {
-  DisplaySettings,
+  DisplayCommand,
   DisplayState,
   ManagedTeam,
   PlayerRole,
 } from "@shayyz/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  DisplayCommandError,
-  fetchDisplay,
-  sendDisplayCommand,
-  subscribeToDisplay,
   uploadPlayerPhoto,
   uploadTeamLogo,
 } from "./api";
 import { OrganizerSidebar } from "./OrganizerShell";
 import "./team-control.css";
+import {
+  autosaveLabel,
+  useDisplaySectionAutosave,
+} from "./useDisplaySectionAutosave";
 
 const roles: PlayerRole[] = ["exp", "jungle", "mid", "gold", "roam"];
-type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
+type TeamDirectory = DisplayState["teams"];
 
-function sameTeams(left: ManagedTeam[], right: ManagedTeam[]): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function settings(state: DisplayState): DisplaySettings {
-  const { revision: _, updatedAt: __, ...value } = state;
-  return value;
-}
+const selectTeams = (state: DisplayState): TeamDirectory => state.teams;
+const teamDirectoryCommand = (
+  expectedRevision: number,
+  teams: TeamDirectory,
+): DisplayCommand => ({ type: "set-team-directory", expectedRevision, teams });
 
 function createTeam(): ManagedTeam {
   const id = crypto.randomUUID();
@@ -46,208 +43,60 @@ function createTeam(): ManagedTeam {
 }
 
 export function TeamControlPage() {
-  const [display, setDisplay] = useState<DisplayState>();
-  const [working, setWorking] = useState<DisplaySettings>();
   const [selectedId, setSelectedId] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState("");
-  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [uploadError, setUploadError] = useState("");
   const [token, setToken] = useState(
     () => sessionStorage.getItem("shayyz-control-token") ?? "",
   );
-  const displayRef = useRef<DisplayState | undefined>(undefined);
-  const workingRef = useRef<DisplaySettings | undefined>(undefined);
-  const baselineTeamsRef = useRef<ManagedTeam[]>([]);
-  const pendingTeamsRef = useRef<ManagedTeam[] | undefined>(undefined);
-  const editVersionRef = useRef(0);
-  const dirtyRef = useRef(false);
-  const savingRef = useRef(false);
-  const conflictRef = useRef(false);
+  const autosave = useDisplaySectionAutosave({
+    token,
+    select: selectTeams,
+    command: teamDirectoryCommand,
+    failureMessage: "Team save failed.",
+  });
+  const { display, value: teams } = autosave;
   useEffect(() => {
-    void fetchDisplay().then((state) => {
-      displayRef.current = state;
-      workingRef.current = settings(state);
-      baselineTeamsRef.current = state.teams;
-      setDisplay(state);
-      setWorking(settings(state));
-      setSelectedId(state.teams[0]?.id ?? "");
-    });
-    return subscribeToDisplay((state) => {
-      displayRef.current = state;
-      setDisplay(state);
-      if (!dirtyRef.current) {
-        const next = settings(state);
-        workingRef.current = next;
-        baselineTeamsRef.current = state.teams;
-        setWorking(next);
-        setSelectedId((current) =>
-          state.teams.some((team) => team.id === current)
-            ? current
-            : (state.teams[0]?.id ?? ""),
-        );
-      } else if (
-        !sameTeams(state.teams, baselineTeamsRef.current) &&
-        !(
-          savingRef.current &&
-          pendingTeamsRef.current &&
-          sameTeams(state.teams, pendingTeamsRef.current)
-        )
-      ) {
-        baselineTeamsRef.current = state.teams;
-        conflictRef.current = true;
-        setSaveState("conflict");
-        setError("Teams changed in another control. Choose which version to keep.");
-      }
-    }, setConnected);
-  }, []);
-  useEffect(() => {
-    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
-      if (!dirtyRef.current) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warnBeforeLeave);
-    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
-  }, []);
-  useEffect(() => {
-    if (
-      !working ||
-      !dirtyRef.current ||
-      savingRef.current ||
-      saveState === "error" ||
-      saveState === "conflict"
-    )
-      return;
-    const timeout = window.setTimeout(async () => {
-      const currentDisplay = displayRef.current;
-      const currentWorking = workingRef.current;
-      if (!currentDisplay || !currentWorking) return;
-      const version = editVersionRef.current;
-      const teams = structuredClone(currentWorking.teams);
-      savingRef.current = true;
-      pendingTeamsRef.current = teams;
-      setSaveState("saving");
-      setError("");
-      try {
-        const saved = await sendDisplayCommand(
-          {
-            type: "set-team-directory",
-            expectedRevision: currentDisplay.revision,
-            teams,
-          },
-          token,
-        );
-        displayRef.current = saved;
-        baselineTeamsRef.current = saved.teams;
-        setDisplay(saved);
-        if (conflictRef.current) setSaveState("conflict");
-        else if (version === editVersionRef.current) {
-          const next = settings(saved);
-          workingRef.current = next;
-          dirtyRef.current = false;
-          conflictRef.current = false;
-          setWorking(next);
-          setSaveState("saved");
-        } else setSaveState("dirty");
-      } catch (reason) {
-        if (reason instanceof DisplayCommandError && reason.status === 409) {
-          const latest = await fetchDisplay();
-          displayRef.current = latest;
-          setDisplay(latest);
-          if (sameTeams(latest.teams, baselineTeamsRef.current))
-            setSaveState("dirty");
-          else {
-            baselineTeamsRef.current = latest.teams;
-            conflictRef.current = true;
-            setSaveState("conflict");
-            setError(
-              "Teams changed in another control. Choose which version to keep.",
-            );
-          }
-        } else {
-          setSaveState("error");
-          setError(reason instanceof Error ? reason.message : "Team save failed.");
-        }
-      } finally {
-        savingRef.current = false;
-        pendingTeamsRef.current = undefined;
-      }
-    }, 600);
-    return () => window.clearTimeout(timeout);
-  }, [saveState, token, working]);
-  if (!display || !working)
+    if (!teams) return;
+    setSelectedId((current) =>
+      teams.some((team) => team.id === current)
+        ? current
+        : (teams[0]?.id ?? ""),
+    );
+  }, [teams]);
+  if (!display || !teams)
     return <div className="loading-screen">Loading team directory…</div>;
-  const selected = working.teams.find((team) => team.id === selectedId);
-  const selectedIndex = working.teams.findIndex(
-    (team) => team.id === selectedId,
-  );
+  const selected = teams.find((team) => team.id === selectedId);
+  const selectedIndex = teams.findIndex((team) => team.id === selectedId);
   const referencedMatches = selected
     ? display.schedule.filter(
         (match) =>
           match.blueTeamId === selected.id || match.redTeamId === selected.id,
       )
     : [];
-  const setTeams = (teams: ManagedTeam[]) => {
-    const next = {
-      ...working,
-      teams,
-    };
-    workingRef.current = next;
-    dirtyRef.current = true;
-    editVersionRef.current += 1;
-    setWorking(next);
-    if (!conflictRef.current && !savingRef.current) {
-      setError("");
-      setSaveState("dirty");
-    }
+  const setTeams = (next: ManagedTeam[]) => {
+    setUploadError("");
+    autosave.edit(next);
   };
   const change = (team: ManagedTeam) =>
-    setTeams(working.teams.map((item) => (item.id === team.id ? team : item)));
+    setTeams(teams.map((item) => (item.id === team.id ? team : item)));
   const moveSelected = (offset: -1 | 1) => {
     const target = selectedIndex + offset;
-    if (selectedIndex < 0 || target < 0 || target >= working.teams.length)
-      return;
-    const teams = [...working.teams];
-    const selectedTeam = teams[selectedIndex];
-    const targetTeam = teams[target];
+    if (selectedIndex < 0 || target < 0 || target >= teams.length) return;
+    const reordered = [...teams];
+    const selectedTeam = reordered[selectedIndex];
+    const targetTeam = reordered[target];
     if (!selectedTeam || !targetTeam) return;
-    teams[selectedIndex] = targetTeam;
-    teams[target] = selectedTeam;
-    setTeams(teams);
+    reordered[selectedIndex] = targetTeam;
+    reordered[target] = selectedTeam;
+    setTeams(reordered);
   };
-  const retrySave = () => {
-    conflictRef.current = false;
-    setError("");
-    setSaveState("dirty");
-  };
-  const useSavedTeams = () => {
-    const next = settings(displayRef.current ?? display);
-    workingRef.current = next;
-    baselineTeamsRef.current = next.teams;
-    dirtyRef.current = false;
-    conflictRef.current = false;
-    setWorking(next);
-    setSelectedId((current) =>
-      next.teams.some((team) => team.id === current)
-        ? current
-        : (next.teams[0]?.id ?? ""),
-    );
-    setError("");
-    setSaveState("saved");
-  };
-  const saveLabel = {
-    saved: "Saved",
-    dirty: "Waiting to save…",
-    saving: "Saving…",
-    error: "Save failed",
-    conflict: "Save conflict",
-  }[saveState];
+  const visibleError = uploadError || autosave.error;
   return (
     <main className="control-shell">
       <OrganizerSidebar
         active="teams"
-        connected={connected}
-        statusLines={<small>{working.teams.length} managed teams</small>}
+        connected={autosave.connected}
+        statusLines={<small>{teams.length} managed teams</small>}
         token={token}
         onTokenChange={(value) => {
           setToken(value);
@@ -265,27 +114,29 @@ export function TeamControlPage() {
               type="button"
               onClick={() => {
                 const team = createTeam();
-                setTeams([...working.teams, team]);
+                setTeams([...teams, team]);
                 setSelectedId(team.id);
               }}
             >
               Add team
             </button>
-            <span className={`autosave-state ${saveState}`} role="status">
-              {saveLabel}
+            <span className={`autosave-state ${autosave.status}`} role="status">
+              {autosaveLabel[autosave.status]}
             </span>
           </div>
         </header>
-        {error && (
+        {visibleError && (
           <div className="error-banner autosave-error">
-            <span>{error}</span>
-            {(saveState === "error" || saveState === "conflict") && (
-              <button type="button" onClick={retrySave}>
-                Keep my changes
-              </button>
-            )}
-            {saveState === "conflict" && (
-              <button type="button" onClick={useSavedTeams}>
+            <span>{visibleError}</span>
+            {autosave.error &&
+              (autosave.status === "error" ||
+                autosave.status === "conflict") && (
+                <button type="button" onClick={autosave.retry}>
+                  Keep my changes
+                </button>
+              )}
+            {autosave.status === "conflict" && (
+              <button type="button" onClick={autosave.reload}>
                 Reload saved teams
               </button>
             )}
@@ -293,7 +144,7 @@ export function TeamControlPage() {
         )}
         <div className="team-directory-layout">
           <nav className="team-directory-list" aria-label="Managed teams">
-            {working.teams.map((team) => (
+            {teams.map((team) => (
               <button
                 className={team.id === selectedId ? "active" : ""}
                 type="button"
@@ -318,7 +169,7 @@ export function TeamControlPage() {
                 </button>
                 <button
                   type="button"
-                  disabled={selectedIndex === working.teams.length - 1}
+                  disabled={selectedIndex === teams.length - 1}
                   onClick={() => moveSelected(1)}
                 >
                   Move down
@@ -399,7 +250,7 @@ export function TeamControlPage() {
                         onChange={async (event) => {
                           const file = event.target.files?.[0];
                           if (!file) return;
-                          setError("");
+                          setUploadError("");
                           try {
                             const result = await uploadPlayerPhoto(
                               selected.id,
@@ -414,7 +265,7 @@ export function TeamControlPage() {
                             };
                             change({ ...selected, starters });
                           } catch (reason) {
-                            setError(
+                            setUploadError(
                               reason instanceof Error
                                 ? reason.message
                                 : "Photo upload failed.",
@@ -516,11 +367,11 @@ export function TeamControlPage() {
                 disabled={referencedMatches.length > 0}
                 onClick={() => {
                   if (!window.confirm(`Delete ${selected.name}?`)) return;
-                  const teams = working.teams.filter(
+                  const remaining = teams.filter(
                     (team) => team.id !== selected.id,
                   );
-                  setTeams(teams);
-                  setSelectedId(teams[0]?.id ?? "");
+                  setTeams(remaining);
+                  setSelectedId(remaining[0]?.id ?? "");
                 }}
               >
                 Delete team

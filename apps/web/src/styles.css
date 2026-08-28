@@ -261,6 +261,29 @@ button.danger {
   background: rgba(255, 64, 93, 0.09);
   color: #ffbdc8;
 }
+.autosave-state {
+  min-width: 105px;
+  color: var(--muted);
+  text-align: right;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.autosave-state.saved {
+  color: var(--display-cyan);
+}
+.autosave-state.error,
+.autosave-state.conflict {
+  color: var(--danger);
+}
+.autosave-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.autosave-error span {
+  margin-right: auto;
+}
 .match-picker {
   min-width: 0;
   display: grid;

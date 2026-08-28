@@ -141,29 +141,6 @@
 .delete-team {
   margin-top: 28px;
 }
-.autosave-state {
-  min-width: 105px;
-  color: var(--muted);
-  text-align: right;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.autosave-state.saved {
-  color: var(--display-cyan);
-}
-.autosave-state.error,
-.autosave-state.conflict {
-  color: var(--danger);
-}
-.autosave-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.autosave-error span {
-  margin-right: auto;
-}
 .delete-team-note {
   margin: 8px 0 0;
   color: var(--muted);

@@ -7,6 +7,7 @@ import type {
 } from "@shayyz/contracts";
 import { useState } from "react";
 import "./match-control.css";
+import { matchTimeFromInput, matchTimeInputValue } from "./match-time";
 import { OrganizerSidebar } from "./OrganizerShell";
 import {
   autosaveLabel,
@@ -19,7 +20,11 @@ const selectSchedule = (state: DisplayState): MatchSchedule => state.schedule;
 const matchScheduleCommand = (
   expectedRevision: number,
   schedule: MatchSchedule,
-): DisplayCommand => ({ type: "set-match-schedule", expectedRevision, schedule });
+): DisplayCommand => ({
+  type: "set-match-schedule",
+  expectedRevision,
+  schedule,
+});
 
 export function MatchControlPage() {
   const [localError, setLocalError] = useState("");
@@ -50,10 +55,10 @@ export function MatchControlPage() {
     const target = index + direction;
     if (target < 0 || target >= schedule.length) return;
     const next = [...schedule];
-    [next[index], next[target]] = [
-      next[target],
-      next[index],
-    ] as [ScheduledMatch, ScheduledMatch];
+    [next[index], next[target]] = [next[target], next[index]] as [
+      ScheduledMatch,
+      ScheduledMatch,
+    ];
     setSchedule(next);
   };
   const add = () => {
@@ -176,12 +181,10 @@ export function MatchControlPage() {
                   Time
                   <input
                     type="datetime-local"
-                    value={match.scheduledAt?.slice(0, 16) ?? ""}
+                    value={matchTimeInputValue(match.scheduledAt)}
                     onChange={(event) =>
                       change(index, {
-                        scheduledAt: event.target.value
-                          ? new Date(event.target.value).toISOString()
-                          : null,
+                        scheduledAt: matchTimeFromInput(event.target.value),
                       })
                     }
                   />

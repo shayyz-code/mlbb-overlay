@@ -43,14 +43,61 @@ bun run build
 bun run start
 ```
 
-Open the control dashboard at `http://127.0.0.1:3000/control/draft`. Add
-`http://127.0.0.1:3000/overlay/draft` to OBS as a 1920x1080 Browser Source.
-The OBS page has a transparent background and updates in real time.
+Open Live Operations at `http://127.0.0.1:3000/control/live`. The organizer
+controls are split by purpose:
 
-Add `http://127.0.0.1:3000/overlay/roster` as a separate transparent
-1920x1080 Browser Source for looping team introductions. It follows the team
-order and optional local player photos configured in Team Control; loop timing
-is configured in the Display Console.
+- **Team Setup** manages reusable teams, starters, substitutes, logos, and
+  optional local player photos.
+- **Match Setup** prepares the schedule so a matchup is selected instead of
+  retyped on air.
+- **Overlay Setup** configures event text, HUD framing, countdown, ticker, and
+  roster-loop timing.
+- **Live Operations** contains the preflight, reviewed series controls, live
+  corrections, draft selection, timer, and optional detector beta.
+
+Team, match, and overlay setup changes save automatically. Resolve any save
+error before beginning a broadcast.
+
+## Organizer live workflow
+
+1. Prepare teams in Team Setup and matches in Match Setup.
+2. Configure the display once in Overlay Setup.
+3. Open Live Operations and review its preflight. The app can verify its own
+   state, but OBS source visibility and placement must be checked manually.
+4. Select a planned matchup, review the teams and best-of value, then press
+   **Start Series**. Selecting a match by itself never changes live state.
+5. If no schedule is available, open **Quick Series**, review both teams, and
+   start it explicitly.
+6. Select heroes manually during the draft. Every selection starts the next
+   draft turn at 50 seconds; the timer can be paused or restarted.
+7. Use the score, game-number, ticker, and **Replay Entrance** actions for
+   on-air corrections. Use **Next Game** to clear draft selections while
+   preserving the series score.
+8. Press **Complete Series** after the deciding game. The final result remains
+   available to the result overlay.
+
+Quick Series is a fallback, not a replacement for preparing scheduled matches.
+The visual detector is optional and does not block the manual workflow.
+
+## OBS Browser Sources
+
+Add each required overlay as its own 1920x1080 OBS Browser Source. Every page
+is transparent, has a stable URL, and updates in real time:
+
+| Surface | URL |
+| --- | --- |
+| Draft | `http://127.0.0.1:3000/overlay/draft` |
+| Gameplay scoreboard and HUD frames | `http://127.0.0.1:3000/overlay/scoreboard` |
+| Match introduction | `http://127.0.0.1:3000/overlay/match` |
+| Schedule | `http://127.0.0.1:3000/overlay/schedule` |
+| Countdown | `http://127.0.0.1:3000/overlay/countdown` |
+| Ticker | `http://127.0.0.1:3000/overlay/ticker` |
+| Looping rosters | `http://127.0.0.1:3000/overlay/roster` |
+| Series result | `http://127.0.0.1:3000/overlay/result` |
+
+The scoreboard source contains only the transparent broadcast UI; gameplay
+remains visible beneath it. The roster source follows the saved team order and
+supports optional local player photos. This application does not automate OBS.
 
 For development with hot reload, run `bun run dev`. Use `bun run check` before
 opening a pull request.

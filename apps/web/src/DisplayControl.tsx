@@ -18,6 +18,7 @@ import {
 import "./display-control.css";
 import { MatchPicker } from "./MatchPicker";
 import { OrganizerSidebar } from "./OrganizerShell";
+import { TickerMessagesInput } from "./TickerMessagesInput";
 import {
   autosaveLabel,
   useDisplaySectionAutosave,
@@ -656,21 +657,16 @@ export function DisplayControlPage() {
               />
               Show ticker
             </label>
-            <label>
+            <label htmlFor="ticker-messages">
               Messages, one per line
-              <textarea
-                rows={5}
-                value={working.ticker.messages.join("\n")}
-                onChange={(event) =>
+              <TickerMessagesInput
+                messages={working.ticker.messages}
+                onChange={(messages) =>
                   autosave.edit({
                     ...working,
                     ticker: {
                       ...working.ticker,
-                      messages: event.target.value
-                        .split("\n")
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .slice(0, 20),
+                      messages,
                       activeIndex: 0,
                     },
                   })

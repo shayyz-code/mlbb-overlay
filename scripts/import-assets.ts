@@ -175,6 +175,9 @@ export async function verifyAssetPack(
     ...Object.values(manifest.cues).filter((value): value is AssetFile =>
       Boolean(value),
     ),
+    ...Object.values(manifest.roles).filter((value): value is AssetFile =>
+      Boolean(value),
+    ),
   ];
   for (const file of files) {
     const path = resolve(root, file.path);

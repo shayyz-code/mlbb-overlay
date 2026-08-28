@@ -57,6 +57,15 @@ export const AssetPackManifestSchema = z.object({
     gameBuild: z.string().optional(),
   }),
   heroes: z.record(z.string().regex(/^[a-z0-9-]+$/), HeroMediaSchema),
+  roles: z
+    .object({
+      exp: AssetFileSchema.optional(),
+      jungle: AssetFileSchema.optional(),
+      mid: AssetFileSchema.optional(),
+      gold: AssetFileSchema.optional(),
+      roam: AssetFileSchema.optional(),
+    })
+    .default({}),
   cues: z
     .object({
       bluePick: AssetFileSchema.optional(),

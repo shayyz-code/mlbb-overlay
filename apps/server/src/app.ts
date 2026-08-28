@@ -9,6 +9,7 @@ import {
   DisplayCommandSchema,
   DisplayStateSchema,
   DraftCommandSchema,
+  PlayerRoleSchema,
   type SeriesCommand,
   SeriesCommandSchema,
 } from "@shayyz/contracts";
@@ -170,7 +171,9 @@ export function createApp(options: AppOptions): Hono {
           match.scores.blue >= winsRequired ||
           match.scores.red >= winsRequired
         )
-          throw new Error("The series has a winner. Complete the series instead.");
+          throw new Error(
+            "The series has a winner. Complete the series instead.",
+          );
         if (next.scoreboard.gameNumber >= match.bestOf)
           throw new Error("The series has no remaining games.");
         next.scoreboard.gameNumber += 1;
@@ -191,8 +194,7 @@ export function createApp(options: AppOptions): Hono {
       expectedRevision: display.revision,
       display: displaySettings,
     });
-    if (nextDraft.revision !== draft.revision)
-      emit("draft-updated", nextDraft);
+    if (nextDraft.revision !== draft.revision) emit("draft-updated", nextDraft);
     emit("display-updated", nextDisplay);
     return { draft: nextDraft, display: nextDisplay };
   };
@@ -364,6 +366,12 @@ export function createApp(options: AppOptions): Hono {
     const asset = options.assetPack?.cue(context.req.param("id"));
     return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
   });
+  app.get("/api/v1/media/roles/:role", (context) => {
+    const role = PlayerRoleSchema.safeParse(context.req.param("role"));
+    if (!role.success) return context.notFound();
+    const asset = options.assetPack?.role(role.data);
+    return asset ? mediaResponse(context.req.raw, asset) : context.notFound();
+  });
   app.post("/api/v1/team-logos/:side", requireControlToken, async (context) => {
     if (!options.teamLogos)
       return context.json({ error: "Team logo storage is unavailable." }, 503);
@@ -463,9 +471,7 @@ export function createApp(options: AppOptions): Hono {
         command.type === "activate-match"
           ? { ...command, type: "start-series" }
           : { ...command, type: "start-quick-series" };
-      return context.json(
-        await runSeriesCommand(seriesCommand),
-      );
+      return context.json(await runSeriesCommand(seriesCommand));
     } catch (error) {
       if (error instanceof SeriesRevisionConflictError)
         return context.json(

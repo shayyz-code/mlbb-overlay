@@ -1,107 +1,90 @@
 import type {
+  DisplayCommand,
   DisplaySettings,
   DisplayState,
   ScheduledMatch,
   Side,
 } from "@shayyz/contracts";
-import { useEffect, useState } from "react";
-import { fetchDisplay, sendDisplayCommand, subscribeToDisplay } from "./api";
+import { useState } from "react";
 import "./match-control.css";
 import { OrganizerSidebar } from "./OrganizerShell";
+import {
+  autosaveLabel,
+  useDisplaySectionAutosave,
+} from "./useDisplaySectionAutosave";
 
-function settings(state: DisplayState): DisplaySettings {
-  const { revision: _, updatedAt: __, ...value } = state;
-  return value;
-}
+type MatchSchedule = DisplayState["schedule"];
+
+const selectSchedule = (state: DisplayState): MatchSchedule => state.schedule;
+const matchScheduleCommand = (
+  expectedRevision: number,
+  schedule: MatchSchedule,
+): DisplayCommand => ({ type: "set-match-schedule", expectedRevision, schedule });
 
 export function MatchControlPage() {
-  const [display, setDisplay] = useState<DisplayState>();
-  const [working, setWorking] = useState<DisplaySettings>();
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
   const [token, setToken] = useState(
     () => sessionStorage.getItem("shayyz-control-token") ?? "",
   );
-  useEffect(() => {
-    void fetchDisplay().then((state) => {
-      setDisplay(state);
-      setWorking(settings(state));
-    });
-    return subscribeToDisplay((state) => {
-      setDisplay(state);
-      setWorking(settings(state));
-    }, setConnected);
-  }, []);
-  if (!display || !working)
+  const autosave = useDisplaySectionAutosave({
+    token,
+    select: selectSchedule,
+    command: matchScheduleCommand,
+    failureMessage: "Match save failed.",
+  });
+  const { display, value: schedule } = autosave;
+  if (!display || !schedule)
     return <div className="loading-screen">Loading match control…</div>;
+  const setSchedule = (next: MatchSchedule) => {
+    setLocalError("");
+    autosave.edit(next);
+  };
   const change = (index: number, patch: Partial<ScheduledMatch>) => {
-    const schedule = [...working.schedule];
-    const match = schedule[index];
+    const next = [...schedule];
+    const match = next[index];
     if (!match) return;
-    schedule[index] = { ...match, ...patch };
-    setWorking({ ...working, schedule });
+    next[index] = { ...match, ...patch };
+    setSchedule(next);
   };
   const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (target < 0 || target >= working.schedule.length) return;
-    const schedule = [...working.schedule];
-    [schedule[index], schedule[target]] = [
-      schedule[target],
-      schedule[index],
+    if (target < 0 || target >= schedule.length) return;
+    const next = [...schedule];
+    [next[index], next[target]] = [
+      next[target],
+      next[index],
     ] as [ScheduledMatch, ScheduledMatch];
-    setWorking({ ...working, schedule });
+    setSchedule(next);
   };
   const add = () => {
-    const blue = working.teams[0];
-    const red = working.teams.find((team) => team.id !== blue?.id);
+    const blue = display.teams[0];
+    const red = display.teams.find((team) => team.id !== blue?.id);
     if (!blue || !red) {
-      setError("Create at least two teams before adding a match.");
+      setLocalError("Create at least two teams before adding a match.");
       return;
     }
-    setWorking({
-      ...working,
-      schedule: [
-        ...working.schedule,
-        {
-          id: crypto.randomUUID(),
-          scheduledAt: null,
-          stage: working.scoreboard.stage,
-          round: `Round ${working.schedule.length + 1}`,
-          bestOf: working.scoreboard.bestOf,
-          blueTeamId: blue.id,
-          redTeamId: red.id,
-          scores: { blue: 0, red: 0 },
-          status: "scheduled",
-        },
-      ],
-    });
+    setSchedule([
+      ...schedule,
+      {
+        id: crypto.randomUUID(),
+        scheduledAt: null,
+        stage: display.scoreboard.stage,
+        round: `Round ${schedule.length + 1}`,
+        bestOf: display.scoreboard.bestOf,
+        blueTeamId: blue.id,
+        redTeamId: red.id,
+        scores: { blue: 0, red: 0 },
+        status: "scheduled",
+      },
+    ]);
   };
-  const persist = async () => {
-    setError("");
-    try {
-      const state = await sendDisplayCommand(
-        {
-          type: "set-display",
-          expectedRevision: display.revision,
-          display: working,
-        },
-        token,
-      );
-      setDisplay(state);
-      setWorking(settings(state));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Match save failed.");
-      const state = await fetchDisplay();
-      setDisplay(state);
-      setWorking(settings(state));
-    }
-  };
+  const visibleError = localError || autosave.error;
   return (
     <main className="control-shell">
       <OrganizerSidebar
         active="matches"
-        connected={connected}
-        statusLines={<small>{working.schedule.length} planned matches</small>}
+        connected={autosave.connected}
+        statusLines={<small>{schedule.length} planned matches</small>}
         token={token}
         onTokenChange={(value) => {
           setToken(value);
@@ -117,31 +100,43 @@ export function MatchControlPage() {
           <div className="header-actions">
             <button
               type="button"
-              disabled={working.schedule.length >= 32}
+              disabled={schedule.length >= 32}
               onClick={add}
             >
               Add match
             </button>
-            <button
-              type="button"
-              className="primary"
-              onClick={() => void persist()}
-            >
-              Save matches
-            </button>
+            <span className={`autosave-state ${autosave.status}`} role="status">
+              {autosaveLabel[autosave.status]}
+            </span>
           </div>
         </header>
-        {error && <div className="error-banner">{error}</div>}
+        {visibleError && (
+          <div className="error-banner autosave-error">
+            <span>{visibleError}</span>
+            {autosave.error &&
+              (autosave.status === "error" ||
+                autosave.status === "conflict") && (
+                <button type="button" onClick={autosave.retry}>
+                  Keep my changes
+                </button>
+              )}
+            {autosave.status === "conflict" && (
+              <button type="button" onClick={autosave.reload}>
+                Reload saved matches
+              </button>
+            )}
+          </div>
+        )}
         <div className="managed-match-list">
-          {working.schedule.map((match, index) => (
+          {schedule.map((match, index) => (
             <article
               key={match.id}
-              className={working.activeMatchId === match.id ? "active" : ""}
+              className={display.activeMatchId === match.id ? "active" : ""}
             >
               <div className="match-row-heading">
                 <strong>Match {index + 1}</strong>
                 <span>
-                  {working.activeMatchId === match.id ? "Active" : match.status}
+                  {display.activeMatchId === match.id ? "Active" : match.status}
                 </span>
               </div>
               <div className="managed-match-fields">
@@ -149,14 +144,14 @@ export function MatchControlPage() {
                   label="Blue team"
                   side="blue"
                   match={match}
-                  state={working}
+                  teams={display.teams}
                   change={(patch) => change(index, patch)}
                 />
                 <TeamSelect
                   label="Red team"
                   side="red"
                   match={match}
-                  state={working}
+                  teams={display.teams}
                   change={(patch) => change(index, patch)}
                 />
                 <label>
@@ -252,21 +247,16 @@ export function MatchControlPage() {
                 <button
                   type="button"
                   onClick={() => move(index, 1)}
-                  disabled={index === working.schedule.length - 1}
+                  disabled={index === schedule.length - 1}
                 >
                   ↓
                 </button>
                 <button
                   type="button"
                   className="danger"
-                  disabled={working.activeMatchId === match.id}
+                  disabled={display.activeMatchId === match.id}
                   onClick={() =>
-                    setWorking({
-                      ...working,
-                      schedule: working.schedule.filter(
-                        (item) => item.id !== match.id,
-                      ),
-                    })
+                    setSchedule(schedule.filter((item) => item.id !== match.id))
                   }
                 >
                   Delete
@@ -274,7 +264,7 @@ export function MatchControlPage() {
               </div>
             </article>
           ))}
-          {!working.schedule.length && (
+          {!schedule.length && (
             <p className="control-empty">
               Create a match and select two managed teams.
             </p>
@@ -289,13 +279,13 @@ function TeamSelect({
   label,
   side,
   match,
-  state,
+  teams,
   change,
 }: {
   label: string;
   side: Side;
   match: ScheduledMatch;
-  state: DisplaySettings;
+  teams: DisplaySettings["teams"];
   change: (patch: Partial<ScheduledMatch>) => void;
 }) {
   const field = side === "blue" ? "blueTeamId" : "redTeamId";
@@ -306,7 +296,7 @@ function TeamSelect({
         value={match[field]}
         onChange={(event) => change({ [field]: event.target.value })}
       >
-        {state.teams.map((team) => (
+        {teams.map((team) => (
           <option value={team.id} key={team.id}>
             {team.name} ({team.shortName})
           </option>

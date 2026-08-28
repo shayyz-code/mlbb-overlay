@@ -26,6 +26,7 @@ import {
   type RosterFrame,
   rosterPhaseDuration,
 } from "./roster-loop";
+import "./overlay-theme.css";
 import "./display-overlays.css";
 
 export type DisplaySurface =
@@ -377,6 +378,41 @@ function TickerOverlay({ display }: { display: DisplayState }) {
 }
 
 const rosterRoles: PlayerRole[] = ["exp", "jungle", "mid", "gold", "roam"];
+const roleLabels: Record<PlayerRole, string> = {
+  exp: "EXP Lane",
+  jungle: "Jungle",
+  mid: "Mid Lane",
+  gold: "Gold Lane",
+  roam: "Roam",
+};
+const roleFallbacks: Record<PlayerRole, string> = {
+  exp: "EXP",
+  jungle: "JGL",
+  mid: "MID",
+  gold: "GOLD",
+  roam: "ROAM",
+};
+
+function RoleIcon({
+  role,
+  variant,
+}: {
+  role: PlayerRole;
+  variant: "hero" | "badge";
+}) {
+  return (
+    <span className={`roster-role-icon is-${variant}`} aria-hidden="true">
+      <b>{roleFallbacks[role]}</b>
+      <img
+        src={`/api/v1/media/roles/${role}`}
+        alt=""
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+        }}
+      />
+    </span>
+  );
+}
 
 function RosterCycle({ display }: { display: DisplayState }) {
   const [frame, setFrame] = useState<RosterFrame>({
@@ -429,12 +465,15 @@ function RosterCycle({ display }: { display: DisplayState }) {
             <article key={player.id} style={cardStyle}>
               <div className="roster-photo">
                 {player.photoUrl ? (
-                  <img src={player.photoUrl} alt={player.name} />
+                  <>
+                    <img src={player.photoUrl} alt={player.name} />
+                    <RoleIcon role={player.role} variant="badge" />
+                  </>
                 ) : (
-                  <b>{initials(player.name)}</b>
+                  <RoleIcon role={player.role} variant="hero" />
                 )}
               </div>
-              <small>{player.role}</small>
+              <small>{roleLabels[player.role]}</small>
               <strong>{player.name}</strong>
             </article>
           );

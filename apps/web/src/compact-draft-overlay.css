@@ -160,15 +160,21 @@
 .compact-draft-title {
   display: grid;
   place-items: center;
+  min-width: 0;
+  padding-inline: 28px;
   background:
     radial-gradient(circle at 50% 0, rgba(247, 201, 101, 0.14), transparent 58%),
     linear-gradient(180deg, rgba(22, 30, 48, 0.94), rgba(5, 10, 18, 0.96));
 }
 
 .compact-draft-title strong {
+  max-width: 100%;
+  overflow: hidden;
   color: #e8edf7;
   font-size: 23px;
   letter-spacing: 0.16em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compact-team-picks {
@@ -213,34 +219,6 @@
 
 .compact-pick-media .hero-initials {
   font-size: 30px;
-}
-
-.compact-pick-media > span {
-  position: absolute;
-  z-index: 2;
-  top: 9px;
-  left: 9px;
-  padding: 4px 6px;
-  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
-  background: linear-gradient(
-    90deg,
-    rgba(40, 220, 255, 0.3),
-    rgba(4, 7, 12, 0.8)
-  );
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.compact-red .compact-pick-media > span {
-  left: auto;
-  right: 9px;
-  background: linear-gradient(
-    270deg,
-    rgba(80, 104, 255, 0.34),
-    rgba(4, 7, 12, 0.8)
-  );
 }
 
 .compact-pick-media > small {

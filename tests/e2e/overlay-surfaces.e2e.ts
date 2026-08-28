@@ -75,6 +75,10 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
     },
   ];
   configured.activeMatchId = "overlay-regression-match";
+  configured.event = {
+    ...configured.event,
+    name: "Yangon Invitational",
+  };
   configured.ticker = {
     ...configured.ticker,
     enabled: true,
@@ -105,6 +109,14 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
     await page.goto("/overlay/draft");
     await expect(page.locator(".compact-draft-strip")).toHaveCSS("width", "1920px");
     await expect(page.locator(".compact-draft-strip")).toHaveCSS("height", "367px");
+    await expect(page.getByText("Yangon Invitational", { exact: true })).toBeVisible();
+    await expect(page.locator(".compact-pick-media > span")).toHaveCount(0);
+    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(page.getByText("Live", { exact: true })).toHaveCount(0);
+
+    await page.goto("/overlay/ticker");
+    await expect(page.getByText("UPDATE", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE UPDATE", { exact: true })).toHaveCount(0);
 
     await page.goto("/overlay/scoreboard");
     const scoreboard = page.locator(".display-compact-scoreboard");

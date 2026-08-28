@@ -369,7 +369,7 @@ function TickerOverlay({ display }: { display: DisplayState }) {
     (display.ticker.activeIndex + offset) % display.ticker.messages.length;
   return (
     <div className="ticker-surface">
-      <strong>LIVE UPDATE</strong>
+      <strong>UPDATE</strong>
       <span key={`${display.cueRevision}-${index}`}>
         {display.ticker.messages[index]}
       </span>

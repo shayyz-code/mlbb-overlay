@@ -12,6 +12,7 @@ import "./compact-draft-overlay.css";
 interface CompactDraftOverlayProps {
   state: DraftState;
   heroes: Hero[];
+  eventName: string;
   connected: boolean;
   remainingSeconds: number;
 }
@@ -161,7 +162,6 @@ function PickSlot({
           fallback={hero ? initials(hero.name) : String(slot + 1)}
         />
         {selection?.source === "detector" && <small>AI</small>}
-        <span>Pick {slot + 1}</span>
       </div>
       <div className="compact-pick-name">
         {hero?.name ?? `Open slot ${slot + 1}`}
@@ -201,7 +201,7 @@ function DraftCenter({
   state,
   connected,
   remainingSeconds,
-}: Omit<CompactDraftOverlayProps, "heroes">) {
+}: Omit<CompactDraftOverlayProps, "heroes" | "eventName">) {
   const phase = currentPhase(state);
   const timerProgress = Math.max(
     0,
@@ -226,7 +226,7 @@ function DraftCenter({
       <div className="compact-phase-row">
         <strong>{phaseLabel}</strong>
         <span className={connected ? "is-online" : ""}>
-          {connected ? "Live" : "Sync"}
+          {connected ? "Connected" : "Sync"}
         </span>
       </div>
       <div className="compact-timer">
@@ -245,6 +245,7 @@ function DraftCenter({
 export function CompactDraftOverlay({
   state,
   heroes,
+  eventName,
   connected,
   remainingSeconds,
 }: CompactDraftOverlayProps) {
@@ -255,7 +256,7 @@ export function CompactDraftOverlay({
         <header className="compact-draft-header">
           <TeamHeader state={state} side="blue" heroes={catalog} />
           <div className="compact-draft-title">
-            <strong>Competitive Draft</strong>
+            <strong>{eventName}</strong>
           </div>
           <TeamHeader state={state} side="red" heroes={catalog} />
         </header>

@@ -111,7 +111,9 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
     await expect(page.locator(".compact-draft-strip")).toHaveCSS("height", "367px");
     await expect(page.getByText("Yangon Invitational", { exact: true })).toBeVisible();
     await expect(page.locator(".compact-pick-media > span")).toHaveCount(0);
-    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(page.locator(".compact-phase-row > *")).toHaveCount(1);
+    await expect(page.getByText("Connected", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Sync", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Live", { exact: true })).toHaveCount(0);
 
     await page.goto("/overlay/ticker");

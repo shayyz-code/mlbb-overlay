@@ -13,7 +13,6 @@ interface CompactDraftOverlayProps {
   state: DraftState;
   heroes: Hero[];
   eventName: string;
-  connected: boolean;
   remainingSeconds: number;
 }
 
@@ -199,7 +198,6 @@ function TeamPicks({
 
 function DraftCenter({
   state,
-  connected,
   remainingSeconds,
 }: Omit<CompactDraftOverlayProps, "heroes" | "eventName">) {
   const phase = currentPhase(state);
@@ -225,9 +223,6 @@ function DraftCenter({
       </div>
       <div className="compact-phase-row">
         <strong>{phaseLabel}</strong>
-        <span className={connected ? "is-online" : ""}>
-          {connected ? "Connected" : "Sync"}
-        </span>
       </div>
       <div className="compact-timer">
         <div className="compact-timer-track">
@@ -246,7 +241,6 @@ export function CompactDraftOverlay({
   state,
   heroes,
   eventName,
-  connected,
   remainingSeconds,
 }: CompactDraftOverlayProps) {
   const catalog = new Map(heroes.map((hero) => [hero.id, hero]));
@@ -262,11 +256,7 @@ export function CompactDraftOverlay({
         </header>
         <div className="compact-draft-lower">
           <TeamPicks state={state} side="blue" heroes={catalog} />
-          <DraftCenter
-            state={state}
-            connected={connected}
-            remainingSeconds={remainingSeconds}
-          />
+          <DraftCenter state={state} remainingSeconds={remainingSeconds} />
           <TeamPicks state={state} side="red" heroes={catalog} />
         </div>
       </div>

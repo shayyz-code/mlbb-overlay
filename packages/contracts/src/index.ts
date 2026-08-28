@@ -782,6 +782,25 @@ export const ActivateMatchCommandSchema = z.discriminatedUnion("type", [
 ]);
 export type ActivateMatchCommand = z.infer<typeof ActivateMatchCommandSchema>;
 
+const SeriesRevisionSchema = z.object({
+  expectedDraftRevision: z.number().int().nonnegative(),
+  expectedDisplayRevision: z.number().int().nonnegative(),
+});
+export const SeriesCommandSchema = z.discriminatedUnion("type", [
+  SeriesRevisionSchema.extend({
+    type: z.literal("start-series"),
+    matchId: z.string().min(1).max(80),
+  }),
+  SeriesRevisionSchema.extend({
+    type: z.literal("start-quick-series"),
+    blueTeamId: z.string().min(1).max(80),
+    redTeamId: z.string().min(1).max(80),
+  }),
+  SeriesRevisionSchema.extend({ type: z.literal("next-game") }),
+  SeriesRevisionSchema.extend({ type: z.literal("complete-series") }),
+]);
+export type SeriesCommand = z.infer<typeof SeriesCommandSchema>;
+
 export const DraftStateSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.string().datetime(),

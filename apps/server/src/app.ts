@@ -7,7 +7,10 @@ import {
   DetectorFrameRequestSchema,
   DetectorModeCommandSchema,
   DisplayCommandSchema,
+  DisplayStateSchema,
   DraftCommandSchema,
+  type SeriesCommand,
+  SeriesCommandSchema,
 } from "@shayyz/contracts";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
@@ -24,6 +27,15 @@ import { heroes } from "./heroes";
 import type { PlayerPhotoStore } from "./player-photos";
 import { type DraftStore, RevisionConflictError } from "./store";
 import type { TeamLogoStore } from "./team-logos";
+
+class SeriesRevisionConflictError extends Error {
+  constructor(
+    readonly currentDraftRevision: number,
+    readonly currentDisplayRevision: number,
+  ) {
+    super("Live state changed. Refresh and try again.");
+  }
+}
 
 export interface AppOptions {
   store: DraftStore;
@@ -64,6 +76,125 @@ export function createApp(options: AppOptions): Hono {
       return context.json({ error: "A valid control token is required." }, 401);
     }
     return next();
+  };
+  const runSeriesCommand = async (command: SeriesCommand) => {
+    if (!options.displayStore)
+      throw new Error("Display storage is unavailable.");
+    const draft = options.store.state;
+    const display = options.displayStore.state;
+    if (
+      command.expectedDraftRevision !== draft.revision ||
+      command.expectedDisplayRevision !== display.revision
+    )
+      throw new SeriesRevisionConflictError(draft.revision, display.revision);
+    const next = structuredClone(display);
+    let nextDraft = draft;
+
+    if (
+      command.type === "start-series" ||
+      command.type === "start-quick-series"
+    ) {
+      let match =
+        command.type === "start-series"
+          ? next.schedule.find((item) => item.id === command.matchId)
+          : undefined;
+      if (command.type === "start-quick-series") {
+        if (command.blueTeamId === command.redTeamId)
+          throw new Error("Quick Series requires two different teams.");
+        if (next.schedule.length >= 32)
+          throw new Error("The match directory is full.");
+        match = {
+          id: randomUUID(),
+          scheduledAt: null,
+          stage: "Exhibition",
+          round: "Quick Series",
+          bestOf: 3,
+          blueTeamId: command.blueTeamId,
+          redTeamId: command.redTeamId,
+          scores: { blue: 0, red: 0 },
+          status: "live",
+        };
+        next.schedule.push(match);
+      }
+      if (!match) throw new Error("The selected match does not exist.");
+      const blue = next.teams.find((team) => team.id === match.blueTeamId);
+      const red = next.teams.find((team) => team.id === match.redTeamId);
+      if (!blue || !red)
+        throw new Error("The selected match teams are missing.");
+      for (const item of next.schedule)
+        if (item.id !== match.id && item.status === "live")
+          item.status = "scheduled";
+      match.status = "live";
+      match.scores = { blue: 0, red: 0 };
+      next.activeMatchId = match.id;
+      next.scoreboard = {
+        ...next.scoreboard,
+        gameNumber: 1,
+        bestOf: match.bestOf,
+        stage: match.stage,
+        round: match.round,
+      };
+      for (const [side, team] of [
+        ["blue", blue],
+        ["red", red],
+      ] as const) {
+        next.lineups[side] = team.starters.map(({ id, name, role }) => ({
+          id,
+          name,
+          role,
+          heroId: "",
+        }));
+        next.rosters[side] = [...team.starters, ...team.substitutes].map(
+          ({ id, name }) => ({ id, name }),
+        );
+      }
+      nextDraft = await options.store.dispatch({
+        type: "activate-match",
+        expectedRevision: draft.revision,
+        blue: {
+          name: blue.name,
+          shortName: blue.shortName,
+          logoUrl: blue.logoUrl,
+        },
+        red: { name: red.name, shortName: red.shortName, logoUrl: red.logoUrl },
+      });
+    } else {
+      const match = next.schedule.find(
+        (item) => item.id === next.activeMatchId,
+      );
+      if (match?.status !== "live")
+        throw new Error("No live series is available.");
+      if (command.type === "next-game") {
+        const winsRequired = Math.floor(match.bestOf / 2) + 1;
+        if (
+          match.scores.blue >= winsRequired ||
+          match.scores.red >= winsRequired
+        )
+          throw new Error("The series has a winner. Complete the series instead.");
+        if (next.scoreboard.gameNumber >= match.bestOf)
+          throw new Error("The series has no remaining games.");
+        next.scoreboard.gameNumber += 1;
+        nextDraft = await options.store.dispatch({
+          type: "reset",
+          expectedRevision: draft.revision,
+        });
+      } else {
+        match.status = "complete";
+        match.scores = structuredClone(draft.scoreboard.scores);
+      }
+    }
+
+    const parsed = DisplayStateSchema.parse(next);
+    const { revision: _, updatedAt: __, ...displaySettings } = parsed;
+    const nextDisplay = options.displayStore.dispatch({
+      type: "set-display",
+      expectedRevision: display.revision,
+      display: displaySettings,
+    });
+    if (nextDraft.revision !== draft.revision)
+      emit("draft-updated", nextDraft);
+    emit("display-updated", nextDisplay);
+    return { draft: nextDraft, display: nextDisplay };
   };
   options.detector?.setEventSink(emit);
 
@@ -328,73 +459,55 @@ export function createApp(options: AppOptions): Hono {
       const command = ActivateMatchCommandSchema.parse(
         await context.req.json(),
       );
-      const draft = options.store.state;
-      const display = options.displayStore.state;
-      if (
-        command.expectedDraftRevision !== draft.revision ||
-        command.expectedDisplayRevision !== display.revision
-      )
+      const seriesCommand: SeriesCommand =
+        command.type === "activate-match"
+          ? { ...command, type: "start-series" }
+          : { ...command, type: "start-quick-series" };
+      return context.json(
+        await runSeriesCommand(seriesCommand),
+      );
+    } catch (error) {
+      if (error instanceof SeriesRevisionConflictError)
         return context.json(
-          { error: "Live state changed. Refresh and try again." },
+          {
+            error: error.message,
+            currentDraftRevision: error.currentDraftRevision,
+            currentDisplayRevision: error.currentDisplayRevision,
+          },
           409,
         );
-      const next = structuredClone(display);
-      let match =
-        command.type === "activate-match"
-          ? next.schedule.find((item) => item.id === command.matchId)
-          : undefined;
-      if (command.type === "activate-quick-match") {
-        if (command.blueTeamId === command.redTeamId)
-          throw new Error("Quick Match requires two different teams.");
-        if (next.schedule.length >= 32)
-          throw new Error("The match directory is full.");
-        match = {
-          id: randomUUID(),
-          scheduledAt: null,
-          stage: "Exhibition",
-          round: "Quick Match",
-          bestOf: 3,
-          blueTeamId: command.blueTeamId,
-          redTeamId: command.redTeamId,
-          scores: { blue: 0, red: 0 },
-          status: "live",
-        };
-        next.schedule.push(match);
-      }
-      if (!match) throw new Error("The selected match does not exist.");
-      const blue = next.teams.find((team) => team.id === match.blueTeamId);
-      const red = next.teams.find((team) => team.id === match.redTeamId);
-      if (!blue || !red)
-        throw new Error("The selected match teams are missing.");
-      for (const item of next.schedule)
-        if (item.id !== match.id && item.status === "live")
-          item.status = "scheduled";
-      match.status = "live";
-      match.scores = { blue: 0, red: 0 };
-      next.activeMatchId = match.id;
-      const nextDraft = await options.store.dispatch({
-        type: "activate-match",
-        expectedRevision: draft.revision,
-        blue: {
-          name: blue.name,
-          shortName: blue.shortName,
-          logoUrl: blue.logoUrl,
-        },
-        red: { name: red.name, shortName: red.shortName, logoUrl: red.logoUrl },
-      });
-      const { revision: _, updatedAt: __, ...displaySettings } = next;
-      const nextDisplay = options.displayStore.dispatch({
-        type: "set-display",
-        expectedRevision: display.revision,
-        display: displaySettings,
-      });
-      emit("draft-updated", nextDraft);
-      emit("display-updated", nextDisplay);
-      return context.json({ draft: nextDraft, display: nextDisplay });
-    } catch (error) {
       return context.json(
         {
           error: error instanceof Error ? error.message : "Activation failed.",
+        },
+        400,
+      );
+    }
+  });
+
+  app.post("/api/v1/series/commands", requireControlToken, async (context) => {
+    if (!options.displayStore)
+      return context.json({ error: "Display storage is unavailable." }, 503);
+    try {
+      return context.json(
+        await runSeriesCommand(
+          SeriesCommandSchema.parse(await context.req.json()),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof SeriesRevisionConflictError)
+        return context.json(
+          {
+            error: error.message,
+            currentDraftRevision: error.currentDraftRevision,
+            currentDisplayRevision: error.currentDisplayRevision,
+          },
+          409,
+        );
+      return context.json(
+        {
+          error:
+            error instanceof Error ? error.message : "Series command failed.",
         },
         400,
       );

@@ -12,6 +12,7 @@ import {
   type DraftPhase,
   DraftReferenceMapSchema,
   IdlePosterJobsSchema,
+  SeriesCommandSchema,
   STANDARD_TEN_BAN_FORMAT,
   selectedHeroIds,
 } from "./index";
@@ -225,6 +226,23 @@ describe("display contracts", () => {
         type: "set-match-schedule",
         expectedRevision: 0,
         schedule: [{ id: "incomplete" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  test("validates explicit series lifecycle commands", () => {
+    const revisions = { expectedDraftRevision: 2, expectedDisplayRevision: 4 };
+    for (const command of [
+      { type: "start-series", matchId: "final", ...revisions },
+      { type: "next-game", ...revisions },
+      { type: "complete-series", ...revisions },
+    ])
+      expect(SeriesCommandSchema.safeParse(command).success).toBe(true);
+    expect(
+      SeriesCommandSchema.safeParse({
+        type: "next-game",
+        ...revisions,
+        expectedDraftRevision: -1,
       }).success,
     ).toBe(false);
   });

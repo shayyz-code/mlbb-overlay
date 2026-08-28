@@ -16,24 +16,44 @@
   display: grid;
   grid-template-rows: 92.5px 274.5px;
   overflow: hidden;
-  background: linear-gradient(
-    90deg,
-    rgba(6, 29, 48, 0.98),
-    rgba(7, 10, 17, 0.99) 38%,
-    rgba(7, 10, 17, 0.99) 62%,
-    rgba(22, 29, 78, 0.98)
-  );
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background:
+    radial-gradient(
+      circle at 13% 45%,
+      rgba(40, 220, 255, 0.16),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 87% 45%,
+      rgba(80, 104, 255, 0.18),
+      transparent 30%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(5, 27, 45, 0.97),
+      rgba(5, 10, 18, 0.98) 38% 62%,
+      rgba(20, 28, 76, 0.97)
+    );
+  box-shadow: var(--overlay-shadow);
+}
+
+.compact-draft-strip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-sweep);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.compact-draft-strip > * {
+  position: relative;
+  z-index: 1;
 }
 
 .compact-draft-header,
 .compact-draft-lower {
   display: grid;
   grid-template-columns: 725px 470px 725px;
-}
-
-.compact-draft-header {
-  border-block: 1px solid rgba(159, 178, 214, 0.22);
 }
 
 .compact-team-header {
@@ -58,9 +78,15 @@
   position: relative;
   height: 72.5px;
   overflow: hidden;
-  border: 1px solid rgba(159, 178, 214, 0.2);
-  background: #090d16;
-  filter: saturate(0.35);
+  clip-path: polygon(7% 0, 100% 0, 93% 100%, 0 100%);
+  background:
+    radial-gradient(
+      circle at 50% 10%,
+      rgba(40, 220, 255, 0.18),
+      transparent 48%
+    ),
+    rgba(5, 10, 18, 0.9);
+  filter: saturate(0.35) drop-shadow(0 5px 8px rgba(0, 0, 0, 0.38));
 }
 
 .compact-ban-slot::after {
@@ -91,9 +117,11 @@
 }
 
 .compact-ban-slot.is-active {
-  border-color: var(--gold);
   filter: none;
-  box-shadow: inset 0 0 18px rgba(247, 198, 95, 0.38);
+  background:
+    radial-gradient(circle at 50% 0, rgba(247, 201, 101, 0.34), transparent 58%),
+    rgba(7, 13, 23, 0.94);
+  box-shadow: inset 0 0 22px rgba(247, 201, 101, 0.28);
 }
 
 .compact-ban-slot.is-active::after {
@@ -107,14 +135,17 @@
   justify-content: center;
   gap: 3px;
   padding: 0 24px;
-  border-inline: 1px solid rgba(159, 178, 214, 0.18);
-  background: linear-gradient(90deg, rgba(37, 185, 255, 0.1), transparent);
+  background: linear-gradient(90deg, rgba(40, 220, 255, 0.14), transparent 88%);
 }
 
 .compact-red .compact-team-name {
   align-items: flex-end;
   text-align: right;
-  background: linear-gradient(270deg, rgba(75, 102, 255, 0.12), transparent);
+  background: linear-gradient(
+    270deg,
+    rgba(80, 104, 255, 0.16),
+    transparent 88%
+  );
 }
 
 .compact-team-name strong {
@@ -129,18 +160,15 @@
 .compact-draft-title {
   display: grid;
   place-items: center;
-  border-inline: 1px solid rgba(247, 198, 95, 0.3);
-  background: linear-gradient(180deg, #161c2a, #090c14);
+  background:
+    radial-gradient(circle at 50% 0, rgba(247, 201, 101, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(22, 30, 48, 0.94), rgba(5, 10, 18, 0.96));
 }
 
 .compact-draft-title strong {
   color: #e8edf7;
   font-size: 23px;
   letter-spacing: 0.16em;
-}
-
-.compact-draft-lower {
-  border-bottom: 1px solid rgba(159, 178, 214, 0.22);
 }
 
 .compact-team-picks {
@@ -158,12 +186,21 @@
 .compact-pick-media {
   position: relative;
   overflow: hidden;
-  border-inline: 1px solid rgba(159, 178, 214, 0.18);
-  background: linear-gradient(155deg, var(--display-cyan-deep), #090c14 68%);
+  margin-inline: 1px;
+  clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%);
+  background:
+    radial-gradient(circle at 50% 16%, rgba(40, 220, 255, 0.2), transparent 48%),
+    linear-gradient(155deg, var(--overlay-cyan-deep), var(--overlay-ink) 68%);
 }
 
 .compact-red .compact-pick-media {
-  background: linear-gradient(205deg, var(--display-blue-deep), #090c14 68%);
+  background:
+    radial-gradient(
+      circle at 50% 16%,
+      rgba(80, 104, 255, 0.22),
+      transparent 48%
+    ),
+    linear-gradient(205deg, var(--overlay-blue-deep), var(--overlay-ink) 68%);
 }
 
 .compact-pick-media .hero-visual img,
@@ -184,8 +221,12 @@
   top: 9px;
   left: 9px;
   padding: 4px 6px;
-  border-left: 2px solid var(--display-cyan);
-  background: rgba(4, 7, 12, 0.72);
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(40, 220, 255, 0.3),
+    rgba(4, 7, 12, 0.8)
+  );
   color: rgba(255, 255, 255, 0.65);
   font-size: 10px;
   text-transform: uppercase;
@@ -195,8 +236,11 @@
 .compact-red .compact-pick-media > span {
   left: auto;
   right: 9px;
-  border-right: 2px solid var(--display-blue);
-  border-left: 0;
+  background: linear-gradient(
+    270deg,
+    rgba(80, 104, 255, 0.34),
+    rgba(4, 7, 12, 0.8)
+  );
 }
 
 .compact-pick-media > small {
@@ -213,9 +257,13 @@
   place-items: center;
   overflow: hidden;
   padding: 0 8px;
-  border: 1px solid rgba(159, 178, 214, 0.18);
-  border-bottom: 4px solid var(--display-cyan);
-  background: #0a0e17;
+  background:
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(40, 220, 255, 0.3),
+      transparent 56%
+    ),
+    linear-gradient(180deg, rgba(11, 18, 31, 0.96), rgba(5, 10, 18, 0.98));
   font-size: 17px;
   font-weight: 700;
   text-align: center;
@@ -225,7 +273,13 @@
 }
 
 .compact-red .compact-pick-name {
-  border-bottom-color: var(--display-blue);
+  background:
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(80, 104, 255, 0.34),
+      transparent 56%
+    ),
+    linear-gradient(180deg, rgba(11, 18, 31, 0.96), rgba(5, 10, 18, 0.98));
 }
 
 .compact-pick-slot:not(.is-locked) .hero-visual {
@@ -233,8 +287,7 @@
 }
 
 .compact-pick-slot.is-active .compact-pick-media {
-  border-color: var(--gold);
-  box-shadow: inset 0 0 28px rgba(247, 198, 95, 0.45);
+  box-shadow: inset 0 0 34px rgba(247, 201, 101, 0.42);
   animation: compact-slot-pulse 1.8s ease-in-out infinite;
 }
 
@@ -245,12 +298,13 @@
 .compact-draft-center {
   display: grid;
   grid-template-rows: 151px 42px 81.5px;
-  border-inline: 1px solid rgba(159, 178, 214, 0.22);
-  background: linear-gradient(
-    180deg,
-    rgba(18, 24, 39, 0.99),
-    rgba(7, 10, 17, 0.99)
-  );
+  background:
+    radial-gradient(
+      circle at 50% 22%,
+      rgba(40, 220, 255, 0.09),
+      transparent 42%
+    ),
+    linear-gradient(180deg, rgba(18, 25, 41, 0.96), rgba(5, 10, 18, 0.98));
 }
 
 .compact-center-score {
@@ -278,8 +332,14 @@
     0 87%,
     0 13%
   );
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: #080c15;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(255, 255, 255, 0.1),
+      transparent 45%
+    ),
+    rgba(5, 10, 18, 0.94);
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.48));
 }
 
 .compact-team-logo-blue {
@@ -330,8 +390,12 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-  border-block: 1px solid rgba(159, 178, 214, 0.14);
-  background: rgba(4, 7, 12, 0.52);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(4, 9, 17, 0.78) 18% 82%,
+    transparent
+  );
 }
 
 .compact-phase-row strong {

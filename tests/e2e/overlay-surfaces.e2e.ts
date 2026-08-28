@@ -64,7 +64,7 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
   configured.schedule = [
     {
       id: "overlay-regression-match",
-      scheduledAt: null,
+      scheduledAt: "2026-08-28T19:30:00.000Z",
       stage: "Group Stage",
       round: "Round 1",
       bestOf: 3,
@@ -88,6 +88,17 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
   expect((await saveDisplay(request, configured)).ok()).toBeTruthy();
 
   try {
+    await page.goto("/control/matches");
+    const matchTime = page.locator('input[type="datetime-local"]');
+    await expect(matchTime).toHaveValue("2026-08-28T19:30");
+    await matchTime.fill("2026-08-28T20:15");
+    await expect
+      .poll(async () => {
+        const saved = await (await request.get("/api/v1/display")).json();
+        return saved.schedule[0]?.scheduledAt;
+      })
+      .toBe("2026-08-28T20:15:00.000Z");
+
     for (const route of routes) {
       await page.goto(`/overlay/${route}`);
       await expectTransparentCanvas(page, route);
@@ -106,6 +117,12 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
       );
       expect(new Set(borderWidths)).toEqual(new Set(["0px"]));
     }
+
+    await page.goto("/overlay/match");
+    await expect(page.getByText("08:15 PM", { exact: true })).toBeVisible();
+
+    await page.goto("/overlay/schedule");
+    await expect(page.getByText("08:15 PM", { exact: true })).toBeVisible();
 
     await page.goto("/overlay/draft");
     await expect(page.locator(".compact-draft-strip")).toHaveCSS("width", "1920px");

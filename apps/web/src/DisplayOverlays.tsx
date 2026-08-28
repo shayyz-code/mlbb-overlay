@@ -26,6 +26,7 @@ import {
   type RosterFrame,
   rosterPhaseDuration,
 } from "./roster-loop";
+import { formatMatchTime } from "./match-time";
 import "./overlay-theme.css";
 import "./display-overlays.css";
 
@@ -188,13 +189,7 @@ function MatchOverlay({
   display: DisplayState;
 }) {
   const match = activeMatch(draft, display);
-  const time = match.scheduledAt
-    ? new Intl.DateTimeFormat("en", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: display.event.timezone,
-      }).format(new Date(match.scheduledAt))
-    : "UP NEXT";
+  const time = formatMatchTime(match.scheduledAt, "UP NEXT");
   return (
     <section className="break-surface match-surface">
       <div className="match-heading">
@@ -245,15 +240,7 @@ function ScheduleOverlay({ display }: { display: DisplayState }) {
                 }
                 key={match.id}
               >
-                <time>
-                  {match.scheduledAt
-                    ? new Intl.DateTimeFormat("en", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: display.event.timezone,
-                      }).format(new Date(match.scheduledAt))
-                    : "TBD"}
-                </time>
+                <time>{formatMatchTime(match.scheduledAt, "TBD")}</time>
                 <span>
                   <Logo team={blue} side="blue" />
                   <strong>{blue.shortName}</strong>

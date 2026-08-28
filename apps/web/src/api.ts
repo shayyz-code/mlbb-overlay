@@ -23,6 +23,7 @@ import {
   MatchActivationResultSchema,
   type PlayerPhotoUploadResult,
   PlayerPhotoUploadResultSchema,
+  type SeriesCommand,
   type TeamLogoUploadResult,
   TeamLogoUploadResultSchema,
 } from "@shayyz/contracts";
@@ -192,6 +193,26 @@ export async function activateMatch(
   });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Match activation failed.");
+  return MatchActivationResultSchema.parse(body);
+}
+
+export async function sendSeriesCommand(
+  command: SeriesCommand,
+  token: string,
+): Promise<MatchActivationResult> {
+  const response = await fetch("/api/v1/series/commands", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(command),
+  });
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(
+      body.error ?? "The series could not be updated. Refresh and try again.",
+    );
   return MatchActivationResultSchema.parse(body);
 }
 

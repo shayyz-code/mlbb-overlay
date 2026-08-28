@@ -1,0 +1,27 @@
+:where(.display-canvas, .compact-draft-canvas) {
+  --overlay-cyan: #28dcff;
+  --overlay-blue: #5068ff;
+  --overlay-cyan-deep: #0b5575;
+  --overlay-blue-deep: #293b9f;
+  --overlay-ink: #050a12;
+  --overlay-glass: rgba(8, 16, 29, 0.92);
+  --overlay-glass-soft: rgba(14, 27, 45, 0.78);
+  --overlay-white: #f6f9ff;
+  --overlay-muted: #a6b4c8;
+  --overlay-gold: #f7c965;
+  --overlay-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
+  --overlay-glow-cyan: 0 0 30px rgba(40, 220, 255, 0.28);
+  --overlay-glow-blue: 0 0 30px rgba(80, 104, 255, 0.3);
+  --overlay-sweep: linear-gradient(
+    112deg,
+    transparent 22%,
+    rgba(255, 255, 255, 0.14) 47%,
+    transparent 72%
+  );
+  --broadcast-cyan: var(--overlay-cyan);
+  --broadcast-blue: var(--overlay-blue);
+  --broadcast-ink: var(--overlay-ink);
+  --broadcast-plate: var(--overlay-glass);
+  --broadcast-white: var(--overlay-white);
+  --broadcast-muted: var(--overlay-muted);
+}

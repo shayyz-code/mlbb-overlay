@@ -1,12 +1,3 @@
-:root {
-  --broadcast-cyan: #20d8ff;
-  --broadcast-blue: #365cff;
-  --broadcast-ink: #07101d;
-  --broadcast-plate: rgba(9, 18, 31, 0.96);
-  --broadcast-white: #f4f8ff;
-  --broadcast-muted: #a8b7cc;
-}
-
 .display-canvas {
   position: relative;
   width: 1920px;
@@ -33,16 +24,33 @@
   place-items: center;
   overflow: hidden;
   clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
-  background: linear-gradient(145deg, #17394d, #07111e);
-  border-inline: 3px solid var(--broadcast-cyan);
+  background:
+    radial-gradient(circle at 30% 28%, rgba(40, 220, 255, 0.3), transparent 48%),
+    linear-gradient(145deg, rgba(18, 54, 74, 0.96), rgba(5, 10, 18, 0.98));
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5));
 }
 
 .broadcast-logo.side-red {
-  border-color: var(--broadcast-blue);
-  background: linear-gradient(215deg, #252f72, #07111e);
+  background:
+    radial-gradient(
+      circle at 70% 28%,
+      rgba(80, 104, 255, 0.36),
+      transparent 48%
+    ),
+    linear-gradient(215deg, rgba(39, 49, 116, 0.96), rgba(5, 10, 18, 0.98));
+}
+.broadcast-logo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-sweep);
+  opacity: 0.42;
+  pointer-events: none;
 }
 
 .broadcast-logo b {
+  position: relative;
+  z-index: 1;
   color: rgba(255, 255, 255, 0.55);
   font-size: 18px;
 }
@@ -53,6 +61,7 @@
   width: calc(100% - 14px);
   height: calc(100% - 14px);
   object-fit: contain;
+  z-index: 2;
 }
 
 .native-hud-wrapper {
@@ -521,19 +530,27 @@
   width: 116px;
   height: 116px;
   flex-basis: 116px;
-  border-right-color: var(--broadcast-blue);
 }
 .roster-team > div {
+  position: relative;
   display: grid;
   min-width: 470px;
   padding: 15px 52px 17px 34px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
   background: linear-gradient(
     100deg,
-    rgba(7, 16, 29, 0.98),
-    rgba(28, 52, 118, 0.96)
+    rgba(8, 20, 34, 0.96),
+    rgba(24, 47, 111, 0.88)
   );
-  border-left: 4px solid var(--broadcast-cyan);
+  box-shadow: var(--overlay-shadow), var(--overlay-glow-blue);
+}
+.roster-team > div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-sweep);
+  opacity: 0.28;
+  pointer-events: none;
 }
 .roster-team small {
   color: var(--broadcast-cyan);
@@ -560,12 +577,26 @@
   clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
   background: linear-gradient(
     155deg,
-    rgba(32, 216, 255, 0.22),
-    rgba(7, 16, 29, 0.97) 44% 76%,
-    rgba(54, 92, 255, 0.3)
+    rgba(40, 220, 255, 0.24),
+    rgba(7, 14, 25, 0.96) 42% 74%,
+    rgba(80, 104, 255, 0.34)
   );
-  border-bottom: 5px solid var(--broadcast-cyan);
-  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.52));
+  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.5));
+}
+.roster-cards article::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    var(--overlay-sweep),
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(40, 220, 255, 0.24),
+      transparent 38%
+    );
+  opacity: 0.32;
+  pointer-events: none;
 }
 .roster-photo {
   position: relative;
@@ -590,10 +621,54 @@
   object-fit: cover;
   object-position: center top;
 }
-.roster-photo b {
-  color: rgba(244, 248, 255, 0.82);
-  font-size: 76px;
-  letter-spacing: 0.04em;
+.roster-role-icon {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle, rgba(40, 220, 255, 0.2), transparent 68%);
+  filter: drop-shadow(0 0 18px rgba(40, 220, 255, 0.35));
+}
+.roster-role-icon > img,
+.roster-role-icon > b {
+  grid-area: 1 / 1;
+}
+.roster-role-icon > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.roster-role-icon > b {
+  color: rgba(244, 248, 255, 0.78);
+  font-size: 28px;
+  letter-spacing: 0.06em;
+}
+.roster-role-icon:has(> img:not([hidden])) > b {
+  opacity: 0;
+}
+.roster-role-icon.is-hero {
+  top: 50%;
+  left: 50%;
+  width: 178px;
+  height: 178px;
+  transform: translate(-50%, -50%);
+}
+.roster-role-icon.is-hero > b {
+  font-size: 38px;
+}
+.roster-role-icon.is-badge {
+  right: 18px;
+  bottom: 18px;
+  width: 62px;
+  height: 62px;
+  padding: 8px;
+  clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+  background: rgba(5, 12, 22, 0.88);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+.roster-role-icon.is-badge > b {
+  font-size: 12px;
 }
 .roster-cards article > small,
 .roster-cards article > strong {

@@ -6,6 +6,7 @@ import {
   createDefaultDraftState,
   currentPhase,
   DetectorProfileSchema,
+  DisplayCommandSchema,
   DisplayStateSchema,
   DraftCommandSchema,
   type DraftPhase,
@@ -208,6 +209,24 @@ describe("display contracts", () => {
     const state = createDefaultDisplayState();
     state.scoreboard.frames.red.x = 1900;
     expect(DisplayStateSchema.safeParse(state).success).toBe(false);
+  });
+
+  test("validates focused organizer section commands", () => {
+    const state = createDefaultDisplayState();
+    expect(
+      DisplayCommandSchema.safeParse({
+        type: "set-team-directory",
+        expectedRevision: 0,
+        teams: state.teams,
+      }).success,
+    ).toBe(true);
+    expect(
+      DisplayCommandSchema.safeParse({
+        type: "set-match-schedule",
+        expectedRevision: 0,
+        schedule: [{ id: "incomplete" }],
+      }).success,
+    ).toBe(false);
   });
 });
 

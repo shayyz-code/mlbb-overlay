@@ -561,13 +561,21 @@
   background: linear-gradient(120deg, #43e2ff, #1685cf);
   letter-spacing: 0.1em;
 }
-.ticker-surface > span {
-  padding: 0 28px;
+.ticker-copy-window {
+  position: relative;
+  height: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+.ticker-copy {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  display: block;
+  width: max-content;
+  padding-inline: 28px;
   white-space: nowrap;
   font-size: 21px;
-  animation: ticker-copy 380ms ease-out both;
+  animation: ticker-marquee var(--ticker-duration) linear infinite;
 }
 
 .roster-surface {
@@ -789,10 +797,12 @@
     opacity: 0;
   }
 }
-@keyframes ticker-copy {
+@keyframes ticker-marquee {
   from {
-    transform: translateX(24px);
-    opacity: 0;
+    transform: translate(0, -50%);
+  }
+  to {
+    transform: translate(calc(-100% - 1590px), -50%);
   }
 }
 @keyframes roster-enter {
@@ -814,9 +824,20 @@
   .match-team,
   .schedule-list article,
   .countdown-card,
-  .ticker-surface > span,
   .roster-team,
   .roster-cards article {
     animation: none;
+  }
+  .ticker-copy {
+    position: static;
+    width: auto;
+    overflow: hidden;
+    transform: none;
+    text-overflow: ellipsis;
+    animation: none;
+  }
+  .ticker-copy-window {
+    display: flex;
+    align-items: center;
   }
 }

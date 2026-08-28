@@ -83,6 +83,7 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
     ...configured.ticker,
     enabled: true,
     messages: ["Overlay regression preview"],
+    speedSeconds: 12,
   };
   expect((await saveDisplay(request, configured)).ok()).toBeTruthy();
 
@@ -119,6 +120,16 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
     await page.goto("/overlay/ticker");
     await expect(page.getByText("UPDATE", { exact: true })).toBeVisible();
     await expect(page.getByText("LIVE UPDATE", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".ticker-copy-window")).toHaveCSS("overflow", "hidden");
+    await expect(page.locator(".ticker-copy")).toHaveCSS(
+      "animation-name",
+      "ticker-marquee",
+    );
+    await expect(page.locator(".ticker-copy")).toHaveCSS("animation-duration", "12s");
+    await expect(page.locator(".ticker-copy")).toHaveCSS(
+      "animation-iteration-count",
+      "infinite",
+    );
 
     await page.goto("/overlay/scoreboard");
     const scoreboard = page.locator(".display-compact-scoreboard");

@@ -367,12 +367,21 @@ function TickerOverlay({ display }: { display: DisplayState }) {
     return null;
   const index =
     (display.ticker.activeIndex + offset) % display.ticker.messages.length;
+  const copyStyle = {
+    "--ticker-duration": `${display.ticker.speedSeconds}s`,
+  } as CSSProperties;
   return (
     <div className="ticker-surface">
       <strong>UPDATE</strong>
-      <span key={`${display.cueRevision}-${index}`}>
-        {display.ticker.messages[index]}
-      </span>
+      <div className="ticker-copy-window">
+        <span
+          className="ticker-copy"
+          key={`${display.cueRevision}-${index}`}
+          style={copyStyle}
+        >
+          {display.ticker.messages[index]}
+        </span>
+      </div>
     </div>
   );
 }

@@ -41,6 +41,7 @@ import { LiveBroadcastActions } from "./LiveBroadcastActions";
 import { MatchControlPage } from "./MatchControl";
 import { MatchPicker } from "./MatchPicker";
 import { OrganizerSidebar } from "./OrganizerShell";
+import { OrganizerPreflight } from "./OrganizerPreflight";
 import { TeamControlPage } from "./TeamControl";
 import { newestAddedHeroId } from "./voice";
 
@@ -505,6 +506,12 @@ function ControlPage() {
           </div>
         </header>
 
+        <OrganizerPreflight
+          connected={connected}
+          draft={state}
+          display={display}
+          assets={assets}
+        />
         {error && <div className="error-banner">{error}</div>}
         <MatchPicker
           draft={state}

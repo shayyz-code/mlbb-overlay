@@ -276,6 +276,82 @@ button.danger {
 .autosave-state.conflict {
   color: var(--danger);
 }
+.organizer-preflight {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.organizer-preflight > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.organizer-preflight h2 {
+  margin: 3px 0 0;
+  font-size: 1.35rem;
+}
+.organizer-preflight > header > strong {
+  color: #ffbf69;
+}
+.organizer-preflight > header > strong.ready {
+  color: #67f5b2;
+}
+.organizer-preflight ul {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(125px, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.preflight-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+.preflight-item > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5e6b80;
+}
+.preflight-item.ready > i {
+  background: #67f5b2;
+  box-shadow: 0 0 8px rgba(103, 245, 178, 0.7);
+}
+.preflight-item.attention > i {
+  background: #ffbf69;
+}
+.preflight-item > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.preflight-item > span > strong,
+.preflight-item > span > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preflight-item > .preflight-fix {
+  color: var(--cyan);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.organizer-preflight > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
 .autosave-error {
   display: flex;
   align-items: center;
@@ -1261,6 +1337,9 @@ button.danger {
   .live-action-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .organizer-preflight ul {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 540px) {
@@ -1269,6 +1348,9 @@ button.danger {
     flex-direction: column;
   }
   .live-action-grid {
+    grid-template-columns: 1fr;
+  }
+  .organizer-preflight ul {
     grid-template-columns: 1fr;
   }
 }

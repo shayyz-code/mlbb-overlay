@@ -7,6 +7,7 @@ import type {
 import { useEffect, useState } from "react";
 import { fetchDisplay, sendDisplayCommand, subscribeToDisplay } from "./api";
 import "./match-control.css";
+import { OrganizerSidebar } from "./OrganizerShell";
 
 function settings(state: DisplayState): DisplaySettings {
   const { revision: _, updatedAt: __, ...value } = state;
@@ -97,49 +98,21 @@ export function MatchControlPage() {
   };
   return (
     <main className="control-shell">
-      <aside className="control-sidebar">
-        <div className="brand-lockup">
-          <span className="brand-rune">S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <nav>
-          <a href="/control/draft">Draft control</a>
-          <a href="/control/displays">Display console</a>
-          <a href="/control/teams">Team control</a>
-          <a className="active" href="/control/matches">
-            Match control
-          </a>
-        </nav>
-        <div className="system-card">
-          <span className={`status-light ${connected ? "online" : ""}`} />
-          <div>
-            <strong>{connected ? "Live sync" : "Reconnecting"}</strong>
-            <small>{working.schedule.length} planned matches</small>
-          </div>
-        </div>
-        <label className="token-field">
-          LAN control token
-          <input
-            type="password"
-            value={token}
-            onChange={(event) => {
-              setToken(event.target.value);
-              sessionStorage.setItem(
-                "shayyz-control-token",
-                event.target.value,
-              );
-            }}
-          />
-        </label>
-      </aside>
+      <OrganizerSidebar
+        active="matches"
+        connected={connected}
+        statusLines={<small>{working.schedule.length} planned matches</small>}
+        token={token}
+        onTokenChange={(value) => {
+          setToken(value);
+          sessionStorage.setItem("shayyz-control-token", value);
+        }}
+      />
       <section className="control-main match-control-main">
         <header className="control-header">
           <div>
             <small>Organizer setup</small>
-            <h1>Match Control</h1>
+            <h1>Match Setup</h1>
           </div>
           <div className="header-actions">
             <button

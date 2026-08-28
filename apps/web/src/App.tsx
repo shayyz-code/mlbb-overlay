@@ -39,6 +39,7 @@ import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
 import { MatchControlPage } from "./MatchControl";
 import { MatchPicker } from "./MatchPicker";
+import { OrganizerSidebar } from "./OrganizerShell";
 import { TeamControlPage } from "./TeamControl";
 import { newestAddedHeroId } from "./voice";
 
@@ -412,66 +413,52 @@ function ControlPage() {
   const phase = currentPhase(state);
   return (
     <main className="control-shell">
-      <aside className="control-sidebar">
-        <div className="brand-lockup">
-          <span className="brand-rune">S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <nav>
-          <a className="active" href="/control/draft">
-            Draft control
-          </a>
-          <a href="/control/displays">Display console</a>
-          <a href="/control/teams">Team control</a>
-          <a href="/control/matches">Match control</a>
-          <a href="/overlay/draft" target="_blank" rel="noreferrer">
-            Open draft view
-          </a>
-        </nav>
-        <div className="system-card">
-          <span className={`status-light ${connected ? "online" : ""}`} />
-          <div>
-            <strong>{connected ? "Live sync" : "Reconnecting"}</strong>
+      <OrganizerSidebar
+        active="live"
+        connected={connected}
+        token={token}
+        onTokenChange={saveToken}
+        statusLines={
+          <>
             <small>Revision {state.revision}</small>
             <small>
               {assets?.enabled
                 ? `${assets.displayName}: ${assets.coverage.portraits}/${assets.coverage.heroes} portraits · ${assets.coverage.posters} posters · ${assets.coverage.voices} voices`
                 : "Private media pack not loaded"}
             </small>
+          </>
+        }
+        extra={
+          <div className="surface-links">
+            <a href="/overlay/draft" target="_blank" rel="noreferrer">
+              Draft overlay
+            </a>
           </div>
-        </div>
-        <label className="token-field">
-          LAN control token
-          <input
-            type="password"
-            value={token}
-            placeholder="Only required on LAN"
-            onChange={(event) => saveToken(event.target.value)}
-          />
-        </label>
-        <label className="voice-setting">
-          <input
-            type="checkbox"
-            checked={state.presentation.voiceEnabled}
-            onChange={(event) =>
-              dispatch({
-                type: "set-presentation",
-                presentation: { voiceEnabled: event.target.checked },
-              })
-            }
-          />
-          <span>
-            <strong>Hero voice lines</strong>
-            <small>Off by default · OBS only</small>
-          </span>
-        </label>
-        <p className="legal-note">
-          Unofficial community project. Game media requires separate permission.
-        </p>
-      </aside>
+        }
+        footer={
+          <>
+            <label className="voice-setting">
+              <input
+                type="checkbox"
+                checked={state.presentation.voiceEnabled}
+                onChange={(event) =>
+                  dispatch({
+                    type: "set-presentation",
+                    presentation: { voiceEnabled: event.target.checked },
+                  })
+                }
+              />
+              <span>
+                <strong>Hero voice lines</strong>
+                <small>Off by default · OBS only</small>
+              </span>
+            </label>
+            <p className="legal-note">
+              Unofficial community project. Game media requires separate permission.
+            </p>
+          </>
+        }
+      />
 
       <section className="control-main">
         <header className="control-header">
@@ -640,6 +627,7 @@ export function App() {
   if (path.startsWith("/control/matches")) return <MatchControlPage />;
   if (path.startsWith("/control/teams")) return <TeamControlPage />;
   if (
+    path.startsWith("/control/overlays") ||
     path.startsWith("/control/displays") ||
     path.startsWith("/control/scoreboard")
   )

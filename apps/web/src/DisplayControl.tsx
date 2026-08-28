@@ -1,23 +1,27 @@
 import type {
+  DisplayCommand,
   DisplaySettings,
   DisplayState,
   DraftCommand,
   DraftState,
   NativeHudFrame,
+  OverlayConfig,
   Side,
 } from "@shayyz/contracts";
 import { type CSSProperties, useEffect, useState } from "react";
 import {
-  fetchDisplay,
   fetchDraft,
   sendCommand,
   sendDisplayCommand,
-  subscribeToDisplay,
   subscribeToDraft,
 } from "./api";
 import "./display-control.css";
 import { MatchPicker } from "./MatchPicker";
 import { OrganizerSidebar } from "./OrganizerShell";
+import {
+  autosaveLabel,
+  useDisplaySectionAutosave,
+} from "./useDisplaySectionAutosave";
 
 const surfaces = [
   "scoreboard",
@@ -33,81 +37,55 @@ type WithoutRevision<T> = T extends unknown
   : never;
 type DraftCommandInput = WithoutRevision<DraftCommand>;
 
-function settings(state: DisplayState): DisplaySettings {
-  const { revision: _, updatedAt: __, ...value } = state;
-  return value;
-}
+const selectOverlayConfig = (state: DisplayState): OverlayConfig => ({
+  event: state.event,
+  scoreboard: state.scoreboard,
+  countdown: state.countdown,
+  ticker: state.ticker,
+  rosterLoop: state.rosterLoop,
+});
+const overlayConfigCommand = (
+  expectedRevision: number,
+  config: OverlayConfig,
+): DisplayCommand => ({ type: "set-overlay-config", expectedRevision, config });
 
 function useDisplayControl() {
   const [draft, setDraft] = useState<DraftState>();
-  const [display, setDisplay] = useState<DisplayState>();
-  const [working, setWorking] = useState<DisplaySettings>();
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState("");
+  const [draftConnected, setDraftConnected] = useState(false);
+  const [liveError, setLiveError] = useState("");
   const [token, setToken] = useState(
     () => sessionStorage.getItem("shayyz-control-token") ?? "",
   );
+  const autosave = useDisplaySectionAutosave({
+    token,
+    select: selectOverlayConfig,
+    command: overlayConfigCommand,
+    failureMessage: "Overlay save failed.",
+  });
 
   useEffect(() => {
-    void Promise.all([fetchDraft(), fetchDisplay()]).then(
-      ([draftState, displayState]) => {
-        setDraft(draftState);
-        setDisplay(displayState);
-        setWorking(settings(displayState));
-      },
-    );
-    const stopDraft = subscribeToDraft(setDraft, setConnected);
-    const stopDisplay = subscribeToDisplay((state) => {
-      setDisplay(state);
-      setWorking(settings(state));
-    }, setConnected);
-    return () => {
-      stopDraft();
-      stopDisplay();
-    };
+    void fetchDraft().then(setDraft);
+    return subscribeToDraft(setDraft, setDraftConnected);
   }, []);
 
-  const persist = async (next: DisplaySettings) => {
+  const cue = async () => {
+    const display = autosave.display;
     if (!display) return;
-    setError("");
     try {
-      const state = await sendDisplayCommand(
-        {
-          type: "set-display",
-          expectedRevision: display.revision,
-          display: next,
-        },
+      setLiveError("");
+      await sendDisplayCommand(
+        { type: "cue", expectedRevision: display.revision },
         token,
       );
-      setDisplay(state);
-      setWorking(settings(state));
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Display update failed.",
-      );
-      const state = await fetchDisplay();
-      setDisplay(state);
-      setWorking(settings(state));
-    }
-  };
-
-  const cue = async () => {
-    if (!display) return;
-    try {
-      setDisplay(
-        await sendDisplayCommand(
-          { type: "cue", expectedRevision: display.revision },
-          token,
-        ),
-      );
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Cue failed.");
+      setLiveError(reason instanceof Error ? reason.message : "Cue failed.");
     }
   };
 
   const draftCommand = async (command: DraftCommandInput) => {
     if (!draft) return;
     try {
+      setLiveError("");
       setDraft(
         await sendCommand(
           { ...command, expectedRevision: draft.revision } as DraftCommand,
@@ -115,7 +93,7 @@ function useDisplayControl() {
         ),
       );
     } catch (reason) {
-      setError(
+      setLiveError(
         reason instanceof Error ? reason.message : "Live score update failed.",
       );
       setDraft(await fetchDraft());
@@ -127,19 +105,15 @@ function useDisplayControl() {
     sessionStorage.setItem("shayyz-control-token", value);
   };
   return {
+    autosave,
     draft,
-    display,
-    working,
-    setWorking,
-    connected,
-    error,
+    connected: autosave.connected && draftConnected,
+    error: liveError || autosave.error,
     token,
     saveToken,
-    persist,
     cue,
     draftCommand,
     setDraft,
-    setDisplay,
   };
 }
 
@@ -286,13 +260,14 @@ function FramePreview({
 
 export function DisplayControlPage() {
   const control = useDisplayControl();
-  const { draft, display, working, setWorking } = control;
+  const { draft, autosave } = control;
+  const { display, value: working } = autosave;
   if (!draft || !display || !working)
     return <div className="loading-screen">Loading display console…</div>;
   const updateFrame = (side: Side, frame: NativeHudFrame) => {
     const next = structuredClone(working);
     next.scoreboard.frames[side] = frame;
-    setWorking(next);
+    autosave.edit(next);
   };
   const effectiveRemaining =
     working.countdown.running && working.countdown.startedAt !== null
@@ -340,24 +315,34 @@ export function DisplayControlPage() {
             <button type="button" onClick={() => void control.cue()}>
               Replay entrance
             </button>
-            <button
-              type="button"
-              className="primary"
-              onClick={() => void control.persist(working)}
-            >
-              Save all changes
-            </button>
+            <span className={`autosave-state ${autosave.status}`} role="status">
+              {autosaveLabel[autosave.status]}
+            </span>
           </div>
         </header>
-        {control.error && <div className="error-banner">{control.error}</div>}
+        {control.error && (
+          <div className="error-banner autosave-error">
+            <span>{control.error}</span>
+            {autosave.error &&
+              (autosave.status === "error" ||
+                autosave.status === "conflict") && (
+                <button type="button" onClick={autosave.retry}>
+                  Keep my changes
+                </button>
+              )}
+            {autosave.status === "conflict" && (
+              <button type="button" onClick={autosave.reload}>
+                Reload saved overlay settings
+              </button>
+            )}
+          </div>
+        )}
         <MatchPicker
           draft={draft}
           display={display}
           token={control.token}
-          onActivated={(nextDraft, nextDisplay) => {
+          onActivated={(nextDraft) => {
             control.setDraft(nextDraft);
-            control.setDisplay(nextDisplay);
-            setWorking(settings(nextDisplay));
           }}
         />
         <p className="scoreboard-instruction">
@@ -376,7 +361,7 @@ export function DisplayControlPage() {
               <select
                 value={working.scoreboard.preset}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     scoreboard: {
                       ...working.scoreboard,
@@ -408,7 +393,7 @@ export function DisplayControlPage() {
               <input
                 value={working.scoreboard.stage}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     scoreboard: {
                       ...working.scoreboard,
@@ -423,7 +408,7 @@ export function DisplayControlPage() {
               <input
                 value={working.scoreboard.round}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     scoreboard: {
                       ...working.scoreboard,
@@ -441,7 +426,7 @@ export function DisplayControlPage() {
                 max="9"
                 value={working.scoreboard.gameNumber}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     scoreboard: {
                       ...working.scoreboard,
@@ -459,7 +444,7 @@ export function DisplayControlPage() {
                 max="9"
                 value={working.scoreboard.bestOf}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     scoreboard: {
                       ...working.scoreboard,
@@ -547,7 +532,7 @@ export function DisplayControlPage() {
                 step="1"
                 value={working.rosterLoop.holdSeconds}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     rosterLoop: {
                       ...working.rosterLoop,
@@ -566,7 +551,7 @@ export function DisplayControlPage() {
                 step="0.1"
                 value={working.rosterLoop.transitionSeconds}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     rosterLoop: {
                       ...working.rosterLoop,
@@ -592,7 +577,7 @@ export function DisplayControlPage() {
                 value={Math.ceil(working.countdown.durationSeconds / 60)}
                 onChange={(event) => {
                   const seconds = Number(event.target.value) * 60;
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     countdown: {
                       durationSeconds: seconds,
@@ -628,8 +613,7 @@ export function DisplayControlPage() {
                           startedAt: Date.now(),
                         },
                   };
-                  setWorking(next);
-                  void control.persist(next);
+                  autosave.saveNow(next);
                 }}
               >
                 {working.countdown.running ? "Pause" : "Start"}
@@ -646,8 +630,7 @@ export function DisplayControlPage() {
                       startedAt: null,
                     },
                   };
-                  setWorking(next);
-                  void control.persist(next);
+                  autosave.saveNow(next);
                 }}
               >
                 Reset
@@ -662,7 +645,7 @@ export function DisplayControlPage() {
                 type="checkbox"
                 checked={working.ticker.enabled}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     ticker: {
                       ...working.ticker,
@@ -679,7 +662,7 @@ export function DisplayControlPage() {
                 rows={5}
                 value={working.ticker.messages.join("\n")}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     ticker: {
                       ...working.ticker,
@@ -702,7 +685,7 @@ export function DisplayControlPage() {
                 max="120"
                 value={working.ticker.speedSeconds}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     ticker: {
                       ...working.ticker,
@@ -728,7 +711,7 @@ export function DisplayControlPage() {
               <input
                 value={working.event.name}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     event: { ...working.event, name: event.target.value },
                   })
@@ -740,7 +723,7 @@ export function DisplayControlPage() {
               <input
                 value={working.event.timezone}
                 onChange={(event) =>
-                  setWorking({
+                  autosave.edit({
                     ...working,
                     event: { ...working.event, timezone: event.target.value },
                   })

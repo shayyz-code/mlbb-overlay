@@ -37,6 +37,7 @@ import { DisplayControlPage } from "./DisplayControl";
 import { DisplayOverlay, type DisplaySurface } from "./DisplayOverlays";
 import { operatorPhaseLabel } from "./draft-turn";
 import { HeroMedia } from "./HeroMedia";
+import { LiveBroadcastActions } from "./LiveBroadcastActions";
 import { MatchControlPage } from "./MatchControl";
 import { MatchPicker } from "./MatchPicker";
 import { OrganizerSidebar } from "./OrganizerShell";
@@ -402,6 +403,16 @@ function ControlPage() {
   const visibleHeroes = heroes.filter((hero) =>
     hero.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
+  const overlaySurfaces = [
+    "draft",
+    "scoreboard",
+    "match",
+    "schedule",
+    "countdown",
+    "ticker",
+    "roster",
+    "result",
+  ];
 
   useEffect(() => {
     void fetchDisplay().then(setDisplay);
@@ -430,9 +441,16 @@ function ControlPage() {
         }
         extra={
           <div className="surface-links">
-            <a href="/overlay/draft" target="_blank" rel="noreferrer">
-              Draft overlay
-            </a>
+            {overlaySurfaces.map((surface) => (
+              <a
+                href={`/overlay/${surface}`}
+                target="_blank"
+                rel="noreferrer"
+                key={surface}
+              >
+                {surface}
+              </a>
+            ))}
           </div>
         }
         footer={
@@ -454,7 +472,8 @@ function ControlPage() {
               </span>
             </label>
             <p className="legal-note">
-              Unofficial community project. Game media requires separate permission.
+              Unofficial community project. Game media requires separate
+              permission.
             </p>
           </>
         }
@@ -495,6 +514,15 @@ function ControlPage() {
             replaceState(nextDraft);
             setDisplay(nextDisplay);
           }}
+        />
+        <LiveBroadcastActions
+          draft={state}
+          display={display}
+          token={token}
+          onScore={(side, score) =>
+            dispatch({ type: "set-scoreboard-score", side, score })
+          }
+          onDisplayChange={setDisplay}
         />
         <div className="phase-strip">
           <div>

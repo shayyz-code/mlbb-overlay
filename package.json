@@ -18,7 +18,7 @@
     "lint": "biome lint .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "bun test",
-    "test:e2e": "playwright test",
+    "test:e2e": "bun run build && playwright test",
     "assets:import": "bun run scripts/import-assets.ts",
     "assets:verify": "bun run scripts/import-assets.ts --verify",
     "android:audit": "bun run scripts/audit-android.ts",

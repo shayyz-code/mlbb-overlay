@@ -6,6 +6,7 @@ import {
   type Side,
 } from "@shayyz/contracts";
 import { HeroMedia } from "./HeroMedia";
+import "./overlay-theme.css";
 import "./compact-draft-overlay.css";
 
 interface CompactDraftOverlayProps {

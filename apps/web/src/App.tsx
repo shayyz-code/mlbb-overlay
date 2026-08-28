@@ -634,18 +634,24 @@ function ControlPage() {
 
 function OverlayPage() {
   const { state, heroes, connected, draftEvent } = useDraft();
+  const [display, setDisplay] = useState<DisplayState>();
   const [, rerender] = useState(0);
   useHeroVoice(state, heroes, draftEvent);
+  useEffect(() => {
+    void fetchDisplay().then(setDisplay);
+    return subscribeToDisplay(setDisplay, () => undefined);
+  }, []);
   useEffect(() => {
     const timer = window.setInterval(() => rerender((value) => value + 1), 250);
     return () => window.clearInterval(timer);
   }, []);
-  if (!state) return null;
+  if (!state || !display) return null;
 
   return (
     <CompactDraftOverlay
       state={state}
       heroes={heroes}
+      eventName={display.event.name}
       connected={connected}
       remainingSeconds={effectiveTimer(state)}
     />

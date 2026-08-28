@@ -17,6 +17,7 @@ import {
 } from "./api";
 import "./display-control.css";
 import { MatchPicker } from "./MatchPicker";
+import { OrganizerSidebar } from "./OrganizerShell";
 
 const surfaces = [
   "scoreboard",
@@ -303,59 +304,37 @@ export function DisplayControlPage() {
       : working.countdown.remainingSeconds;
   return (
     <main className="control-shell display-control-shell">
-      <aside className="control-sidebar">
-        <div className="brand-lockup">
-          <span className="brand-rune">S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <nav>
-          <a href="/control/draft">Draft control</a>
-          <a className="active" href="/control/displays">
-            Display console
-          </a>
-          <a href="/control/teams">Team control</a>
-          <a href="/control/matches">Match control</a>
-        </nav>
-        <div className="surface-links">
-          {surfaces.map((surface) => (
-            <a
-              key={surface}
-              href={`/overlay/${surface}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {surface}
-            </a>
-          ))}
-        </div>
-        <div className="system-card">
-          <span
-            className={`status-light ${control.connected ? "online" : ""}`}
-          />
-          <div>
-            <strong>{control.connected ? "Live sync" : "Reconnecting"}</strong>
+      <OrganizerSidebar
+        active="overlays"
+        connected={control.connected}
+        token={control.token}
+        onTokenChange={control.saveToken}
+        statusLines={
+          <>
             <small>Display revision {display.revision}</small>
             <small>Native HUD framing</small>
+          </>
+        }
+        extra={
+          <div className="surface-links">
+            {surfaces.map((surface) => (
+              <a
+                key={surface}
+                href={`/overlay/${surface}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {surface}
+              </a>
+            ))}
           </div>
-        </div>
-        <label className="token-field">
-          LAN control token
-          <input
-            type="password"
-            value={control.token}
-            placeholder="Only required on LAN"
-            onChange={(event) => control.saveToken(event.target.value)}
-          />
-        </label>
-      </aside>
+        }
+      />
       <section className="control-main display-control-main">
         <header className="control-header">
           <div>
-            <small>Broadcast operations</small>
-            <h1>Display Console</h1>
+            <small>Organizer setup</small>
+            <h1>Overlay Setup</h1>
           </div>
           <div className="header-actions">
             <button type="button" onClick={() => void control.cue()}>

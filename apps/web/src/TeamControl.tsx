@@ -12,6 +12,7 @@ import {
   uploadPlayerPhoto,
   uploadTeamLogo,
 } from "./api";
+import { OrganizerSidebar } from "./OrganizerShell";
 import "./team-control.css";
 
 const roles: PlayerRole[] = ["exp", "jungle", "mid", "gold", "roam"];
@@ -103,49 +104,21 @@ export function TeamControlPage() {
   };
   return (
     <main className="control-shell">
-      <aside className="control-sidebar">
-        <div className="brand-lockup">
-          <span className="brand-rune">S</span>
-          <div>
-            <strong>SHAYYZ</strong>
-            <small>MLBB OVERLAY</small>
-          </div>
-        </div>
-        <nav>
-          <a href="/control/draft">Draft control</a>
-          <a href="/control/displays">Display console</a>
-          <a className="active" href="/control/teams">
-            Team control
-          </a>
-          <a href="/control/matches">Match control</a>
-        </nav>
-        <div className="system-card">
-          <span className={`status-light ${connected ? "online" : ""}`} />
-          <div>
-            <strong>{connected ? "Live sync" : "Reconnecting"}</strong>
-            <small>{working.teams.length} managed teams</small>
-          </div>
-        </div>
-        <label className="token-field">
-          LAN control token
-          <input
-            type="password"
-            value={token}
-            onChange={(event) => {
-              setToken(event.target.value);
-              sessionStorage.setItem(
-                "shayyz-control-token",
-                event.target.value,
-              );
-            }}
-          />
-        </label>
-      </aside>
+      <OrganizerSidebar
+        active="teams"
+        connected={connected}
+        statusLines={<small>{working.teams.length} managed teams</small>}
+        token={token}
+        onTokenChange={(value) => {
+          setToken(value);
+          sessionStorage.setItem("shayyz-control-token", value);
+        }}
+      />
       <section className="control-main team-control-main">
         <header className="control-header">
           <div>
             <small>Organizer setup</small>
-            <h1>Team Control</h1>
+            <h1>Team Setup</h1>
           </div>
           <div className="header-actions">
             <button

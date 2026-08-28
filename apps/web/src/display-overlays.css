@@ -500,6 +500,135 @@
   animation: ticker-copy 380ms ease-out both;
 }
 
+.roster-surface {
+  position: absolute;
+  inset: 0;
+  padding: 150px 150px 110px;
+  display: grid;
+  align-content: center;
+  gap: 42px;
+}
+.roster-surface.phase-gap {
+  visibility: hidden;
+}
+.roster-team {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: 24px;
+}
+.roster-team .broadcast-logo {
+  width: 116px;
+  height: 116px;
+  flex-basis: 116px;
+  border-right-color: var(--broadcast-blue);
+}
+.roster-team > div {
+  display: grid;
+  min-width: 470px;
+  padding: 15px 52px 17px 34px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
+  background: linear-gradient(
+    100deg,
+    rgba(7, 16, 29, 0.98),
+    rgba(28, 52, 118, 0.96)
+  );
+  border-left: 4px solid var(--broadcast-cyan);
+}
+.roster-team small {
+  color: var(--broadcast-cyan);
+  letter-spacing: 0.22em;
+}
+.roster-team strong {
+  max-width: 700px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 48px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.roster-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.roster-cards article {
+  position: relative;
+  min-width: 0;
+  height: 500px;
+  overflow: hidden;
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+  background: linear-gradient(
+    155deg,
+    rgba(32, 216, 255, 0.22),
+    rgba(7, 16, 29, 0.97) 44% 76%,
+    rgba(54, 92, 255, 0.3)
+  );
+  border-bottom: 5px solid var(--broadcast-cyan);
+  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.52));
+}
+.roster-photo {
+  position: relative;
+  height: 385px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(32, 216, 255, 0.3), transparent 44%),
+    linear-gradient(145deg, rgba(10, 39, 57, 0.96), rgba(17, 25, 66, 0.98));
+}
+.roster-photo::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  background: linear-gradient(transparent, rgba(7, 16, 29, 0.98));
+}
+.roster-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.roster-photo b {
+  color: rgba(244, 248, 255, 0.82);
+  font-size: 76px;
+  letter-spacing: 0.04em;
+}
+.roster-cards article > small,
+.roster-cards article > strong {
+  position: absolute;
+  z-index: 1;
+  left: 26px;
+  right: 26px;
+}
+.roster-cards article > small {
+  bottom: 76px;
+  color: var(--broadcast-cyan);
+  letter-spacing: 0.2em;
+}
+.roster-cards article > strong {
+  bottom: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 29px;
+  white-space: nowrap;
+}
+.roster-surface.phase-entering .roster-team,
+.roster-surface.phase-entering .roster-cards article {
+  animation: roster-enter var(--roster-transition) ease-out both;
+}
+.roster-surface.phase-entering .roster-cards article {
+  animation-delay: var(--roster-delay);
+}
+.roster-surface.phase-exiting .roster-team,
+.roster-surface.phase-exiting .roster-cards article {
+  animation: roster-exit var(--roster-transition) ease-in both;
+}
+.roster-surface.phase-exiting .roster-cards article {
+  animation-delay: var(--roster-exit-delay);
+}
+
 @keyframes hud-enter {
   from {
     transform: translateY(-105%);
@@ -530,6 +659,18 @@
     opacity: 0;
   }
 }
+@keyframes roster-enter {
+  from {
+    transform: translateY(70px);
+    opacity: 0;
+  }
+}
+@keyframes roster-exit {
+  to {
+    transform: translateY(55px);
+    opacity: 0;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .display-compact-scoreboard,
@@ -537,7 +678,9 @@
   .match-team,
   .schedule-list article,
   .countdown-card,
-  .ticker-surface > span {
+  .ticker-surface > span,
+  .roster-team,
+  .roster-cards article {
     animation: none;
   }
 }

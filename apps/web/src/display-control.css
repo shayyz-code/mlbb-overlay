@@ -356,6 +356,9 @@ textarea:focus {
 .event-fields {
   grid-template-columns: 2fr 1fr;
 }
+.roster-loop-fields {
+  grid-template-columns: repeat(2, minmax(0, 240px));
+}
 @media (max-width: 1250px) {
   .display-team-control {
     grid-template-columns: 55px minmax(0, 1fr);

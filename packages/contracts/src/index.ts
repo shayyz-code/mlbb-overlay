@@ -678,6 +678,10 @@ export const DisplaySettingsSchema = z.object({
     activeIndex: z.number().int().nonnegative(),
     speedSeconds: z.number().min(5).max(120),
   }),
+  rosterLoop: z.object({
+    holdSeconds: z.number().min(3).max(30),
+    transitionSeconds: z.number().min(0.3).max(2),
+  }),
   cueRevision: z.number().int().nonnegative(),
 });
 export type DisplaySettings = z.infer<typeof DisplaySettingsSchema>;
@@ -946,6 +950,7 @@ export function createDefaultDisplayState(now = new Date()): DisplayState {
       activeIndex: 0,
       speedSeconds: 24,
     },
+    rosterLoop: { holdSeconds: 8, transitionSeconds: 0.8 },
     cueRevision: 0,
   });
 }

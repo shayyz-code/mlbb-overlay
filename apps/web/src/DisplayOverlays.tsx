@@ -1,7 +1,9 @@
 import type {
   DisplayState,
   DraftState,
+  ManagedTeam,
   NativeHudFrame,
+  PlayerRole,
   ScheduledMatch,
   Side,
   Team,
@@ -19,6 +21,11 @@ import {
   subscribeToDisplay,
   subscribeToDraft,
 } from "./api";
+import {
+  advanceRosterFrame,
+  type RosterFrame,
+  rosterPhaseDuration,
+} from "./roster-loop";
 import "./display-overlays.css";
 
 export type DisplaySurface =
@@ -27,6 +34,7 @@ export type DisplaySurface =
   | "schedule"
   | "countdown"
   | "ticker"
+  | "roster"
   | "result";
 
 function initials(value: string) {
@@ -368,6 +376,79 @@ function TickerOverlay({ display }: { display: DisplayState }) {
   );
 }
 
+const rosterRoles: PlayerRole[] = ["exp", "jungle", "mid", "gold", "roam"];
+
+function RosterCycle({ display }: { display: DisplayState }) {
+  const [frame, setFrame] = useState<RosterFrame>({
+    phase: "entering",
+    teamIndex: 0,
+  });
+  const { holdSeconds, transitionSeconds } = display.rosterLoop;
+  useEffect(() => {
+    if (display.teams.length === 0) return;
+    const timer = window.setTimeout(
+      () =>
+        setFrame((current) =>
+          advanceRosterFrame(current, display.teams.length),
+        ),
+      rosterPhaseDuration(frame.phase, holdSeconds, transitionSeconds),
+    );
+    return () => window.clearTimeout(timer);
+  }, [display.teams.length, frame, holdSeconds, transitionSeconds]);
+  if (display.teams.length === 0) return null;
+  const team = display.teams[
+    frame.teamIndex % display.teams.length
+  ] as ManagedTeam;
+  const starters = rosterRoles.map((role) =>
+    team.starters.find((player) => player.role === role),
+  );
+  const style = {
+    "--roster-transition": `${transitionSeconds * 0.6}s`,
+  } as CSSProperties;
+  return (
+    <section
+      className={`roster-surface phase-${frame.phase}`}
+      style={style}
+      data-team-id={team.id}
+    >
+      <header className="roster-team">
+        <Logo team={team} side="blue" />
+        <div>
+          <small>Team roster</small>
+          <strong>{team.name}</strong>
+        </div>
+      </header>
+      <div className="roster-cards">
+        {starters.map((player, index) => {
+          if (!player) return null;
+          const cardStyle = {
+            "--roster-delay": `${index * transitionSeconds * 0.1}s`,
+            "--roster-exit-delay": `${(4 - index) * transitionSeconds * 0.1}s`,
+          } as CSSProperties;
+          return (
+            <article key={player.id} style={cardStyle}>
+              <div className="roster-photo">
+                {player.photoUrl ? (
+                  <img src={player.photoUrl} alt={player.name} />
+                ) : (
+                  <b>{initials(player.name)}</b>
+                )}
+              </div>
+              <small>{player.role}</small>
+              <strong>{player.name}</strong>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function RosterOverlay({ display }: { display: DisplayState }) {
+  const resetKey = JSON.stringify([display.teams, display.rosterLoop]);
+  return <RosterCycle key={resetKey} display={display} />;
+}
+
 export function DisplayOverlay({ surface }: { surface: DisplaySurface }) {
   const { draft, display } = useBroadcastState();
   const cueKey = useMemo(
@@ -396,6 +477,7 @@ export function DisplayOverlay({ surface }: { surface: DisplaySurface }) {
   else if (surface === "countdown")
     content = <CountdownOverlay display={display} />;
   else if (surface === "ticker") content = <TickerOverlay display={display} />;
+  else if (surface === "roster") content = <RosterOverlay display={display} />;
   else content = <ResultOverlay draft={draft} display={display} />;
   return (
     <main key={cueKey} className={`display-canvas display-${surface}`}>

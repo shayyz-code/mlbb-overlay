@@ -633,7 +633,7 @@ function OverlayPage() {
 export function App() {
   const path = window.location.pathname;
   const surface = path.match(
-    /^\/overlay\/(scoreboard|match|schedule|countdown|ticker|result)/,
+    /^\/overlay\/(scoreboard|match|schedule|countdown|ticker|roster|result)/,
   )?.[1] as DisplaySurface | undefined;
   if (surface) return <DisplayOverlay surface={surface} />;
   if (path.startsWith("/overlay")) return <OverlayPage />;

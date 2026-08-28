@@ -21,4 +21,9 @@ test("loads and reports only manifest-listed private media", async () => {
     missingHeroIds: ["layla"],
   });
   expect(pack.hero("layla", "portrait")).toBeUndefined();
+  expect(pack.role("exp")).toMatchObject({
+    path: "roles/exp.png",
+    mimeType: "image/png",
+  });
+  expect(pack.role("roam")).toBeUndefined();
 });

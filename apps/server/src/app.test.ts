@@ -287,9 +287,9 @@ describe("draft API", () => {
       currentDisplayRevision: 1,
     });
 
-    expect((await series({ type: "start-series", matchId: "final" })).status).toBe(
-      200,
-    );
+    expect(
+      (await series({ type: "start-series", matchId: "final" })).status,
+    ).toBe(200);
     expect(displayStore.state.scoreboard.gameNumber).toBe(1);
     expect(displayStore.state.lineups.blue.map((player) => player.id)).toEqual(
       blue.starters.map((player) => player.id),
@@ -373,6 +373,11 @@ describe("draft API", () => {
     expect(response.status).toBe(206);
     expect(response.headers.get("content-range")).toBe("bytes 0-6/16");
     expect(await response.text()).toBe("private");
+    const role = await app.request("/api/v1/media/roles/exp");
+    expect(role.status).toBe(200);
+    expect(await role.text()).toBe("private role");
+    expect((await app.request("/api/v1/media/roles/roam")).status).toBe(404);
+    expect((await app.request("/api/v1/media/roles/invalid")).status).toBe(404);
     expect(
       (await app.request("/api/v1/media/heroes/layla/portrait")).status,
     ).toBe(404);

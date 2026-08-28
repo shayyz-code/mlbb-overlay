@@ -37,6 +37,7 @@ const manifest: AssetPackManifest = {
       },
     },
   },
+  roles: {},
   cues: {},
 };
 

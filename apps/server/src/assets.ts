@@ -7,6 +7,7 @@ import {
   type AssetPackStatus,
   type Hero,
   type HeroMedia,
+  type PlayerRole,
 } from "@shayyz/contracts";
 
 export type HeroMediaKind = keyof HeroMedia;
@@ -104,6 +105,10 @@ export class LocalAssetPack {
     return this.files.get(`cue:${id}`);
   }
 
+  role(id: PlayerRole): LoadedAsset | undefined {
+    return this.files.get(`role:${id}`);
+  }
+
   private heroUrl(id: string, kind: HeroMediaKind): string {
     return `/api/v1/media/heroes/${id}/${kind}`;
   }
@@ -120,6 +125,9 @@ export class LocalAssetPack {
     }
     for (const [id, file] of Object.entries(manifest.cues)) {
       if (file) result.push([`cue:${id}`, file]);
+    }
+    for (const [id, file] of Object.entries(manifest.roles)) {
+      if (file) result.push([`role:${id}`, file]);
     }
     return result;
   }

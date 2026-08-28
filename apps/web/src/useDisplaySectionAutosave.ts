@@ -50,6 +50,7 @@ export function useDisplaySectionAutosave<T>({
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const conflictRef = useRef(false);
+  const immediateRef = useRef(false);
 
   useEffect(() => {
     const receive = (state: DisplayState) => {
@@ -96,6 +97,8 @@ export function useDisplaySectionAutosave<T>({
       status === "conflict"
     )
       return;
+    const delay = immediateRef.current ? 0 : 600;
+    immediateRef.current = false;
     const timeout = window.setTimeout(async () => {
       const currentDisplay = displayRef.current;
       const currentValue = valueRef.current;
@@ -149,7 +152,7 @@ export function useDisplaySectionAutosave<T>({
         savingRef.current = false;
         pendingRef.current = undefined;
       }
-    }, 600);
+    }, delay);
     return () => window.clearTimeout(timeout);
   }, [command, failureMessage, select, status, token, value]);
 
@@ -162,6 +165,10 @@ export function useDisplaySectionAutosave<T>({
       setError("");
       setStatus("dirty");
     }
+  };
+  const saveNow = (next: T) => {
+    immediateRef.current = true;
+    edit(next);
   };
   const retry = () => {
     conflictRef.current = false;
@@ -181,5 +188,15 @@ export function useDisplaySectionAutosave<T>({
     setStatus("saved");
   };
 
-  return { connected, display, edit, error, reload, retry, status, value };
+  return {
+    connected,
+    display,
+    edit,
+    error,
+    reload,
+    retry,
+    saveNow,
+    status,
+    value,
+  };
 }

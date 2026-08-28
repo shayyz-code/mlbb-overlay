@@ -9,6 +9,32 @@ The importer creates a validated manifest containing:
 - the relative portrait and optional WebM/MP4 poster paths;
 - SHA-256 checksum for each file.
 
+## Local role icons
+
+Role icons are personal operator assets and are never committed. Download the
+five official MLBB role PNGs from their attributed source pages, then place
+them in one local folder with these exact names:
+
+```text
+exp.png
+jungle.png
+mid.png
+gold.png
+roam.png
+```
+
+Install them into the ignored personal pack and verify the manifest:
+
+```sh
+bun run assets:roles --source /absolute/path/to/role-icons \
+  --attribution "Source, copyright owner, and personal-use note"
+bun run assets:verify
+```
+
+The installer validates PNG signatures, records SHA-256 hashes and provenance,
+and updates the manifest atomically. The roster uses English text fallbacks
+when the local files are unavailable. Do not redistribute or commit the icons.
+
 Set `SHAYYZ_ASSET_PACK` only when using a non-default pack location. The server
 rejects symbolic links and serves only manifest-listed files. The application
 falls back to original geometric placeholders when the private pack is absent.

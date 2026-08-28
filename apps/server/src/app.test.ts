@@ -218,6 +218,12 @@ describe("draft API", () => {
     expect(store.state.scoreboard.scores).toEqual({ blue: 0, red: 0 });
     expect(displayStore.state.activeMatchId).toBe("final");
     expect(displayStore.state.schedule[0]?.status).toBe("live");
+    expect(displayStore.state.scoreboard).toMatchObject({
+      gameNumber: 1,
+      bestOf: 7,
+      stage: "Finals",
+      round: "Grand Final",
+    });
 
     await app.request("/api/v1/draft/commands", {
       method: "POST",
@@ -230,6 +236,111 @@ describe("draft API", () => {
       }),
     });
     expect(displayStore.state.schedule[0]?.scores).toEqual({ blue: 1, red: 0 });
+    displayStore.close();
+  });
+
+  test("runs an explicit series from start through completion", async () => {
+    const { app, store, displayStore } = await setup();
+    const [blue, red] = displayStore.state.teams;
+    if (!blue || !red) throw new Error("Default teams are missing.");
+    displayStore.dispatch({
+      type: "set-match-schedule",
+      expectedRevision: 0,
+      schedule: [
+        {
+          id: "final",
+          scheduledAt: null,
+          stage: "Finals",
+          round: "Grand Final",
+          bestOf: 3,
+          blueTeamId: blue.id,
+          redTeamId: red.id,
+          scores: { blue: 0, red: 0 },
+          status: "scheduled",
+        },
+      ],
+    });
+    const series = (command: Record<string, unknown>) =>
+      app.request("/api/v1/series/commands", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...command,
+          expectedDraftRevision: store.state.revision,
+          expectedDisplayRevision: displayStore.state.revision,
+        }),
+      });
+
+    const stale = await app.request("/api/v1/series/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "start-series",
+        matchId: "final",
+        expectedDraftRevision: 0,
+        expectedDisplayRevision: 0,
+      }),
+    });
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({
+      currentDraftRevision: 0,
+      currentDisplayRevision: 1,
+    });
+
+    expect((await series({ type: "start-series", matchId: "final" })).status).toBe(
+      200,
+    );
+    expect(displayStore.state.scoreboard.gameNumber).toBe(1);
+    expect(displayStore.state.lineups.blue.map((player) => player.id)).toEqual(
+      blue.starters.map((player) => player.id),
+    );
+
+    await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "select-hero",
+        expectedRevision: store.state.revision,
+        heroId: "miya",
+        source: "manual",
+      }),
+    });
+    await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "set-scoreboard-score",
+        expectedRevision: store.state.revision,
+        side: "blue",
+        score: 1,
+      }),
+    });
+    expect((await series({ type: "next-game" })).status).toBe(200);
+    expect(store.state.phaseIndex).toBe(0);
+    expect(store.state.scoreboard.scores).toEqual({ blue: 1, red: 0 });
+    expect(displayStore.state.scoreboard.gameNumber).toBe(2);
+
+    await app.request("/api/v1/draft/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "set-scoreboard-score",
+        expectedRevision: store.state.revision,
+        side: "blue",
+        score: 2,
+      }),
+    });
+    const extraGame = await series({ type: "next-game" });
+    expect(extraGame.status).toBe(400);
+    expect(await extraGame.json()).toMatchObject({
+      error: "The series has a winner. Complete the series instead.",
+    });
+    expect((await series({ type: "complete-series" })).status).toBe(200);
+    expect(displayStore.state.schedule[0]).toMatchObject({
+      status: "complete",
+      scores: { blue: 2, red: 0 },
+    });
+    expect(displayStore.state.activeMatchId).toBe("final");
     displayStore.close();
   });
 

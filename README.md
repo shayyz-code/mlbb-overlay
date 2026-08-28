@@ -47,6 +47,11 @@ Open the control dashboard at `http://127.0.0.1:3000/control/draft`. Add
 `http://127.0.0.1:3000/overlay/draft` to OBS as a 1920x1080 Browser Source.
 The OBS page has a transparent background and updates in real time.
 
+Add `http://127.0.0.1:3000/overlay/roster` as a separate transparent
+1920x1080 Browser Source for looping team introductions. It follows the team
+order and optional local player photos configured in Team Control; loop timing
+is configured in the Display Console.
+
 For development with hot reload, run `bun run dev`. Use `bun run check` before
 opening a pull request.
 

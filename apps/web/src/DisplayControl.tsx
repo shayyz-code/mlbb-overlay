@@ -24,6 +24,7 @@ const surfaces = [
   "schedule",
   "countdown",
   "ticker",
+  "roster",
   "result",
 ] as const;
 type WithoutRevision<T> = T extends unknown
@@ -536,6 +537,67 @@ export function DisplayControlPage() {
               Open match control
             </a>
           </header>
+        </section>
+
+        <section className="display-panel roster-loop-panel">
+          <header>
+            <div>
+              <small>Transparent team introductions</small>
+              <h2>Team roster loop</h2>
+            </div>
+            <a
+              className="calibration-link"
+              href="/overlay/roster"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open roster overlay
+            </a>
+          </header>
+          <p className="frame-help">
+            Loops every team in Team Control order. Replay entrance restarts
+            from the first team.
+          </p>
+          <div className="metadata-grid roster-loop-fields">
+            <label>
+              Hold per team (seconds)
+              <input
+                type="number"
+                min="3"
+                max="30"
+                step="1"
+                value={working.rosterLoop.holdSeconds}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    rosterLoop: {
+                      ...working.rosterLoop,
+                      holdSeconds: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Transition (seconds)
+              <input
+                type="number"
+                min="0.3"
+                max="2"
+                step="0.1"
+                value={working.rosterLoop.transitionSeconds}
+                onChange={(event) =>
+                  setWorking({
+                    ...working,
+                    rosterLoop: {
+                      ...working.rosterLoop,
+                      transitionSeconds: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+          </div>
         </section>
 
         <section className="display-panel utility-grid">

@@ -43,6 +43,7 @@ describe("DisplayStore", () => {
         activeMatchId: next.activeMatchId,
         countdown: next.countdown,
         ticker: next.ticker,
+        rosterLoop: next.rosterLoop,
         cueRevision: next.cueRevision,
       },
     });
@@ -119,6 +120,27 @@ describe("DisplayStore", () => {
       width: 142,
       height: 430,
       rowGap: 4,
+    });
+    migrated.close();
+  });
+
+  test("migrates display documents created before roster loop settings", async () => {
+    const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
+    directories.push(runtime);
+    const store = await createStore(runtime);
+    const legacy = store.state as unknown as Record<string, unknown>;
+    delete legacy.rosterLoop;
+    store.close();
+    const database = new Database(join(runtime, "overlay.sqlite"));
+    database
+      .query("UPDATE display_state SET document = ?1 WHERE id = 1")
+      .run(JSON.stringify(legacy));
+    database.close();
+
+    const migrated = await createStore(runtime);
+    expect(migrated.state.rosterLoop).toEqual({
+      holdSeconds: 8,
+      transitionSeconds: 0.8,
     });
     migrated.close();
   });

@@ -73,6 +73,9 @@ export class DisplayStore {
             return true;
           }),
         );
+        const migratedRosterLoop = document.rosterLoop === undefined;
+        if (migratedRosterLoop)
+          document.rosterLoop = createDefaultDisplayState().rosterLoop;
         const schedule = document.schedule as Array<Record<string, unknown>>;
         const migratedMatches = schedule.some(
           (match) => match.blueTeamId === undefined,
@@ -85,6 +88,7 @@ export class DisplayStore {
           migratedFrames ||
           migratedTeams ||
           migratedPlayerPhotos ||
+          migratedRosterLoop ||
           migratedMatches
         )
           this.persist();

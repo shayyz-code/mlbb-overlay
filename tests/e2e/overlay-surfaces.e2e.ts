@@ -99,6 +99,22 @@ test("keeps every OBS surface transparent, fitted, and borderless", async ({
       })
       .toBe("2026-08-28T20:15:00.000Z");
 
+    await page.goto("/control/overlays");
+    const tickerMessages = page.getByLabel("Messages, one per line");
+    await tickerMessages.fill("First bulletin");
+    await tickerMessages.press("Enter");
+    await expect(tickerMessages).toHaveValue("First bulletin\n");
+    await tickerMessages.pressSequentially("Second bulletin");
+    await expect(tickerMessages).toHaveValue(
+      "First bulletin\nSecond bulletin",
+    );
+    await expect
+      .poll(async () => {
+        const saved = await (await request.get("/api/v1/display")).json();
+        return saved.ticker.messages;
+      })
+      .toEqual(["First bulletin", "Second bulletin"]);
+
     for (const route of routes) {
       await page.goto(`/overlay/${route}`);
       await expectTransparentCanvas(page, route);

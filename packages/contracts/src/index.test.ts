@@ -161,6 +161,9 @@ describe("display contracts", () => {
       "gold",
       "roam",
     ]);
+    expect(state.teams[0]?.starters.every((player) => !player.photoUrl)).toBe(
+      true,
+    );
   });
 
   test("rejects duplicate lineup roles", () => {
@@ -168,6 +171,14 @@ describe("display contracts", () => {
     const secondStarter = state.lineups.blue[1];
     if (!secondStarter) throw new Error("Default lineup is incomplete.");
     secondStarter.role = "exp";
+    expect(DisplayStateSchema.safeParse(state).success).toBe(false);
+  });
+
+  test("keeps player photos on the local runtime route", () => {
+    const state = createDefaultDisplayState();
+    const starter = state.teams[0]?.starters[0];
+    if (!starter) throw new Error("Default starter is missing.");
+    starter.photoUrl = "https://example.com/player.png";
     expect(DisplayStateSchema.safeParse(state).success).toBe(false);
   });
 

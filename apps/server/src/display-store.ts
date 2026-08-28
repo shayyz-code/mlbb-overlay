@@ -63,6 +63,16 @@ export class DisplayStore {
         const migratedTeams = document.teams === undefined;
         if (migratedTeams)
           document.teams = migrateManagedTeams(document, seedTeams);
+        const managedTeams = document.teams as Array<{
+          starters?: Array<Record<string, unknown>>;
+        }>;
+        const migratedPlayerPhotos = managedTeams.some((team) =>
+          (team.starters ?? []).some((player) => {
+            if (player.photoUrl !== undefined) return false;
+            player.photoUrl = "";
+            return true;
+          }),
+        );
         const schedule = document.schedule as Array<Record<string, unknown>>;
         const migratedMatches = schedule.some(
           (match) => match.blueTeamId === undefined,
@@ -74,6 +84,7 @@ export class DisplayStore {
           migratedPresentation ||
           migratedFrames ||
           migratedTeams ||
+          migratedPlayerPhotos ||
           migratedMatches
         )
           this.persist();
@@ -208,6 +219,7 @@ function migrateManagedTeams(
         id,
         name,
         role,
+        photoUrl: "",
       })) ?? fallback.starters;
     const starterIds = new Set(starters.map((player) => player.id));
     return {

@@ -6,6 +6,7 @@ import { createApp } from "./app";
 import { assetFixture } from "./asset-fixture";
 import { DetectorCoordinator } from "./detector";
 import { DisplayStore } from "./display-store";
+import { PlayerPhotoStore } from "./player-photos";
 import { DraftStore } from "./store";
 import { TeamLogoStore } from "./team-logos";
 
@@ -24,6 +25,7 @@ async function setup(controlToken?: string) {
   const displayStore = new DisplayStore(directory);
   await displayStore.initialize();
   const teamLogos = new TeamLogoStore(join(directory, "team-logos"));
+  const playerPhotos = new PlayerPhotoStore(join(directory, "player-photos"));
   return {
     store,
     displayStore,
@@ -31,6 +33,7 @@ async function setup(controlToken?: string) {
       store,
       displayStore,
       teamLogos,
+      playerPhotos,
       ...(controlToken ? { controlToken } : {}),
     }),
   };
@@ -288,5 +291,43 @@ describe("draft API", () => {
     expect(await response.json()).toMatchObject({
       error: "The uploaded file does not match its image type.",
     });
+  });
+
+  test("uploads and serves photos only for managed starters", async () => {
+    const { app, displayStore } = await setup("secret-token");
+    const [team] = displayStore.state.teams;
+    const player = team?.starters[0];
+    if (!team || !player) throw new Error("Default starter is missing.");
+    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+    const form = new FormData();
+    form.set("photo", new File([png], "player.png", { type: "image/png" }));
+    const path = `/api/v1/player-photos/${team.id}/${player.id}`;
+    expect(
+      (await app.request(path, { method: "POST", body: form })).status,
+    ).toBe(401);
+
+    const authorized = new FormData();
+    authorized.set(
+      "photo",
+      new File([png], "player.png", { type: "image/png" }),
+    );
+    const response = await app.request(path, {
+      method: "POST",
+      body: authorized,
+      headers: { authorization: "Bearer secret-token" },
+    });
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { photoUrl: string };
+    expect(result.photoUrl).toStartWith("/api/v1/media/player-photos/");
+    expect((await app.request(result.photoUrl)).status).toBe(200);
+    expect(
+      (
+        await app.request(`/api/v1/player-photos/${team.id}/missing`, {
+          method: "POST",
+          headers: { authorization: "Bearer secret-token" },
+        })
+      ).status,
+    ).toBe(404);
+    displayStore.close();
   });
 });

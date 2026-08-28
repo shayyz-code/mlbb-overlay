@@ -37,6 +37,19 @@
 .team-directory-editor h2 {
   margin: 24px 0 10px;
 }
+.team-order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.team-order-actions span {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
 .team-identity-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px 130px;
@@ -71,15 +84,47 @@
 }
 .managed-player-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
-.managed-player-list label {
-  grid-template-columns: 70px minmax(0, 1fr);
+.managed-starter {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 110px auto;
   align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
 }
-.managed-player-list label span {
+.managed-starter > span {
   color: var(--display-cyan);
+  text-transform: uppercase;
+}
+.player-photo-upload {
+  position: relative;
+  height: 58px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px dashed var(--line);
+  cursor: pointer;
+}
+.player-photo-upload img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.48;
+}
+.player-photo-upload b,
+.player-photo-upload span {
+  position: relative;
+}
+.player-photo-upload input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 .substitute-heading {
   display: flex;
@@ -112,5 +157,17 @@
   }
   .managed-player-list.substitutes > div {
     grid-template-columns: 1fr;
+  }
+  .managed-starter {
+    grid-template-columns: 55px minmax(0, 1fr) auto;
+  }
+  .player-photo-upload {
+    grid-column: 1 / -1;
+  }
+  .team-order-actions {
+    flex-wrap: wrap;
+  }
+  .team-order-actions span {
+    flex-basis: 100%;
   }
 }

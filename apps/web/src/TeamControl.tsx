@@ -9,6 +9,7 @@ import {
   fetchDisplay,
   sendDisplayCommand,
   subscribeToDisplay,
+  uploadPlayerPhoto,
   uploadTeamLogo,
 } from "./api";
 import "./team-control.css";
@@ -31,6 +32,7 @@ function createTeam(): ManagedTeam {
       id: crypto.randomUUID(),
       name: role.toUpperCase(),
       role,
+      photoUrl: "",
     })),
     substitutes: [],
   };
@@ -59,11 +61,26 @@ export function TeamControlPage() {
   if (!display || !working)
     return <div className="loading-screen">Loading team directory…</div>;
   const selected = working.teams.find((team) => team.id === selectedId);
+  const selectedIndex = working.teams.findIndex(
+    (team) => team.id === selectedId,
+  );
   const change = (team: ManagedTeam) =>
     setWorking({
       ...working,
       teams: working.teams.map((item) => (item.id === team.id ? team : item)),
     });
+  const moveSelected = (offset: -1 | 1) => {
+    const target = selectedIndex + offset;
+    if (selectedIndex < 0 || target < 0 || target >= working.teams.length)
+      return;
+    const teams = [...working.teams];
+    const selectedTeam = teams[selectedIndex];
+    const targetTeam = teams[target];
+    if (!selectedTeam || !targetTeam) return;
+    teams[selectedIndex] = targetTeam;
+    teams[target] = selectedTeam;
+    setWorking({ ...working, teams });
+  };
   const persist = async () => {
     setError("");
     try {
@@ -167,6 +184,23 @@ export function TeamControlPage() {
           </nav>
           {selected && (
             <section className="team-directory-editor">
+              <div className="team-order-actions">
+                <span>Roster loop position {selectedIndex + 1}</span>
+                <button
+                  type="button"
+                  disabled={selectedIndex <= 0}
+                  onClick={() => moveSelected(-1)}
+                >
+                  Move up
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedIndex === working.teams.length - 1}
+                  onClick={() => moveSelected(1)}
+                >
+                  Move down
+                </button>
+              </div>
               <div className="team-identity-fields">
                 <label>
                   Team name
@@ -212,9 +246,10 @@ export function TeamControlPage() {
               <h2>Starting five</h2>
               <div className="managed-player-list">
                 {selected.starters.map((player, index) => (
-                  <label key={player.id}>
+                  <div className="managed-starter" key={player.id}>
                     <span>{player.role}</span>
                     <input
+                      aria-label={`${player.role} player name`}
                       value={player.name}
                       maxLength={40}
                       onChange={(event) => {
@@ -226,7 +261,57 @@ export function TeamControlPage() {
                         change({ ...selected, starters });
                       }}
                     />
-                  </label>
+                    <label className="player-photo-upload">
+                      {player.photoUrl ? (
+                        <img src={player.photoUrl} alt="" />
+                      ) : (
+                        <b>{player.name.slice(0, 2).toUpperCase()}</b>
+                      )}
+                      <span>
+                        {player.photoUrl ? "Change photo" : "Add photo"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          setError("");
+                          try {
+                            const result = await uploadPlayerPhoto(
+                              selected.id,
+                              player.id,
+                              file,
+                              token,
+                            );
+                            const starters = [...selected.starters];
+                            starters[index] = {
+                              ...player,
+                              photoUrl: result.photoUrl,
+                            };
+                            change({ ...selected, starters });
+                          } catch (reason) {
+                            setError(
+                              reason instanceof Error
+                                ? reason.message
+                                : "Photo upload failed.",
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!player.photoUrl}
+                      onClick={() => {
+                        const starters = [...selected.starters];
+                        starters[index] = { ...player, photoUrl: "" };
+                        change({ ...selected, starters });
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 ))}
               </div>
               <div className="substitute-heading">

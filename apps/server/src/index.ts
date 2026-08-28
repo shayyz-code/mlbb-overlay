@@ -25,6 +25,7 @@ import { DetectorCoordinator } from "./detector";
 import { DetectorLifecycle, validateObsUrl } from "./detector-lifecycle";
 import { DisplayStore } from "./display-store";
 import { heroes } from "./heroes";
+import { PlayerPhotoStore } from "./player-photos";
 import { DraftStore } from "./store";
 import { TeamLogoStore } from "./team-logos";
 
@@ -44,6 +45,9 @@ await store.initialize();
 const displayStore = new DisplayStore(runtimeDirectory);
 await displayStore.initialize(store.state.teams);
 const teamLogos = new TeamLogoStore(join(runtimeDirectory, "team-logos"));
+const playerPhotos = new PlayerPhotoStore(
+  join(runtimeDirectory, "player-photos"),
+);
 const configuredAssetManifest = process.env.SHAYYZ_ASSET_PACK;
 const assetManifest = configuredAssetManifest
   ? resolve(configuredAssetManifest)
@@ -149,6 +153,7 @@ const application = createApp({
   detectorLifecycle,
   detectorCalibration,
   teamLogos,
+  playerPhotos,
   webRoot: join(projectRoot, "apps/web/dist"),
   broadcast(event: EventEnvelope) {
     const payload = JSON.stringify(event);

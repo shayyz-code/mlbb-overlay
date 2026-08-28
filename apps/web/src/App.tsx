@@ -633,7 +633,7 @@ function ControlPage() {
 }
 
 function OverlayPage() {
-  const { state, heroes, connected, draftEvent } = useDraft();
+  const { state, heroes, draftEvent } = useDraft();
   const [display, setDisplay] = useState<DisplayState>();
   const [, rerender] = useState(0);
   useHeroVoice(state, heroes, draftEvent);
@@ -652,7 +652,6 @@ function OverlayPage() {
       state={state}
       heroes={heroes}
       eventName={display.event.name}
-      connected={connected}
       remainingSeconds={effectiveTimer(state)}
     />
   );

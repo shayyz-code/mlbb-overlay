@@ -380,17 +380,6 @@
   font-size: 16px;
 }
 
-.compact-phase-row > span {
-  color: var(--muted);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-}
-
-.compact-phase-row > span.is-online {
-  color: var(--success);
-}
-
 .compact-timer {
   display: flex;
   flex-direction: column;

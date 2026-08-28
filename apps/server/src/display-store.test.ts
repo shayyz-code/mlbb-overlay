@@ -99,6 +99,88 @@ describe("DisplayStore", () => {
     store.close();
   });
 
+  test("merges focused organizer sections without replacing unrelated data", async () => {
+    const store = await createStore();
+    const initial = store.state;
+    const teams = structuredClone(initial.teams);
+    if (!teams[0] || !teams[1]) throw new Error("Default teams are missing.");
+    teams[0].name = "Yangon Ravens";
+    const teamState = store.dispatch({
+      type: "set-team-directory",
+      expectedRevision: 0,
+      teams,
+    });
+    expect(teamState.event).toEqual(initial.event);
+
+    const schedule = [
+      {
+        id: "final",
+        scheduledAt: null,
+        stage: "Finals",
+        round: "Grand Final",
+        bestOf: 7,
+        blueTeamId: teams[0].id,
+        redTeamId: teams[1].id,
+        scores: { blue: 0, red: 0 },
+        status: "scheduled" as const,
+      },
+    ];
+    const matchState = store.dispatch({
+      type: "set-match-schedule",
+      expectedRevision: teamState.revision,
+      schedule,
+    });
+    expect(matchState.teams[0]?.name).toBe("Yangon Ravens");
+
+    const overlayState = store.dispatch({
+      type: "set-overlay-config",
+      expectedRevision: matchState.revision,
+      config: {
+        event: { ...matchState.event, name: "MSC Yangon" },
+        scoreboard: matchState.scoreboard,
+        countdown: matchState.countdown,
+        ticker: matchState.ticker,
+        rosterLoop: matchState.rosterLoop,
+      },
+    });
+    expect(overlayState.schedule).toEqual(schedule);
+    expect(overlayState.teams[0]?.name).toBe("Yangon Ravens");
+    expect(overlayState.event.name).toBe("MSC Yangon");
+    store.close();
+  });
+
+  test("validates cross-section references after focused updates", async () => {
+    const store = await createStore();
+    const state = store.state;
+    const [blue, red] = state.teams;
+    if (!blue || !red) throw new Error("Default teams are missing.");
+    store.dispatch({
+      type: "set-match-schedule",
+      expectedRevision: 0,
+      schedule: [
+        {
+          id: "match-1",
+          scheduledAt: null,
+          stage: "Groups",
+          round: "Round 1",
+          bestOf: 3,
+          blueTeamId: blue.id,
+          redTeamId: red.id,
+          scores: { blue: 0, red: 0 },
+          status: "scheduled",
+        },
+      ],
+    });
+    expect(() =>
+      store.dispatch({
+        type: "set-team-directory",
+        expectedRevision: 1,
+        teams: [blue],
+      }),
+    ).toThrow();
+    store.close();
+  });
+
   test("migrates display documents created before native HUD frames", async () => {
     const runtime = await mkdtemp(join(tmpdir(), "shayyz-display-"));
     directories.push(runtime);

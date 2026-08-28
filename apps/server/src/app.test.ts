@@ -161,6 +161,29 @@ describe("draft API", () => {
     expect(await response.json()).toMatchObject({ currentRevision: 1 });
   });
 
+  test("reports display section revision conflicts", async () => {
+    const { app, displayStore } = await setup();
+    const initial = displayStore.state;
+    await app.request("/api/v1/display/commands", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "set-team-directory",
+        expectedRevision: 0,
+        teams: initial.teams,
+      }),
+    });
+    const response = await app.request("/api/v1/display/commands", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "set-match-schedule",
+        expectedRevision: 0,
+        schedule: initial.schedule,
+      }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ currentRevision: 1 });
+  });
+
   test("activates one managed match and synchronizes its live score", async () => {
     const { app, store, displayStore } = await setup();
     const state = displayStore.state;

@@ -686,6 +686,17 @@ export const DisplaySettingsSchema = z.object({
 });
 export type DisplaySettings = z.infer<typeof DisplaySettingsSchema>;
 
+export const TeamDirectorySchema = DisplaySettingsSchema.shape.teams;
+export const MatchScheduleSchema = DisplaySettingsSchema.shape.schedule;
+export const OverlayConfigSchema = DisplaySettingsSchema.pick({
+  event: true,
+  scoreboard: true,
+  countdown: true,
+  ticker: true,
+  rosterLoop: true,
+});
+export type OverlayConfig = z.infer<typeof OverlayConfigSchema>;
+
 export const DisplayStateSchema = DisplaySettingsSchema.extend({
   revision: z.number().int().nonnegative(),
   updatedAt: z.string().datetime(),
@@ -731,6 +742,21 @@ export const DisplayCommandSchema = z.discriminatedUnion("type", [
     type: z.literal("set-display"),
     expectedRevision: z.number().int().nonnegative(),
     display: DisplaySettingsSchema,
+  }),
+  z.object({
+    type: z.literal("set-team-directory"),
+    expectedRevision: z.number().int().nonnegative(),
+    teams: TeamDirectorySchema,
+  }),
+  z.object({
+    type: z.literal("set-match-schedule"),
+    expectedRevision: z.number().int().nonnegative(),
+    schedule: MatchScheduleSchema,
+  }),
+  z.object({
+    type: z.literal("set-overlay-config"),
+    expectedRevision: z.number().int().nonnegative(),
+    config: OverlayConfigSchema,
   }),
   z.object({
     type: z.literal("cue"),

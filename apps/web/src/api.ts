@@ -29,6 +29,16 @@ import {
 
 const HeroesSchema = HeroSchema.array();
 
+export class DisplayCommandError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly currentRevision?: number,
+  ) {
+    super(message);
+  }
+}
+
 async function detectorRequest(
   path: string,
   token: string,
@@ -153,8 +163,18 @@ export async function sendDisplayCommand(
     },
     body: JSON.stringify(command),
   });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "Display command failed.");
+  const body = (await response.json()) as {
+    error?: unknown;
+    currentRevision?: unknown;
+  };
+  if (!response.ok)
+    throw new DisplayCommandError(
+      typeof body.error === "string" ? body.error : "Display command failed.",
+      response.status,
+      typeof body.currentRevision === "number"
+        ? body.currentRevision
+        : undefined,
+    );
   return DisplayStateSchema.parse(body);
 }
 

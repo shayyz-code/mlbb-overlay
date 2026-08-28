@@ -109,17 +109,33 @@ export class DisplayStore {
     if (command.expectedRevision !== this.#state.revision)
       throw new RevisionConflictError(this.#state.revision);
     const now = new Date().toISOString();
+    const next = this.nextSettings(command);
     this.#state = DisplayStateSchema.parse({
-      ...(command.type === "set-display" ? command.display : this.#state),
+      ...next,
       cueRevision:
         command.type === "cue"
           ? this.#state.cueRevision + 1
-          : command.display.cueRevision,
+          : next.cueRevision,
       revision: this.#state.revision + 1,
       updatedAt: now,
     });
     this.persist();
     return this.state;
+  }
+
+  private nextSettings(command: DisplayCommand): DisplayState {
+    switch (command.type) {
+      case "set-display":
+        return { ...this.#state, ...command.display };
+      case "set-team-directory":
+        return { ...this.#state, teams: command.teams };
+      case "set-match-schedule":
+        return { ...this.#state, schedule: command.schedule };
+      case "set-overlay-config":
+        return { ...this.#state, ...command.config };
+      case "cue":
+        return this.#state;
+    }
   }
 
   syncActiveScores(
